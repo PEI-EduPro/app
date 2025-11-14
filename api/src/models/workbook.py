@@ -8,7 +8,7 @@ class Workbook(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     workbook_name: str = Field(max_length=100)
-    workbook_xml: Optional[str] = Field(default=None, sa_column_kwargs={"type_": "TEXT"})
+    workbook_xml: Optional[str] = Field(default=None)
     professor_id: int = Field(foreign_key="professor.id")
     
     # Relationships

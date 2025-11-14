@@ -1,5 +1,5 @@
 from typing import Optional, List
-from api.src.models.subject import ProfessorSubjectLink, StudentSubjectLink
+from .subject import ProfessorSubjectLink, StudentSubjectLink
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
 
