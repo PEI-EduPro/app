@@ -1,6 +1,5 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
 
 
 # Association tables for many-to-many relationships
@@ -15,7 +14,6 @@ class ProfessorSubjectLink(SQLModel, table=True):
     
     professor_id: int = Field(foreign_key="professor.id", primary_key=True)
     subject_id: int = Field(foreign_key="subject.id", primary_key=True)
-
 
 #SubjectModel
 class Subject(SQLModel, table=True):
@@ -55,41 +53,3 @@ class SubjectCreate(SQLModel):
 class SubjectPublic(SQLModel):
     id: int
     name: str
-
-
-# --- Topic ---
-class Topic(SQLModel, table=True):
-    __tablename__ = "topic"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    subject_id: int = Field(foreign_key="subject.id")
-    
-    # Relationships
-    subject: "Subject" = Relationship(back_populates="topics")
-    questions: List["Question"] = Relationship(back_populates="topic")
-    exam_configs: List["ExamConfig"] = Relationship(back_populates="topic")
-
-# Question model
-class Question(SQLModel, table=True):
-    __tablename__ = "question"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    topic_id: int = Field(foreign_key="topic.id")
-    question_text: str = Field(default="Empty Question")
-    
-    # Relationships
-    topic: "Topic" = Relationship(back_populates="questions")
-    options: List["QuestionOption"] = Relationship(back_populates="question", cascade_delete=True)
-
-# QuestionOption model - allows multiple options with fractional scoring
-class QuestionOption(SQLModel, table=True):
-    __tablename__ = "question_option"
-    
-    id: Optional[int] = Field(default=None, primary_key=True)
-    question_id: int = Field(foreign_key="question.id", ondelete="CASCADE")
-    option_text: str = Field(max_length=500)
-    fraction: float = Field(default=0.0)  # 100.0 for correct, negative for incorrect (based on penalty)
-    order_position: Optional[int] = Field(default=None)  # For displaying options in specific order
-    
-    # Relationships
-    question: "Question" = Relationship(back_populates="options")
