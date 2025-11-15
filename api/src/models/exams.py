@@ -60,7 +60,7 @@ class Exam(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     question_id: int = Field(foreign_key="question.id")
     exam_config_id: int = Field(foreign_key="exam_config.id")
-    exam_xml: Optional[str] = Field(default=None, sa_column_kwargs={"type_": "TEXT"})
+    exam_xml: Optional[str] = Field(default=None)
     
     # Relationships
     exam_config: "ExamConfig" = Relationship(back_populates="exams")

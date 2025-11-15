@@ -14,6 +14,22 @@ async def get_current_user(
     session: AsyncSession = Depends(get_session)
 ):
     """Dependency to get current user from Keycloak token"""
+
+    # TEMPORARY: For testing only - remove in production!
+    #Para testar no Swagger clicar em authorize e inserir "test"
+    if credentials.credentials == "test":
+        user = await get_user_by_keycloak_id(session, "test-user-id")
+        if not user:
+            user = await create_user(
+                session=session,
+                keycloak_id="test-user-id",
+                email="test@example.com",
+                name="Test User",
+                mechanographic_number="696969"
+            )
+        return user
+
+
     if not credentials:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
