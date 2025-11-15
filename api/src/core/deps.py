@@ -19,6 +19,22 @@ async def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated"
         )
+
+
+    # TEMPORARY: For testing only - remove in production!
+    #Para testar no Swagger clicar em authorize e inserir "test"
+    if credentials.credentials == "test":
+        user = await get_user_by_keycloak_id(session, "test-user-id")
+        if not user:
+            user = await create_user(
+                session=session,
+                keycloak_id="test-user-id",
+                email="test@example.com",
+                name="Test User",
+                mechanographic_number="696969"
+            )
+        return user
+    
     
     # Verify the token with Keycloak
     token_info = await keycloak_client.verify_token(credentials.credentials)
