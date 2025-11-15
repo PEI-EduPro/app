@@ -16,11 +16,12 @@ class ProfessorSubjectLink(SQLModel, table=True):
     professor_id: int = Field(foreign_key="professor.id", primary_key=True)
     subject_id: int = Field(foreign_key="subject.id", primary_key=True)
 
+
+#SubjectModel
 class Subject(SQLModel, table=True):
     __tablename__ = "subject"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    subject_id: str = Field(max_length=20, unique=True, index=True)
     name: str = Field(max_length=100)
     regent_id: Optional[int] = Field(default=None, foreign_key="professor.id")  # Professor appointed as regent by manager
     manager_id: Optional[int] = Field(default=None, foreign_key="manager.id")
@@ -40,6 +41,23 @@ class Subject(SQLModel, table=True):
     )
     topics: List["Topic"] = Relationship(back_populates="subject")
 
+#SubjectUpdate for patch
+class SubjectUpdate(SQLModel):
+    name: str | None = None
+    regent_id: int | None = None
+    manager_id: int | None = None
+
+class SubjectCreate(SQLModel):
+    name: str
+    regent_id: int | None = None
+    manager_id: int | None = None
+
+class SubjectPublic(SQLModel):
+    id: int
+    name: str
+
+
+# --- Topic ---
 class Topic(SQLModel, table=True):
     __tablename__ = "topic"
     
