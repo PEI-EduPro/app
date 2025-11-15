@@ -32,6 +32,7 @@ async def get_subject_by_id(session: AsyncSession, subject_id: int) -> Optional[
 
 async def update_subject(
     session: AsyncSession,
+    subject_id: int,
     subject_data: dict
 ) -> Optional[Subject]:
     """Update a subject by ID"""
