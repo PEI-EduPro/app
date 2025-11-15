@@ -14,6 +14,12 @@ async def get_current_user(
     session: AsyncSession = Depends(get_session)
 ):
     """Dependency to get current user from Keycloak token"""
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated"
+        )
+
 
     # TEMPORARY: For testing only - remove in production!
     #Para testar no Swagger clicar em authorize e inserir "test"
@@ -28,13 +34,7 @@ async def get_current_user(
                 mechanographic_number="696969"
             )
         return user
-
-
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated"
-        )
+    
     
     # Verify the token with Keycloak
     token_info = await keycloak_client.verify_token(credentials.credentials)
