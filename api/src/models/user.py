@@ -22,7 +22,7 @@ class UserCreate(SQLModel):
     email: str
     name: str
     mechanographic_number: Optional[str] = None
-    role: UserRole = UserRole.STUDENT
+    role: UserRole
 
 class UserRead(SQLModel):
     id: int

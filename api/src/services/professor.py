@@ -1,7 +1,7 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.professor import Professor
-from src.models.user import User, UserType
+from src.models.user import User, UserRole
 from typing import Optional, List
 
 
@@ -14,7 +14,7 @@ async def create_professor(
     user = User(
         name=professor_data["name"],
         email=professor_data["email"],
-        user_type=UserType.PROFESSOR
+        user_role=UserRole.PROFESSOR
     )
     session.add(user)
     await session.commit()
