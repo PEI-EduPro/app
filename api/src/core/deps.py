@@ -21,7 +21,7 @@ async def get_current_user(
         )
 
 
-    # TEMPORARY: For testing only - remove in production!
+    #TO REMOVE ONLY USED IN PRODUCTION
     #Para testar no Swagger clicar em authorize e inserir "test"
     if credentials.credentials == "test":
         user = await get_user_by_keycloak_id(session, "test-user-id")

@@ -1,22 +1,22 @@
 from typing import Optional, List
-from .subject import ProfessorSubjectLink, StudentSubjectLink
+from .subject import ProfessorSubjectLink
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
-
+from .user import User
 
 
 class Professor(SQLModel, table=True):
-    __tablename__ = "professor"
-    
     id: Optional[int] = Field(default=None, foreign_key="user.id", primary_key=True)
     name: str = Field(index=True)
-    
+
     subjects: List["Subject"] = Relationship(
         back_populates="professors",
         link_model=ProfessorSubjectLink
     )
     workbooks: List["Workbook"] = Relationship(back_populates="professor")
     exam_configs: List["ExamConfig"] = Relationship(back_populates="professor")
+
+    user: User = Relationship(back_populates="professor")
 
 # Professor schemas
 class ProfessorCreate(SQLModel):

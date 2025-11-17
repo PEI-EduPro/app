@@ -1,27 +1,31 @@
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models.professor import Professor
+from src.models.professor import Professor,ProfessorCreate
 from src.models.user import User, UserRole
 from typing import Optional, List
 
 
 async def create_professor(
     session: AsyncSession,
-    professor_data: dict
+    data: ProfessorCreate
 ) -> Professor:
-    """Create a new professor"""
-    # First create the User entry
+    """Create a new User"""
     user = User(
-        name=professor_data["name"],
-        email=professor_data["email"],
-        user_role=UserRole.PROFESSOR
-    )
+        keycloak_id="test-user-id", #TO REMOVE, ONLY USED IN PRODUCTION
+        email=data.email,
+        name=data.name,
+        role=UserRole.PROFESSOR
+        )
     session.add(user)
     await session.commit()
     await session.refresh(user)
-    
+
+    professor = Professor(
+        id=user.id,   # required FK/PK
+        name=data.name
+    )
+
     # Then create the Professor entry linked to the User
-    professor = Professor(id=user.id)
     session.add(professor)
     await session.commit()
     await session.refresh(professor)
@@ -49,44 +53,51 @@ async def update_professor(
     professor_data: dict
 ) -> Optional[Professor]:
     """Update a professor by ID"""
-    # Get the professor
     professor = await get_professor_by_id(session, professor_id)
     if not professor:
         return None
-    
-    # Get the associated User to update name and email
+
     user = await session.get(User, professor_id)
     if not user:
         return None
-    
-    # Update User fields
+
     if "name" in professor_data:
         user.name = professor_data["name"]
+
+        professor.name = professor_data["name"]
+
     if "email" in professor_data:
         user.email = professor_data["email"]
-    
+
     session.add(user)
+    session.add(professor)
+
     await session.commit()
     await session.refresh(professor)
+
     return professor
 
-
 async def delete_professor(session: AsyncSession, professor_id: int) -> bool:
-    """Delete a professor by ID"""
+    """Delete a professor and the associated User."""
+    
+    # Load professor WITH related User
     professor = await get_professor_by_id(session, professor_id)
     if not professor:
         return False
-    
-    # Delete the Professor entry (User will be handled by cascade if configured)
-    await session.delete(professor)
-    
-    # Also delete the User entry
-    user = await session.get(User, professor_id)
+
+    # Access linked user (SQLModel relationship)
+    user = professor.user
+
+    # Delete main records
+    if professor:
+        await session.delete(professor)
+
     if user:
         await session.delete(user)
-    
+
     await session.commit()
     return True
+
 
 
 async def get_professor_subjects(session: AsyncSession, professor_id: int) -> Optional[List[dict]]:

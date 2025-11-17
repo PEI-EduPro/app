@@ -17,8 +17,7 @@ async def create_professor(
     current_user: User = Depends(get_current_user)
 ):
     """Create a new professor"""
-    professor_data = professor_create.model_dump()
-    prof = await professor.create_professor(session, professor_data)
+    prof = await professor.create_professor(session, professor_create)
     return prof
 
 
@@ -32,7 +31,7 @@ async def get_professors(
     return professors
 
 
-@router.get("/{id}", response_model=ProfessorRead)
+@router.get("/{id}", response_model=ProfessorPublic)
 async def get_professor(
     id: int,
     session: AsyncSession = Depends(get_session),

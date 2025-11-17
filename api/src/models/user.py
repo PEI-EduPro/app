@@ -17,6 +17,10 @@ class User(SQLModel, table=True):
     role: UserRole = Field(default=UserRole.STUDENT)
     is_active: bool = Field(default=True)
 
+
+    #relationship to entity 
+    professor: Optional["Professor"] = Relationship(back_populates="user")
+
 class UserCreate(SQLModel):
     keycloak_id: str
     email: str
