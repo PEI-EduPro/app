@@ -15,7 +15,6 @@ class ExamConfig(SQLModel, table=True):
     relative_weight: float = Field(default=1.0)
     
     # Relationships
-    topic: "Topic" = Relationship(back_populates="exam_configs")
     professor: "Professor" = Relationship(back_populates="exam_configs")
     exams: List["Exam"] = Relationship(back_populates="exam_config")
 

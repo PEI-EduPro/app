@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from src.core.db import create_db_and_tables
-from src.routers import user, subject
+from src.routers import user, subject,topics
 from src.models import __all__
 
 @asynccontextmanager
@@ -21,6 +21,7 @@ app = FastAPI(
 #app.include_router(product.router, prefix="/api/products", tags=["products"])
 app.include_router(user.router, prefix="/api/users", tags=["users"])
 app.include_router(subject.router, prefix="/api/subject",tags=["subject"])
+app.include_router(topics.router, prefix="/api/topics", tags=["topics"])
 
 @app.get("/health")
 async def health_check():

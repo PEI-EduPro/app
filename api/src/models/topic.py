@@ -15,6 +15,14 @@ class Topic(SQLModel, table=True):
     # Relationships
     subject: "Subject" = Relationship(back_populates="topics")
     questions: List["Question"] = Relationship(back_populates="topic")
-    exam_configs: List["ExamConfig"] = Relationship(back_populates="topic")
 
 
+class TopicCreate(SQLModel):
+    subject_id: int
+    name: str
+
+
+class TopicRead(SQLModel):
+    id: int
+    subject_id: int
+    name: str
