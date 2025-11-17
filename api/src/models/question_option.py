@@ -21,7 +21,6 @@ class QuestionOption(SQLModel, table=True):
 # QuestionOption schemas
 class QuestionOptionCreate(SQLModel):
     """Schema for creating a new question option"""
-    question_id: int
     option_text: str = Field(max_length=500)
     fraction: float = 0.0
     order_position: Optional[int] = None
