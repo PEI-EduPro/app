@@ -6,6 +6,8 @@ from .user import User
 
 
 class Professor(SQLModel, table=True):
+    __tablename__ = "professor"
+
     id: Optional[int] = Field(default=None, foreign_key="user.id", primary_key=True)
     name: str = Field(index=True)
 
@@ -21,6 +23,7 @@ class Professor(SQLModel, table=True):
 # Professor schemas
 class ProfessorCreate(SQLModel):
     """Schema for creating a new professor"""
+    user_id: int #the user id to link to the user
     name: str = Field(max_length=100)
     email: str = Field(max_length=100)
 

@@ -8,20 +8,10 @@ from typing import Optional, List
 async def create_professor(
     session: AsyncSession,
     data: ProfessorCreate
-) -> Professor:
-    """Create a new User"""
-    user = User(
-        keycloak_id="test-user-id", #TO REMOVE, ONLY USED IN PRODUCTION
-        email=data.email,
-        name=data.name,
-        role=UserRole.PROFESSOR
-        )
-    session.add(user)
-    await session.commit()
-    await session.refresh(user)
+) -> Professor: 
 
     professor = Professor(
-        id=user.id,   # required FK/PK
+        id=data.user_id,   # required FK
         name=data.name
     )
 
