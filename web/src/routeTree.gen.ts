@@ -9,12 +9,13 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as NewProductRouteImport } from './routes/new-product'
+import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
+import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
 
-const NewProductRoute = NewProductRouteImport.update({
-  id: '/new-product',
-  path: '/new-product',
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -22,40 +23,60 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LayoutUnidadesCurricularesRoute =
+  LayoutUnidadesCurricularesRouteImport.update({
+    id: '/unidades-curriculares',
+    path: '/unidades-curriculares',
+    getParentRoute: () => LayoutRoute,
+  } as any)
+const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
+  id: '/nova-uc',
+  path: '/nova-uc',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/new-product': typeof NewProductRoute
+  '/nova-uc': typeof LayoutNovaUcRoute
+  '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/new-product': typeof NewProductRoute
+  '/nova-uc': typeof LayoutNovaUcRoute
+  '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/new-product': typeof NewProductRoute
+  '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/nova-uc': typeof LayoutNovaUcRoute
+  '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/new-product'
+  fullPaths: '/' | '/nova-uc' | '/unidades-curriculares'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/new-product'
-  id: '__root__' | '/' | '/new-product'
+  to: '/' | '/nova-uc' | '/unidades-curriculares'
+  id:
+    | '__root__'
+    | '/'
+    | '/_layout'
+    | '/_layout/nova-uc'
+    | '/_layout/unidades-curriculares'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  NewProductRoute: typeof NewProductRoute
+  LayoutRoute: typeof LayoutRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/new-product': {
-      id: '/new-product'
-      path: '/new-product'
-      fullPath: '/new-product'
-      preLoaderRoute: typeof NewProductRouteImport
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -65,12 +86,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_layout/unidades-curriculares': {
+      id: '/_layout/unidades-curriculares'
+      path: '/unidades-curriculares'
+      fullPath: '/unidades-curriculares'
+      preLoaderRoute: typeof LayoutUnidadesCurricularesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/nova-uc': {
+      id: '/_layout/nova-uc'
+      path: '/nova-uc'
+      fullPath: '/nova-uc'
+      preLoaderRoute: typeof LayoutNovaUcRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
+interface LayoutRouteChildren {
+  LayoutNovaUcRoute: typeof LayoutNovaUcRoute
+  LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
+}
+
+const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutNovaUcRoute: LayoutNovaUcRoute,
+  LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,
+}
+
+const LayoutRouteWithChildren =
+  LayoutRoute._addFileChildren(LayoutRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  NewProductRoute: NewProductRoute,
+  LayoutRoute: LayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
