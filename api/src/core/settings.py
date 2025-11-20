@@ -1,3 +1,4 @@
+# src/core/settings.py
 from pydantic import Field
 from pydantic_settings import BaseSettings
 
@@ -11,11 +12,15 @@ class Settings(BaseSettings):
     
     # Keycloak
     KEYCLOAK_SERVER_URL: str = Field(default="http://localhost:8080")
-    KEYCLOAK_REALM: str = Field(default="EduPro")  # Match your realm name
+    KEYCLOAK_REALM: str = Field(default="master")
     KEYCLOAK_CLIENT_ID: str = Field(default="api-backend")
-    KEYCLOAK_CLIENT_SECRET: str = Field(default="RdwcPv5Gp0Nq3Pm8fGV4HfpST4KurVhb")
+    KEYCLOAK_CLIENT_SECRET: str = Field(default="ofvdbxJRWua5qTjuo8D6mnk3I45SB9kT") # Make sure this is the secret for 'api-backend' in 'master' realm
     KEYCLOAK_PUBLIC_KEY: str = Field(default="")
-    
+    # Note: These are for the initial admin-cli authentication method.
+    # The preferred method is service account as described below.
+    KEYCLOAK_ADMIN_USERNAME: str = Field(default="admin") # Default admin username
+    KEYCLOAK_ADMIN_PASSWORD: str = Field(default="admin") # Default admin password
+
     @property
     def PGSQL_DATABASE_URI(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
