@@ -93,7 +93,8 @@ class KeycloakClient:
         first_name: str = None,
         last_name: str = None,
         temporary: bool = False,
-        realm_role: str = None
+        realm_role: str = None,
+        nmec: str = None
     ) -> dict:
         """
         Create a new user in Keycloak using the Admin API via Service Account.
@@ -107,23 +108,37 @@ class KeycloakClient:
         logger.info(f"Attempting to create user: {username} in realm: {settings.KEYCLOAK_REALM}")
         try:
             loop = asyncio.get_event_loop()
+            
+            # Prepare the user data dictionary
+            user_data = {
+                "username": username,
+                "email": email,
+                "enabled": True, # Enable user by default
+                "emailVerified": True, # Assume email is verified during creation
+                "credentials": [
+                    {
+                        "type": "password",
+                        "value": password,
+                        "temporary": temporary # Set temporary flag
+                    }
+                ],
+                # Initialize attributes dictionary, even if empty
+                "attributes": {}
+            }
+
+            # Add optional standard fields if they are provided
+            if first_name:
+                user_data["firstName"] = first_name
+            if last_name:
+                user_data["lastName"] = last_name
+            # Add the nmec as an attribute if provided
+            if nmec is not None: # Check explicitly for None, not just falsy
+                user_data["attributes"]["nmec"] = nmec # Add nmec to the existing attributes dict
+
+            # Call the Keycloak Admin API to create the user
             user_id = await loop.run_in_executor(
                 None,
-                lambda: self.admin_client.create_user({
-                    "username": username,
-                    "email": email,
-                    "firstName": first_name,
-                    "lastName": last_name,
-                    "enabled": True, # Enable user by default
-                    "emailVerified": True, # Assume email is verified during creation
-                    "credentials": [
-                        {
-                            "type": "password",
-                            "value": password,
-                            "temporary": temporary # Set temporary flag
-                        }
-                    ]
-                })
+                lambda: self.admin_client.create_user(user_data) # Pass the correctly structured user_data
             )
             logger.info(f"User {username} created successfully with ID: {user_id}")
 

@@ -57,7 +57,8 @@ async def create_user_endpoint(
             first_name=user_data.first_name,
             last_name=user_data.last_name,
             temporary=user_data.temporary_password,
-            realm_role=user_data.realm_role # Pass the role to assign
+            realm_role=user_data.realm_role, # Pass the role to assign
+            nmec=user_data.nmec
         )
         logger.info(f"User {user_data.username} created successfully by manager {current_user_info['username']}.")
         return UserCreateResponse(
