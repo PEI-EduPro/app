@@ -24,13 +24,31 @@ import {
   SelectValue,
 } from "./ui/select";
 
+type NovaUCFormT = {
+  nome: string;
+  imagem: File | null;
+  regente: string;
+  professores: string[];
+  alunos: string[];
+  docs: FileList | null;
+};
+
 export const NovaUCForm = () => {
   const [formStep, setFormStep] = useState<number>(0);
   const totalSteps = 3;
 
-  const form = useForm();
+  const form = useForm<NovaUCFormT>({
+    defaultValues: {
+      nome: "",
+      imagem: null,
+      regente: "",
+      professores: [],
+      alunos: [],
+      docs: null,
+    },
+  });
 
-  const { handleSubmit, control, reset } = form;
+  const { handleSubmit, control, reset, watch, formState } = form;
 
   const onSubmit = async (formData: unknown) => {
     console.log(formData);
@@ -79,10 +97,18 @@ export const NovaUCForm = () => {
                   name="nome"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome</FormLabel>
+                      <FormLabel className="flex items-center gap-1">
+                        <span>Nome</span>
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
                       <FormControl>
                         <Input
-                          className="shadow-none"
+                          className={cn(
+                            "shadow-none",
+                            formState.touchedFields.nome &&
+                              !field.value &&
+                              "border-red-500"
+                          )}
                           {...field}
                           placeholder="Nome da UC"
                           autoComplete="off"
@@ -114,14 +140,13 @@ export const NovaUCForm = () => {
                             type="file"
                             id="file-upload-yI1i8RdV"
                             onChange={(e) => {
-                              field.onChange(e.target.files);
+                              field.onChange(e.target.files?.[0] || null);
                             }}
                             accept="image/*, application/pdf"
                             className="hidden"
                           />
 
-                          {!field.value ||
-                          (field.value && field.value.length == 0) ? (
+                          {!field.value ? (
                             <div className="flex flex-col items-center space-y-3">
                               <Upload className="w-6 h-6 text-gray-400" />
                               <div className="text-sm text-gray-500">
@@ -133,7 +158,7 @@ export const NovaUCForm = () => {
                               </div>
                             </div>
                           ) : (
-                            <span>{field.value?.[0]?.name}</span>
+                            <span>{field.value.name}</span>
                           )}
                         </div>
                       </FormControl>
@@ -152,6 +177,7 @@ export const NovaUCForm = () => {
                     Retroceder
                   </Button>
                   <Button
+                    disabled={!watch("nome")}
                     type="button"
                     size="sm"
                     className="font-medium"
@@ -295,8 +321,7 @@ export const NovaUCForm = () => {
                             className="hidden"
                           />
 
-                          {!field.value ||
-                          (field.value && field.value.length == 0) ? (
+                          {!field.value || field.value.length === 0 ? (
                             <div className="flex flex-col items-center space-y-3">
                               <Upload className="w-6 h-6 text-gray-400" />
                               <div className="text-sm text-gray-500">
@@ -308,7 +333,7 @@ export const NovaUCForm = () => {
                               </div>
                             </div>
                           ) : (
-                            <span>{field.value?.[0]?.name}</span>
+                            <span>{field.value.item.name}</span>
                           )}
                         </div>
                       </FormControl>

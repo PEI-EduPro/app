@@ -25,14 +25,14 @@ export function AppBreadcrumb(props: BreadcrumbProps) {
       <BreadcrumbList>
         {crumbs &&
           crumbs.map((el, index) => (
-            <>
-              <BreadcrumbItem key={index}>
+            <div key={index} className="flex items-center gap-1.5">
+              <BreadcrumbItem>
                 <BreadcrumbLink asChild>
                   <Link to={el.link}>{el.name}</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator />
-            </>
+            </div>
           ))}
         <BreadcrumbItem>
           <BreadcrumbPage>{page}</BreadcrumbPage>

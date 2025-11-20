@@ -16,7 +16,9 @@ function Index() {
           <p className="text-2xl text-gray-700 leading-snug">
             Um sistema que gera e avalia <br /> unidades curriculares
           </p>
-          <Button className="py-[21px] px-[84px] text-4xl">Log In</Button>
+          <Button className="py-[21px] px-[84px] text-4xl h-auto">
+            Log In
+          </Button>
           <p className="text-lg text-gray-600">
             Ainda não tens conta?{" "}
             <a href="#" className="text-[#41B5C0] hover:underline">
