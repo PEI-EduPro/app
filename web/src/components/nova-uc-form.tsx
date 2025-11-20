@@ -312,6 +312,7 @@ export const NovaUCForm = () => {
                           }}
                         >
                           <input
+                            multiple
                             type="file"
                             id="file-upload-yI1i8RdV"
                             onChange={(e) => {
@@ -333,7 +334,11 @@ export const NovaUCForm = () => {
                               </div>
                             </div>
                           ) : (
-                            <span>{field.value.item.name}</span>
+                            <div className="flex flex-col gap-1">
+                              {Array.from(field.value).map((file, index) => (
+                                <span key={index}>{file.name}</span>
+                              ))}
+                            </div>
                           )}
                         </div>
                       </FormControl>
