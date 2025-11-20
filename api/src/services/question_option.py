@@ -16,8 +16,6 @@ async def create_question_options(
         option = QuestionOption(
             question_id=question_id,
             option_text=opt.option_text,
-            fraction=opt.fraction,
-            order_position=opt.order_position
         )
         session.add(option)
         created_options.append(option)

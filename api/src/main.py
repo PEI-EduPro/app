@@ -23,7 +23,7 @@ app.include_router(user.router, prefix="/api/users", tags=["users"])
 app.include_router(subject.router, prefix="/api/subject",tags=["subject"])
 app.include_router(topics.router, prefix="/api/topics", tags=["topics"])
 app.include_router(question.router, prefix="/api/question", tags=["question"])
-app.include_router(question_option.router,prefix="/api/question_option",tags=["question_option"])
+app.include_router(question_option.router,prefix="/api/question",tags=["question"])
 
 
 @app.get("/health")

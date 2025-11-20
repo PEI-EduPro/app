@@ -11,7 +11,6 @@ class ExamConfig(SQLModel, table=True):
     topic_id: int = Field(foreign_key="topic.id")
     professor_id: int = Field(foreign_key="professor.id")
     num_questions: int
-    fraction: int = Field(default=0)
     relative_weight: float = Field(default=1.0)
     
     # Relationships
@@ -24,7 +23,6 @@ class ExamConfigCreate(SQLModel):
     topic_id: int
     professor_id: int
     num_questions: int
-    fraction: int = 0
     relative_weight: float = 1.0
 
 class ExamConfigUpdate(SQLModel):
@@ -32,7 +30,6 @@ class ExamConfigUpdate(SQLModel):
     topic_id: Optional[int] = None
     professor_id: Optional[int] = None
     num_questions: Optional[int] = None
-    fraction: Optional[int] = None
     relative_weight: Optional[float] = None
 
 class ExamConfigRead(SQLModel):
@@ -41,7 +38,6 @@ class ExamConfigRead(SQLModel):
     topic_id: int
     professor_id: int
     num_questions: int
-    fraction: int
     relative_weight: float
 
 class ExamConfigPublic(SQLModel):
@@ -50,7 +46,3 @@ class ExamConfigPublic(SQLModel):
     topic_id: int
     num_questions: int
     relative_weight: float
-
-
-    
-
