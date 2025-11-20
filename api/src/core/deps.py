@@ -4,7 +4,8 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from keycloak import KeycloakOpenID
 from src.core.settings import settings
-from src.core.keycloak import keycloak_client # Assuming your Keycloak client instance
+from src.core.keycloak import keycloak_client
+import asyncio
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
@@ -89,3 +90,24 @@ def require_subject_student(subject_id: str):
 def require_edit_question_bank(subject_id: str):
     group_name = f"/s{subject_id}/edit_question_bank"
     return require_group(group_name)
+
+
+async def verify_regent_exists(regent_keycloak_id: str):
+    """Dependency to check if the regent user exists in Keycloak before proceeding."""
+    try:
+        # Run the synchronous keycloak operation in a thread pool
+        loop = asyncio.get_event_loop()
+        regent_info = await loop.run_in_executor(
+            None, # Uses default executor (ThreadPoolExecutor)
+            lambda: keycloak_client.admin_client.get_user(regent_keycloak_id) # Wrap the sync call
+        )
+        logger.info(f"Verified regent user exists: {regent_info.get('username')} (ID: {regent_keycloak_id})")
+        return regent_info # Return user info if needed later
+    except Exception as e:
+        logger.error(f"Failed to verify regent user {regent_keycloak_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Regent user with ID '{regent_keycloak_id}' not found in Keycloak."
+        )
+        # Or raise a ValueError to be caught by the endpoint handler
+        # raise ValueError(f"Regent user with ID '{regent_keycloak_id}' not found.")

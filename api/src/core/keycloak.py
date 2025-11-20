@@ -197,5 +197,94 @@ class KeycloakClient:
         """Check if user is in specific group"""
         groups = self.get_user_groups(token_info)
         return group in groups
+    
+    async def create_subject_groups_and_assign_regent(
+        self,
+        subject_id: str, # Use the database subject ID as part of the group name
+        regent_keycloak_id: str
+    ) -> bool:
+        """
+        Creates the base subject group and all its subgroups in Keycloak using a flat structure.
+        Assigns the specified user as the regent by adding them to the /s{subject_id}/regent group.
+        """
+        logger.info(f"Creating groups for subject ID: {subject_id}, assigning regent: {regent_keycloak_id}")
+
+        try:
+            loop = asyncio.get_event_loop()
+
+            # Define the group hierarchy using flat names with a prefix
+            base_group_name = f"s{subject_id}" # e.g., "s4"
+            subgroups = [
+                "regent",      # Will become "s4/regent" when concatenated
+                "students",    # Will become "s4/students"
+                "professors",  # Will become "s4/professors"
+                "edit_topics", # Will become "s4/edit_topics"
+                "edit_questions", # Will become "s4/edit_questions"
+                "view_question_bank", # Will become "s4/view_question_bank"
+                "add_students", # Will become "s4/add_students"
+                "generate_exams", # Will become "s4/generate_exams"
+                "view_grades", # Will become "s4/view_grades"
+                "auto_correct_exams" # Will become "s4/auto_correct_exams"
+            ]
+
+            # Create each subgroup as a flat group with a hierarchical name
+            subgroup_ids = {}
+            for sub_name in subgroups:
+                # Construct the full group name as it should be stored and looked up
+                # This is the name Keycloak receives and stores internally.
+                full_group_name = base_group_name + "/" + sub_name # e.g., "s4/regent"
+                logger.debug(f"Attempting to create subgroup: {full_group_name}")
+
+                # Create the group directly with its full hierarchical name segment
+                subgroup_id = await loop.run_in_executor(
+                    None,
+                    lambda name=full_group_name: self.admin_client.create_group({"name": name})
+                    # Note: We are NOT using a 'parent' argument here.
+                    # Groups are created flat but with names that imply hierarchy.
+                )
+                logger.info(f"Created subgroup: {full_group_name} with ID: {subgroup_id}")
+                # Store the ID using the *exact* name Keycloak received
+                subgroup_ids[full_group_name] = subgroup_id # e.g., store as {"s4/regent": "id123"}
+
+            # Verify the regent user exists before adding them to the group
+            logger.info(f"Verifying regent user exists: {regent_keycloak_id}")
+            regent_user_info = await loop.run_in_executor(
+                None,
+                lambda: self.admin_client.get_user(regent_keycloak_id)
+            )
+            regent_username = regent_user_info.get('username')
+            logger.info(f"Regent user verified: {regent_username} (ID: {regent_keycloak_id})")
+
+            # Find the specific regent subgroup ID
+            # Use the *same* name format used when storing in subgroup_ids: "s{subject_id}/regent"
+            # DO NOT add a leading slash here if the stored key doesn't have one.
+            regent_group_name = f"{base_group_name}/regent" # e.g., "s4/regent"
+            regent_group_id = subgroup_ids.get(regent_group_name) # This should now find "s4/regent"
+
+            if not regent_group_id:
+                 logger.error(f"Regent group {regent_group_name} not found after creation.")
+                 logger.debug(f"Available group names in cache: {list(subgroup_ids.keys())}") # Add this line for debugging
+                 return False # Or raise an error
+
+            # Add the user to the s{subject_id}/regent group (Keycloak path will be /{regent_group_name})
+            await loop.run_in_executor(
+                None,
+                lambda uid=regent_keycloak_id, gid=regent_group_id: self.admin_client.group_user_add(uid, gid)
+            )
+            logger.info(f"User {regent_username} (ID: {regent_keycloak_id}) added to group {regent_group_name} (ID: {regent_group_id})")
+
+            logger.info(f"All groups for subject {subject_id} created and regent assigned successfully.")
+            return True
+
+        except Exception as e:
+            error_msg = str(e)
+            logger.error(f"Keycloak Admin API error during group creation/assignment: {error_msg}")
+            logger.exception(e) # Log the full traceback
+            # Handle specific errors like user not found, group already exists, etc.
+            if "User not found" in error_msg:
+                 raise ValueError(f"Regent user with ID '{regent_keycloak_id}' not found in Keycloak.")
+            # Re-raise or return False based on how you want to handle errors in the endpoint
+            raise e # Re-raise to be handled by the endpoint
+
 
 keycloak_client = KeycloakClient()
