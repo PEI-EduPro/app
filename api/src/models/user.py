@@ -1,6 +1,6 @@
-# src/schemas/user.py
-from pydantic import BaseModel, EmailStr
 from typing import Optional
+from pydantic import EmailStr
+
 
 class UserCreateRequest(BaseModel):
     """Schema for the request to create a user via the API."""
