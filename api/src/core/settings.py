@@ -1,31 +1,31 @@
-from pydantic import PostgresDsn, computed_field
-from pydantic_settings import BaseSettings, SettingsConfigDict
-
+# src/core/settings.py
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    # Database
+    POSTGRES_SERVER: str = Field(default="localhost")
+    POSTGRES_PORT: int = Field(default=5432)
+    POSTGRES_USER: str = Field(default="myuser")
+    POSTGRES_PASSWORD: str = Field(default="mypassword")
+    POSTGRES_DB: str = Field(default="mydatabase")
+    
+    # Keycloak
+    KEYCLOAK_SERVER_URL: str = Field(default="http://localhost:8080")
+    KEYCLOAK_REALM: str = Field(default="master")
+    KEYCLOAK_CLIENT_ID: str = Field(default="api-backend")
+    KEYCLOAK_CLIENT_SECRET: str = Field(default="ofvdbxJRWua5qTjuo8D6mnk3I45SB9kT") # Make sure this is the secret for 'api-backend' in 'master' realm
+    KEYCLOAK_PUBLIC_KEY: str = Field(default="")
+    # Note: These are for the initial admin-cli authentication method.
+    # The preferred method is service account as described below.
+    KEYCLOAK_ADMIN_USERNAME: str = Field(default="admin") # Default admin username
+    KEYCLOAK_ADMIN_PASSWORD: str = Field(default="admin") # Default admin password
 
-  model_config = SettingsConfigDict( {
-    "env_file": ".env",
-    "env_ignore_empty": True,
-    "extra": "ignore",
-  })
+    @property
+    def PGSQL_DATABASE_URI(self) -> str:
+        return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
 
-  POSTGRES_SERVER: str
-  POSTGRES_PORT: int = 5432
-  POSTGRES_USER: str
-  POSTGRES_PASSWORD: str = ""
-  POSTGRES_DB: str = ""
+    class Config:
+        env_file = ".env"
 
-  @computed_field
-  @property
-  def PGSQL_DATABASE_URI(self) -> PostgresDsn:
-      return PostgresDsn.build(
-          scheme="postgresql+psycopg",
-          username=self.POSTGRES_USER,
-          password=self.POSTGRES_PASSWORD,
-          host=self.POSTGRES_SERVER,
-          port=self.POSTGRES_PORT,
-          path=self.POSTGRES_DB,
-        )
-  
-settings = Settings() # type: ignore
+settings = Settings()

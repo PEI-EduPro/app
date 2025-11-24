@@ -1,45 +1,42 @@
+import { Button } from '@/components/ui/button'
 import { createFileRoute } from '@tanstack/react-router'
-import { useProduct } from '@/hooks/use-product';
-import { ProductsTable } from '@/components/products-table';
 
 export const Route = createFileRoute('/')({
   component: Index,
 })
 
 function Index() {
-
-  const { data: products, isLoading, isError } = useProduct();
   return (
-    <div className="container mx-auto py-8 px-4">
-      <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-3xl font-bold">Products</h1>
-          <p className="text-muted-foreground">
-            Manage your product inventory
+    <div className="min-h-screen bg-gray-50 px-20 py-16">
+      {/* Heading */}
+      <h1 className="text-5xl font-semibold text-center mb-20">Bem-vind@ ao EduPro</h1>
+
+      {/* Two-column layout */}
+      <div className="flex items-start justify-center gap-24">
+        {/* Left column */}
+        <div className="flex flex-col items-center space-y-10 max-w-md text-center">
+          <p className="text-2xl text-gray-700 leading-snug">
+            Um sistema que gera e avalia <br/> unidades curriculares
+          </p>
+
+          <Button className="h-16.5 w-67.5 px-10 py-4 text-xl">Log In</Button>
+
+          <p className="text-lg text-gray-600">
+            Ainda não tens conta?{' '}
+            <a href="#" className="text-sky-600 hover:underline">
+              Cria uma nova
+            </a>
           </p>
         </div>
-        
-        {isLoading && (
-          <div className="flex items-center justify-center py-8">
-            <p>Loading products...</p>
-          </div>
-        )}
-        
-        {isError && (
-          <div className="flex items-center justify-center py-8">
-            <p className="text-destructive">Error loading products</p>
-          </div>
-        )}
-        
-        {products && products.length > 0 ? (
-          <ProductsTable products={products} />
-        ) : (
-          !isLoading && !isError && (
-            <div className="flex items-center justify-center py-8">
-              <p className="text-muted-foreground">No products found</p>
-            </div>
-          )
-        )}
+
+        {/* Right column (logo) */}
+        <div>
+          <img
+            src="/logo.png"
+            alt="EduPro logo"
+            className="h-auto w-156.5 h-89.5"
+          />
+        </div>
       </div>
     </div>
   )

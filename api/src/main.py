@@ -1,39 +1,59 @@
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from src.core.db import init_db
-from src.routers import product
+from contextlib import asynccontextmanager
+from src.core.db import create_db_and_tables
+from src.core.config import setup_logging
+import logging
 
+setup_logging()
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database
-    await init_db()
+    """Application lifespan management"""
+    logger.info("Starting application initialization...")
+    
+    # Create database tables
+    try:
+        logger.info("Creating database tables...")
+        await create_db_and_tables()
+        logger.info("Database tables created successfully")
+    except Exception as e:
+        logger.error(f"Database initialization failed: {str(e)}")
+        raise
+    
+    # Verify database connection
+    try:
+        from src.core.db import engine
+        async with engine.connect() as conn:
+            await conn.execute("SELECT 1")
+        logger.info("Database connection verified")
+    except Exception as e:
+        logger.error(f"Database connection verification failed: {str(e)}")
+    
     yield
-    # Shutdown: Add cleanup code here if needed
-
+    
+    logger.info("Application shutting down...")
 
 app = FastAPI(
-    title="Project Template API",
-    summary="API to serve Project Template.",
-    openapi_url="/openapi.json",
-    docs_url="/api/docs",
-    lifespan=lifespan,
+    title="Education Platform API",
+    description="Backend API with Keycloak authentication",
+    version="1.0.0",
+    lifespan=lifespan
 )
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"], # Adjust as needed
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-@app.get("/health", tags=["Health"])
-async def health_check():
-    return {"status": "ok"}
 
 # Include routers
-app.include_router(product.router,prefix="/api/products", tags=["products"])
+from src.routers import user, subject
+app.include_router(user.router, prefix="/api/users", tags=["users"])
+app.include_router(subject.router, prefix="/api/subjects", tags=["subjects"])
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok", "message": "Education Platform API is running"}
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to Education Platform API",
+        "documentation": "/docs",
+        "health_check": "/health"
+    }
