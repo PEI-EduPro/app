@@ -4,9 +4,12 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.db import get_session
 from src.core.deps import require_manager, verify_regent_exists # Import the new dependency
 from src.models.topic import Topic, TopicCreate
-from src.schemas.topic import TopicCreateRequest, TopicCreateResponse
+from src.models.user import User
+from src.schemas.subject import TopicCreateRequest, TopicCreateResponse
 from src.core.keycloak import keycloak_client
+from src.core.deps import get_current_user_info
 import logging
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -14,19 +17,20 @@ router = APIRouter()
 @router.post("/", response_model=TopicCreateResponse, dependencies=[Depends(require_manager)])
 async def create_subject_endpoint(
     topic_data: TopicCreateRequest, # Receive the request body data
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user_info)
 ):
     """
-    Create a new subject in the database and its corresponding Keycloak groups.
+    Create a new topic in the database.
     Assigns the specified user as the regent.
     Requires the 'manager' role.
     """
-    logger.info(f"Manager is attempting to create a new subject: '{subject_data.name}', assigning regent ID: {subject_data.regent_keycloak_id}")
+    logger.info(f"User '{current_user['id']}' is attempting to create topic '{topic_data.name}' for subject '{topic_data.subject_id}'")
 
     try:
         # 1. Verify regent exists BEFORE creating anything in the database
         # Call the verification function explicitly here, now that we have subject_data
-        regent_info = await verify_regent_exists(subject_data.regent_keycloak_id)
+        regent_info = await verify_regent_exists(current_user.id)
 
         # 2. Create the Subject in the local database
         db_subject = Subject(name=subject_data.name)

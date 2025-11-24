@@ -1,41 +1,28 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from src.core.deps import get_current_user_info, require_manager # Import require_manager
-from src.schemas.user import UserCreateRequest # Import the schema
-from src.core.keycloak import keycloak_client # Import the keycloak client instance
-from pydantic import BaseModel
 import logging
+
+from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.core.deps import get_current_user_info, require_manager # Import require_manager
+from src.models.user import UserCreateRequest, CurrentUserInfo, UserCreateResponse,User # Import the schema
+from src.core.keycloak import keycloak_client # Import the keycloak client instance
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-class CurrentUserInfo(BaseModel):
-    id: str # Keycloak user ID
-    username: str
-    email: str
-    realm_roles: list[str]
-    groups: list[str]
+
 
 @router.get("/me", response_model=CurrentUserInfo)
 async def read_current_user(
-    user_info: dict = Depends(get_current_user_info)
+    user: User = Depends(get_current_user_info)
     # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Get current user info from the token (requires authentication)"""
     # You could still apply a role check here if desired, e.g., only allow certain roles to access this endpoint
     # await require_manager(user_info) # Uncomment if only managers should access /me
-    return CurrentUserInfo(
-        id=user_info["id"],
-        username=user_info["username"],
-        email=user_info["email"],
-        realm_roles=user_info["realm_roles"],
-        groups=user_info["groups"]
-    )
+    return CurrentUserInfo.model_validate(user)
 
-
-class UserCreateResponse(BaseModel):
-    user_id: str
-    message: str
 
 @router.post("/create", response_model=UserCreateResponse, dependencies=[Depends(require_manager)])
 async def create_user_endpoint(

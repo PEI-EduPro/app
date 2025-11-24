@@ -1,1 +1,0 @@
-@router.post("/", response_model=SubjectCreateResponse, dependencies=[Depends(require_manager)])

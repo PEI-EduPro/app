@@ -27,7 +27,6 @@ class TopicUpdate(SQLModel):
 
 class TopicRead(SQLModel):
     """Schema for reading workbook data"""
-    id: int
     name: str
     subject_id: int
 
@@ -36,3 +35,9 @@ class TopicPublic(SQLModel):
     id: int
     name: str
     subject_id : int
+
+class TopicCreateRequest(SQLModel):
+    """Schema for the request to create a topic via the API."""
+    name: str
+    subject_id: int
+
