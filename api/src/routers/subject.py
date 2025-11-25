@@ -1,19 +1,18 @@
 # src/routers/subject.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
+from api.src.models.subject import Subject, SubjectCreateRequest, SubjectCreateResponse
 from src.core.db import get_session
 from src.core.deps import require_manager, verify_regent_exists # Import the new dependency
-from src.models.topic import Topic, TopicCreate
-from src.schemas.topic import TopicCreateRequest, TopicCreateResponse
 from src.core.keycloak import keycloak_client
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/", response_model=TopicCreateResponse, dependencies=[Depends(require_manager)])
+@router.post("/", response_model=SubjectCreateResponse, dependencies=[Depends(require_manager)])
 async def create_subject_endpoint(
-    topic_data: TopicCreateRequest, # Receive the request body data
+    subject_data: SubjectCreateRequest, # Receive the request body data
     session: AsyncSession = Depends(get_session)
 ):
     """

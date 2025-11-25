@@ -8,7 +8,7 @@ class Topic(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     subject_id: int = Field(foreign_key="subject.id")
-    name: str = Field(index=True)
+    name: str = Field(unique=True,index=True)
     
     # Relationships
     subject: "Subject" = Relationship(back_populates="topics")
@@ -40,4 +40,11 @@ class TopicCreateRequest(SQLModel):
     """Schema for the request to create a topic via the API."""
     name: str
     subject_id: int
+
+class TopicCreateResponse(SQLModel):
+    """Schema for the response to create a topic via the API."""
+    name: str
+    subject_id: int
+
+
 

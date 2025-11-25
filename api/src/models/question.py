@@ -23,6 +23,7 @@ class QuestionCreate(SQLModel):
 
 class QuestionUpdate(SQLModel):
     """Schema for updating question data"""
+    id: int
     topic_id: Optional[int] = None
     question_text: Optional[str] = None
 

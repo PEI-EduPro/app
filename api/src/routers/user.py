@@ -27,7 +27,7 @@ async def read_current_user(
 @router.post("/create", response_model=UserCreateResponse, dependencies=[Depends(require_manager)])
 async def create_user_endpoint(
     user_data: UserCreateRequest,
-    current_user_info: dict = Depends(get_current_user_info) # This will be the manager's info due to require_manager
+    current_user_info: User = Depends(get_current_user_info) # This will be the manager's info due to require_manager
 ):
     """
     Create a new user in Keycloak (Manager only).
@@ -77,7 +77,7 @@ async def create_user_endpoint(
 # Add a debug endpoint if needed (maybe for managers only)
 @router.get("/debug/token-info")
 async def debug_token_info(
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     _ = Depends(require_manager) # Only accessible by managers for debugging
 ):
     """Debug endpoint to see the full decoded token info (managers only)"""
