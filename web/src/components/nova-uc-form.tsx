@@ -106,7 +106,7 @@ export const NovaUCForm = () => {
                           className={cn(
                             "shadow-none",
                             formState.touchedFields.nome &&
-                              !field.value &&
+                              (!field.value || field.value.trim() == "") &&
                               "border-red-500"
                           )}
                           {...field}
@@ -177,7 +177,7 @@ export const NovaUCForm = () => {
                     Retroceder
                   </Button>
                   <Button
-                    disabled={!watch("nome")}
+                    disabled={!watch("nome") || watch("nome").trim() === ""}
                     type="button"
                     size="sm"
                     className="font-medium"
