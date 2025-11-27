@@ -1,10 +1,9 @@
 # src/routers/subject.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.models.subject import Subject, SubjectCreateRequest, SubjectCreateResponse
 from src.core.db import get_session
 from src.core.deps import require_manager, verify_regent_exists # Import the new dependency
-from src.models.subject import Subject, SubjectCreate
-from src.schemas.subject import SubjectCreateRequest, SubjectCreateResponse
 from src.core.keycloak import keycloak_client
 import logging
 
