@@ -1,6 +1,5 @@
 import logging
 
-from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.core.deps import get_current_user_info, require_manager # Import require_manager
