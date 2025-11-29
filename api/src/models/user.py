@@ -3,14 +3,14 @@ from sqlmodel import SQLModel
 
 class User(SQLModel):
     """Base model for user"""
-    user_id: int
+    user_id: str
     username: str
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
     password: Optional[str] = None
     temporary_password: Optional[str] = None
-    realm_role: Optional[list[str]] = None
+    realm_roles: Optional[list[str]] = None
     nmec: Optional[str] = None
     groups: Optional[list[str]] = None
 
