@@ -27,15 +27,11 @@ class QuestionUpdate(SQLModel):
     topic_id: Optional[int] = None
     question_text: Optional[str] = None
 
-class QuestionRead(SQLModel):
-    """Schema for reading question data"""
-    id: int
-    topic_id: int
-    question_text: str
 
 class QuestionPublic(SQLModel):
     """Schema for public question data"""
-    id: int
+    #id: int
+    topic_id: int
     question_text: str
 
 class QuestionDelete(SQLModel):

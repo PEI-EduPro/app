@@ -42,9 +42,12 @@ app = FastAPI(
 )
 
 # Include routers
-from src.routers import user, subject
+from src.routers import user, subject, topic, question, question_option
 app.include_router(user.router, prefix="/api/users", tags=["users"])
 app.include_router(subject.router, prefix="/api/subjects", tags=["subjects"])
+app.include_router(topic.router, prefix="/api/topics", tags=["topics"])
+app.include_router(question.router, prefix="/api/questions", tags=["questions "])
+app.include_router(question_option.router, prefix="/api/question-options", tags=["question-options "])
 
 @app.get("/health")
 async def health_check():

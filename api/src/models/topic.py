@@ -24,27 +24,15 @@ class TopicCreate(SQLModel):
 class TopicUpdate(SQLModel):
     """Schema for updating workbook data"""
     name: Optional[str] = Field(default = None,max_length=100)
+    subject_id : Optional[int]
 
-class TopicRead(SQLModel):
-    """Schema for reading workbook data"""
-    name: str
-    subject_id: int
 
 class TopicPublic(SQLModel):
     """Schema for public workbook data (limited info)"""
-    id: int
+    #id: int
     name: str
     subject_id : int
 
-class TopicCreateRequest(SQLModel):
-    """Schema for the request to create a topic via the API."""
-    name: str
-    subject_id: int
-
-class TopicCreateResponse(SQLModel):
-    """Schema for the response to create a topic via the API."""
-    name: str
-    subject_id: int
 
 
 

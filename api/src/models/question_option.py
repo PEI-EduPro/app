@@ -2,9 +2,6 @@ from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
 
-
-
-
 # QuestionOption model - allows multiple options with fractional scoring
 class QuestionOption(SQLModel, table=True):
     __tablename__ = "question_option"
@@ -24,7 +21,7 @@ class QuestionOptionCreate(SQLModel):
     question_id: int
     option_text: str = Field(max_length=500)
     value: bool = False
-    order_position: Optional[int] = None
+    #order_position: Optional[int] = None
 
 class QuestionOptionUpdate(SQLModel):
     """Schema for updating question option data"""
@@ -32,20 +29,12 @@ class QuestionOptionUpdate(SQLModel):
     value: Optional[bool] = None
     order_position: Optional[int] = None
 
-class QuestionOptionRead(SQLModel):
-    """Schema for reading question option data"""
-    id: int
-    question_id: int
-    option_text: str
-    value: bool
-    order_position: Optional[int] = None
-
 class QuestionOptionPublic(SQLModel):
     """Schema for public question option data (no fraction exposed)"""
-    id: int
+    #id: int
     question_id: int
     option_text: str
-    order_position: Optional[int] = None
+    #order_position: Optional[int] = None
 
 class QuestionOptionDelete(SQLModel):
     """Schema for deleting a question option"""

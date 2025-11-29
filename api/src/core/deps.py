@@ -4,8 +4,6 @@ import jwt
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from keycloak import KeycloakOpenID
-from src.core.settings import settings
 from src.core.keycloak import keycloak_client
 from src.models.user import User
 
