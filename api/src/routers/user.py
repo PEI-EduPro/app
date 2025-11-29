@@ -1,46 +1,32 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from src.core.deps import get_current_user_info, require_manager # Import require_manager
-from src.schemas.user import UserCreateRequest # Import the schema
-from src.core.keycloak import keycloak_client # Import the keycloak client instance
-from pydantic import BaseModel
 import logging
+
+from fastapi import APIRouter, Depends, HTTPException, status
+
+from src.core.deps import get_current_user_info, require_manager # Import require_manager
+from src.models.user import UserCreateRequest, CurrentUserInfo, UserCreateResponse,User # Import the schema
+from src.core.keycloak import keycloak_client # Import the keycloak client instance
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-class CurrentUserInfo(BaseModel):
-    id: str # Keycloak user ID
-    username: str
-    email: str
-    realm_roles: list[str]
-    groups: list[str]
+
 
 @router.get("/me", response_model=CurrentUserInfo)
 async def read_current_user(
-    user_info: dict = Depends(get_current_user_info)
+    user: User = Depends(get_current_user_info)
     # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Get current user info from the token (requires authentication)"""
     # You could still apply a role check here if desired, e.g., only allow certain roles to access this endpoint
     # await require_manager(user_info) # Uncomment if only managers should access /me
-    return CurrentUserInfo(
-        id=user_info["id"],
-        username=user_info["username"],
-        email=user_info["email"],
-        realm_roles=user_info["realm_roles"],
-        groups=user_info["groups"]
-    )
+    return CurrentUserInfo.model_validate(user)
 
-
-class UserCreateResponse(BaseModel):
-    user_id: str
-    message: str
 
 @router.post("/create", response_model=UserCreateResponse, dependencies=[Depends(require_manager)])
 async def create_user_endpoint(
     user_data: UserCreateRequest,
-    current_user_info: dict = Depends(get_current_user_info) # This will be the manager's info due to require_manager
+    current_user_info: User = Depends(get_current_user_info) # This will be the manager's info due to require_manager
 ):
     """
     Create a new user in Keycloak (Manager only).
@@ -90,7 +76,7 @@ async def create_user_endpoint(
 # Add a debug endpoint if needed (maybe for managers only)
 @router.get("/debug/token-info")
 async def debug_token_info(
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     _ = Depends(require_manager) # Only accessible by managers for debugging
 ):
     """Debug endpoint to see the full decoded token info (managers only)"""

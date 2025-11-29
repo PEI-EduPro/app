@@ -1,11 +1,13 @@
+import asyncio
 import logging
+import jwt
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
 from keycloak import KeycloakOpenID
 from src.core.settings import settings
 from src.core.keycloak import keycloak_client
-import asyncio
+from src.models.user import User
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
@@ -39,14 +41,10 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
     # groups = user_info.get("groups", groups) # Fallback or additional check
 
     logger.info(f"Authenticated user: {username}, roles: {realm_roles}, groups: {groups}")
-    return {
-        "id": user_id,
-        "username": username,
-        "email": email,
-        "realm_roles": realm_roles,
-        "groups": groups,
-    }
+    user = User(user_id=user_id,username=username,email=email,realm_roles=realm_roles,groups=groups)
 
+    return user
+    
 
 def require_role(role_name: str):
     """Dependency factory to require a specific realm role"""

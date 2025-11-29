@@ -5,6 +5,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.db import get_session
 from src.core.deps import require_manager, verify_regent_exists, get_current_user_info
+from src.models.subject import Subject, SubjectCreateRequest, SubjectCreateResponse
+from src.core.db import get_session
+from src.core.deps import require_manager, verify_regent_exists # Import the new dependency
 from src.core.keycloak import keycloak_client
 import logging
 
