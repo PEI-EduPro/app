@@ -2,13 +2,13 @@ from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from pydantic import BaseModel
 
-
 # --- Database Table ---
 class Subject(SQLModel, table=True):
     __tablename__ = "subject"
     
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(max_length=100)
+    # Ensure "Topic" is in quotes to handle forward reference
     topics: List["Topic"] = Relationship(back_populates="subject")
 
 # --- Pydantic DTOs (Request/Response Schemas) ---
@@ -67,12 +67,3 @@ class ProfessorAddRequest(ProfessorPermissions):
 class ProfessorUpdateRequest(ProfessorPermissions):
     """Used for PUT /subject/{id}/professors/{user_id}"""
     pass # Inherits all boolean fields
-class SubjectCreateRequest(SQLModel):
-    name: str
-    regent_keycloak_id: str  # The Keycloak user ID of the professor to be made regent
-
-class SubjectCreateResponse(SQLModel):
-    id: int
-    name: str
-    message: str
-    regent_username: str # Optional: Return the regent's username for confirmation
