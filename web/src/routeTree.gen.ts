@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
+import { Route as LayoutNovoExameRouteImport } from './routes/_layout/novo-exame'
 import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
 
 const LayoutRoute = LayoutRouteImport.update({
@@ -29,6 +30,11 @@ const LayoutUnidadesCurricularesRoute =
     path: '/unidades-curriculares',
     getParentRoute: () => LayoutRoute,
   } as any)
+const LayoutNovoExameRoute = LayoutNovoExameRouteImport.update({
+  id: '/novo-exame',
+  path: '/novo-exame',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
   id: '/nova-uc',
   path: '/nova-uc',
@@ -38,11 +44,13 @@ const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/nova-uc': typeof LayoutNovaUcRoute
+  '/novo-exame': typeof LayoutNovoExameRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/nova-uc': typeof LayoutNovaUcRoute
+  '/novo-exame': typeof LayoutNovoExameRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRoutesById {
@@ -50,18 +58,20 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/nova-uc': typeof LayoutNovaUcRoute
+  '/_layout/novo-exame': typeof LayoutNovoExameRoute
   '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/nova-uc' | '/unidades-curriculares'
+  fullPaths: '/' | '/nova-uc' | '/novo-exame' | '/unidades-curriculares'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/nova-uc' | '/unidades-curriculares'
+  to: '/' | '/nova-uc' | '/novo-exame' | '/unidades-curriculares'
   id:
     | '__root__'
     | '/'
     | '/_layout'
     | '/_layout/nova-uc'
+    | '/_layout/novo-exame'
     | '/_layout/unidades-curriculares'
   fileRoutesById: FileRoutesById
 }
@@ -93,6 +103,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutUnidadesCurricularesRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/novo-exame': {
+      id: '/_layout/novo-exame'
+      path: '/novo-exame'
+      fullPath: '/novo-exame'
+      preLoaderRoute: typeof LayoutNovoExameRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/nova-uc': {
       id: '/_layout/nova-uc'
       path: '/nova-uc'
@@ -105,11 +122,13 @@ declare module '@tanstack/react-router' {
 
 interface LayoutRouteChildren {
   LayoutNovaUcRoute: typeof LayoutNovaUcRoute
+  LayoutNovoExameRoute: typeof LayoutNovoExameRoute
   LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutNovaUcRoute: LayoutNovaUcRoute,
+  LayoutNovoExameRoute: LayoutNovoExameRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,
 }
 
