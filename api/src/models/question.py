@@ -13,7 +13,10 @@ class Question(SQLModel, table=True):
     
     # Relationships
     topic: "Topic" = Relationship(back_populates="questions")
-    options: List["QuestionOption"] = Relationship(back_populates="question", cascade_delete=True)
+    options: List["QuestionOption"] = Relationship(
+        back_populates="question",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 # Question schemas
 class QuestionCreate(SQLModel):
@@ -30,7 +33,7 @@ class QuestionUpdate(SQLModel):
 
 class QuestionPublic(SQLModel):
     """Schema for public question data"""
-    #id: int
+    id: int
     topic_id: int
     question_text: str
 

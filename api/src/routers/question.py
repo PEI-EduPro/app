@@ -90,7 +90,7 @@ async def put_question(
             raise HTTPException(status_code=404, detail="Question not found")
         
         question.question_text = question_data.question_text
-        question.topic_id = question_data.question_text
+        question.topic_id = question_data.topic_id
         session.add(question)
         session.commit()
         session.refresh(question)

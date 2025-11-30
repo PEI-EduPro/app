@@ -7,6 +7,7 @@ from src.models.topic import Topic, TopicCreate, TopicPublic
 from src.models.user import User
 from src.core.deps import get_current_user_info
 import logging
+from sqlmodel import select
 
 
 logger = logging.getLogger(__name__)
@@ -62,12 +63,15 @@ async def create_topic(
 async def read_topic(
     topic_name: str,
     session: AsyncSession = Depends(get_session)
-    # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
-    """Get topic info from provided id"""
-    result = await session.get(Topic, topic_name)
-    if not result:
+    """Get topic info from provided name"""
+    # FIX: Use select statement filtering by name
+    statement = select(Topic).where(Topic.name == topic_name)
+    result = await session.exec(statement)
+    topic = result.first()
+    
+    if not topic:
         raise HTTPException(status_code=404, detail="Topic not found")
-    return TopicPublic.model_validate(result)
+    return TopicPublic.model_validate(topic)
     
     
