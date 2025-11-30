@@ -1,6 +1,8 @@
 # src/routers/subject.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.services import topic
+from src.services import question
 from src.core.db import get_session
 from src.core.deps import require_subject_regent, verify_regent_exists # Import the new dependency
 from src.models.topic import Topic, TopicCreate, TopicPublic
@@ -31,12 +33,9 @@ async def create_topic(
         #regent_info = await verify_regent_exists(current_user.user_id)
 
         # 2. Create the Topic in the local database
-        db_topic = Topic.model_validate(topic_data)
-        session.add(db_topic)
-        await session.commit()
-        await session.refresh(db_topic) # Get the auto-generated ID
+        db_topic = question.create_question(session,topic_data)
 
-        logger.info(f"Subject '{db_topic.name}' created in database with ID: {db_topic.id}")
+        logger.info(f"Topic '{db_topic.name}' created in database with ID: {db_topic.id}")
 
         # Return success response
         return TopicPublic.model_validate(db_topic)
@@ -59,19 +58,17 @@ async def create_topic(
 
 # ... (keep existing endpoints like GET, PUT, etc.) ...
 
-@router.get("/{topic_name}", response_model=TopicPublic)
+@router.get("/{id}", response_model=TopicPublic)
 async def read_topic(
-    topic_name: str,
+    topic_id: str,
     session: AsyncSession = Depends(get_session)
 ):
     """Get topic info from provided name"""
     # FIX: Use select statement filtering by name
-    statement = select(Topic).where(Topic.name == topic_name)
-    result = await session.exec(statement)
-    topic = result.first()
+    result = topic.get_topic_by_id(session,topic_id)
     
-    if not topic:
+    if not result:
         raise HTTPException(status_code=404, detail="Topic not found")
-    return TopicPublic.model_validate(topic)
+    return TopicPublic.model_validate(result)
     
     

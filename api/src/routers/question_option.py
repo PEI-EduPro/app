@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
+from api.src.services import question_option
 from src.models.question_option import QuestionOption, QuestionOptionCreate, QuestionOptionPublic
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, require_subject_regent, verify_regent_exists
@@ -20,15 +21,12 @@ async def create_question_option(
     """
     try:
         # Create the QuestionOption in the local database
-        db_question_option = QuestionOption.model_validate(question_option_data)  # Fixed variable name
-        session.add(db_question_option)
-        await session.commit()
-        await session.refresh(db_question_option)  # Get the auto-generated ID
+        db_question_option = question_option.create_question(session,question_option_data)
 
         logger.info(f"Question option '{db_question_option.option_text}' created successfully with ID: {db_question_option.id}")  # Fixed logging
 
         # Return success response
-        return QuestionOptionPublic.model_validate(db_question_option)
+        return db_question_option
         
     except ValueError as ve:
         # Handle specific validation errors
