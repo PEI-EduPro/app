@@ -2,6 +2,14 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -163,6 +171,15 @@ function RouteComponent() {
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [profsSelection, setProfsSelection] = useState(data);
   const [alunosSelection, setAlunosSelection] = useState(data);
+  const [regente, setRegente] = useState<
+    { value: string; label: string } | undefined
+  >({ value: "p1", label: "Joao Rafael" });
+
+  const options = [
+    { value: "p1", label: "Joao Rafael" },
+    { value: "p2", label: "Maria Silva" },
+    { value: "p3", label: "Pedro Santos" },
+  ];
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -193,12 +210,44 @@ function RouteComponent() {
           <div className="flex flex-row gap-[60px] w-full">
             <div className="w-full flex flex-1 flex-col gap-[30px]">
               <div>
-                <span className="text-[26px] font-medium">Regente</span>
-                <Input
-                  className={cn("shadow-none")}
-                  value={"Manuel Pedro"}
-                  readOnly
-                />
+                {isEditing ? (
+                  <>
+                    <span className="text-[26px] font-medium">Regente</span>
+                    <Select
+                      value={regente?.value}
+                      onValueChange={(e) =>
+                        setRegente(
+                          options.find((el) => el.value === e) || undefined
+                        )
+                      }
+                    >
+                      <SelectTrigger className="shadow-none w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {options.map((option, index) => (
+                            <SelectItem
+                              key={`option.value${index}`}
+                              value={option.value}
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-[26px] font-medium">Regente</span>
+                    <Input
+                      className={cn("shadow-none")}
+                      value={regente?.label}
+                      readOnly
+                    />
+                  </>
+                )}
               </div>
               <div>
                 <span className="text-[26px] font-medium">Professores</span>
@@ -236,6 +285,7 @@ function RouteComponent() {
                     setAlunosSelection(data);
                     setProfsSelection(data);
                     setIsEditing(false);
+                    setRegente({ value: "p1", label: "Joao Rafael" });
                   }}
                 >
                   Cancelar
