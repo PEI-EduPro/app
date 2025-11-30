@@ -14,7 +14,7 @@ interface UCCArdProps {
 }
 function UCCard({ label, srcImage }: UCCArdProps) {
   return (
-    <Link to="/">
+    <Link to="/detalhes-uc">
       <Card className="w-80 h-57.5 py-0 overflow-hidden gap-2.5 hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
         <img src={srcImage || "/card-image.png"} />
         <span className="px-1.75 h-auto line-clamp-2 overflow-hidden text-ellipsis">
@@ -66,7 +66,7 @@ function UCS() {
   return (
     <div className="py-3.5 px-6 w-full">
       <AppBreadcrumb page="Unidades Curriculares" />
-      <div className="flex justify-center text-5xl mb-35">
+      <div className="font-rubik flex justify-center text-5xl mb-35">
         Unidades Curriculares
       </div>
       <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-x-[70px] gap-y-[50px]">

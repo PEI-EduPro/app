@@ -13,6 +13,7 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
 import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
+import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -34,14 +35,21 @@ const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
   path: '/nova-uc',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutDetalhesUcRoute = LayoutDetalhesUcRouteImport.update({
+  id: '/detalhes-uc',
+  path: '/detalhes-uc',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
@@ -49,18 +57,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/_layout/nova-uc': typeof LayoutNovaUcRoute
   '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/nova-uc' | '/unidades-curriculares'
+  fullPaths: '/' | '/detalhes-uc' | '/nova-uc' | '/unidades-curriculares'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/nova-uc' | '/unidades-curriculares'
+  to: '/' | '/detalhes-uc' | '/nova-uc' | '/unidades-curriculares'
   id:
     | '__root__'
     | '/'
     | '/_layout'
+    | '/_layout/detalhes-uc'
     | '/_layout/nova-uc'
     | '/_layout/unidades-curriculares'
   fileRoutesById: FileRoutesById
@@ -100,15 +110,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutNovaUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/detalhes-uc': {
+      id: '/_layout/detalhes-uc'
+      path: '/detalhes-uc'
+      fullPath: '/detalhes-uc'
+      preLoaderRoute: typeof LayoutDetalhesUcRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
   LayoutNovaUcRoute: typeof LayoutNovaUcRoute
   LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
   LayoutNovaUcRoute: LayoutNovaUcRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,
 }

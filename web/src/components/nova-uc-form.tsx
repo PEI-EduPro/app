@@ -33,7 +33,7 @@ type NovaUCFormT = {
   docs: FileList | null;
 };
 
-export const NovaUCForm = () => {
+export function NovaUCForm() {
   const [formStep, setFormStep] = useState<number>(0);
   const totalSteps = 3;
 
@@ -173,6 +173,7 @@ export const NovaUCForm = () => {
                     className="font-medium"
                     size="sm"
                     disabled
+                    variant="outline"
                   >
                     Retroceder
                   </Button>
@@ -253,6 +254,7 @@ export const NovaUCForm = () => {
                     type="button"
                     className="font-medium"
                     size="sm"
+                    variant="outline"
                     onClick={() => setFormStep(formStep - 1)}
                   >
                     Retroceder
@@ -352,6 +354,7 @@ export const NovaUCForm = () => {
                     type="button"
                     className="font-medium"
                     size="sm"
+                    variant="outline"
                     onClick={() => setFormStep(formStep - 1)}
                   >
                     Retroceder
@@ -367,4 +370,4 @@ export const NovaUCForm = () => {
       </Card>
     </div>
   );
-};
+}

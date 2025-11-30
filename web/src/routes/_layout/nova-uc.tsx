@@ -18,7 +18,7 @@ function NovaUC() {
           },
         ]}
       />
-      <div className="flex justify-center text-5xl mb-35">
+      <div className="font-rubik flex justify-center text-5xl mb-35">
         Nova Unidade Curricular
       </div>
       <div className="flex flex-col items-center">
