@@ -2,7 +2,6 @@ from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
 
-
 # Question model
 class Question(SQLModel, table=True):
     __tablename__ = "question"
@@ -13,7 +12,10 @@ class Question(SQLModel, table=True):
     
     # Relationships
     topic: "Topic" = Relationship(back_populates="questions")
-    options: List["QuestionOption"] = Relationship(back_populates="question", cascade_delete=True)
+    options: List["QuestionOption"] = Relationship(
+        back_populates="question",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )
 
 # Question schemas
 class QuestionCreate(SQLModel):
@@ -27,15 +29,11 @@ class QuestionUpdate(SQLModel):
     topic_id: Optional[int] = None
     question_text: Optional[str] = None
 
-class QuestionRead(SQLModel):
-    """Schema for reading question data"""
-    id: int
-    topic_id: int
-    question_text: str
 
 class QuestionPublic(SQLModel):
     """Schema for public question data"""
     id: int
+    topic_id: int
     question_text: str
 
 class QuestionDelete(SQLModel):

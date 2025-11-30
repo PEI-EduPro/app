@@ -1,10 +1,11 @@
-# src/routers/subject.py
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.db import get_session
 from src.core.deps import require_manager, get_current_user_info
+# Import User model for type hinting and correct attribute access
+from src.models.user import User 
 from src.models.subject import (
     SubjectCreateRequest, 
     SubjectCreateResponse, 
@@ -15,7 +16,6 @@ from src.models.subject import (
     ProfessorAddRequest,
     ProfessorUpdateRequest
 )
-# Import the new service functions
 import src.services.subject as subject_service
 import logging
 
@@ -23,7 +23,12 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # --- Helpers ---
-async def verify_manager_or_regent(subject_id: int, user_info: dict):
+
+async def verify_manager_or_regent(subject_id: int, user_info: User):
+    """
+    Helper to enforce Manager or Regent access.
+    Uses dot notation for the Pydantic User object.
+    """
     username = user_info.username
     roles = user_info.realm_roles
     groups = user_info.groups
@@ -45,6 +50,9 @@ async def create_subject_endpoint(
     subject_data: SubjectCreateRequest,
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Create a new subject. Delegates complex logic (DB + Keycloak) to the service layer.
+    """
     try:
         result = await subject_service.create_subject_service(
             session=session,
@@ -66,8 +74,11 @@ async def create_subject_endpoint(
 @router.get("/", response_model=List[SubjectRead])
 async def get_subjects(
     session: AsyncSession = Depends(get_session),
-    user_info: dict = Depends(get_current_user_info)
+    user_info: User = Depends(get_current_user_info)
 ):
+    """
+    Get subjects the user has access to.
+    """
     return await subject_service.get_subjects_for_user(session, user_info)
 
 @router.put("/{subject_id}", response_model=SubjectRead, dependencies=[Depends(require_manager)])
@@ -76,6 +87,9 @@ async def update_subject(
     subject_update: SubjectUpdate,
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Update subject name or regent.
+    """
     try:
         return await subject_service.update_subject_service(session, subject_id, subject_update)
     except ValueError:
@@ -88,20 +102,30 @@ async def delete_subject(
     subject_id: int,
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Delete subject and clean up Keycloak groups.
+    """
     try:
         await subject_service.delete_subject_service(session, subject_id)
     except ValueError:
         raise HTTPException(status_code=404, detail="Subject not found")
+    except Exception as e:
+        logger.error(f"Error deleting subject: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete subject")
 
 @router.get("/{subject_id}/students", response_model=List[StudentInfo])
 async def get_subject_students(
     subject_id: int,
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
-    # Permission Check (kept in router as it relies on HTTP Context)
+    """
+    View enrolled students.
+    """
+    # Permission Check
     roles = user_info.realm_roles
     groups = user_info.groups
+    
     if not ("manager" in roles or 
             any(g.endswith(f"s{subject_id}/regent") for g in groups) or 
             any(g.endswith(f"s{subject_id}/professors") for g in groups)):
@@ -109,6 +133,7 @@ async def get_subject_students(
 
     try:
         students = await subject_service.get_students_service(session, subject_id)
+        # Map raw dictionary from Keycloak to Pydantic model
         return [
             StudentInfo(
                 id=s['id'], 
@@ -125,12 +150,16 @@ async def get_subject_students(
 async def add_students_to_subject(
     subject_id: int,
     request: StudentAddRequest,
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Add students to a subject.
+    """
     # Permission Check
     roles = user_info.realm_roles
     groups = user_info.groups
+    
     if not ("manager" in roles or 
             any(g.endswith(f"s{subject_id}/regent") for g in groups) or 
             any(g.endswith(f"s{subject_id}/add_students") for g in groups)):
@@ -148,9 +177,12 @@ async def add_students_to_subject(
 async def add_professor_to_subject(
     subject_id: int,
     request: ProfessorAddRequest,
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Add a professor with specific permissions.
+    """
     await verify_manager_or_regent(subject_id, user_info)
     try:
         await subject_service.manage_professor_service(
@@ -162,7 +194,6 @@ async def add_professor_to_subject(
         )
         return {"message": "Professor added successfully."}
     except ValueError as e:
-        # Catch "Subject not found" or "Regent not found"
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
@@ -172,9 +203,12 @@ async def update_professor_permissions(
     subject_id: int,
     professor_id: str,
     request: ProfessorUpdateRequest,
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Update permissions for an existing professor.
+    """
     await verify_manager_or_regent(subject_id, user_info)
     try:
         await subject_service.manage_professor_service(
@@ -194,9 +228,12 @@ async def update_professor_permissions(
 async def remove_professor_from_subject(
     subject_id: int,
     professor_id: str,
-    user_info: dict = Depends(get_current_user_info),
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Remove a professor from all subject groups.
+    """
     await verify_manager_or_regent(subject_id, user_info)
     try:
         await subject_service.remove_professor_service(session, subject_id, professor_id)

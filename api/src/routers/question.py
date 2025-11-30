@@ -1,44 +1,40 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
-from api.src.core.db import get_session
-from api.src.core.deps import get_current_user_info, require_subject_regent, verify_regent_exists
-from api.src.models.question import Question, QuestionCreate, QuestionRead, QuestionUpdate
-from api.src.models.user import User
+from src.services import question
+from src.core.db import get_session
+from src.core.deps import get_current_user_info, require_subject_regent, verify_regent_exists
+from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
+from src.models.user import User
 from sqlmodel.ext.asyncio.session import AsyncSession
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/question/{subject}/{topic}", response_model=QuestionRead, dependencies=[Depends(require_subject_regent)])
+@router.post("/", response_model=QuestionPublic)#, dependencies=[Depends(require_subject_regent)])
 async def create_question(
-    subject_name: str,
-    topic_name: str,
     question_data: QuestionCreate,
-    current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
+    #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
     session: AsyncSession = Depends(get_session)
 ):
     """
     Create a new question (regent only).
     Requires the 'regent' role.
     """
-    logger.info(f"Regent {current_user.user_id} is attempting to create a new question: {question_data.question_text} in subject {subject_name} in topic {topic_name}")
+    #logger.info(f"Regent {current_user.user_id} is attempting to create a new question: {question_data.question_text}")
 
     try:
         # 1. Verify current_user is regent BEFORE creating anything in the database
         # Call the verification function explicitly here, now that we have current_user
-        regent_info = await verify_regent_exists(current_user.user_id)
+        #regent_info = await verify_regent_exists(current_user.user_id)
 
         # 2. Create the Topic in the local database
-        db_question = Question(topic_id=question_data.topic_id,question_text=question_data.question_text)
-        session.add(db_question)
-        await session.commit()
-        await session.refresh(db_question) # Get the auto-generated ID
+        db_question = await question.create_question(session,question_data)
 
         logger.info(f"Question '{db_question.question_text}' created in successfully with ID: {db_question.id}")
 
         # Return success response
-        return QuestionRead.model_validate(db_question)
+        return db_question
         
     except ValueError as ve:
         # Handle specific validation errors like user exists
@@ -48,57 +44,44 @@ async def create_question(
             detail=str(ve)
         )
     except Exception as e:
-        # Handle other errors during creation
-        logger.error(f"Failed to create user {question_data.question_text} by regent {current_user.user_id}: {e}")
+        logger.error(f"Failed to create question '{question_data.question_text}': {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the user in Keycloak."
+            detail="An internal error occurred while creating the question."
         )
+
     
     
-@router.get("/question/{id}", response_model=QuestionRead)
+@router.get("/{id}", response_model=QuestionPublic)
 async def get_question(
     id: int,
     session: AsyncSession = Depends(get_session)
-    # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Get topic info from provided id"""
-    result = await session.get(Question, id)
+    result = await question.get_question_by_id(session,id)
+
     if not result:
         raise HTTPException(status_code=404, detail="Question not found")
-    return QuestionRead.model_validate(result)
+    
+    return result
 
 
-@router.put("/question/{id}", response_model=QuestionRead)
+@router.put("/{id}", response_model=QuestionPublic)
 async def put_question(
     id: int,
     question_data: QuestionUpdate,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
+    #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
     # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Update question info from provided id"""
     try:
         # 1. Verify current_user is regent BEFORE creating anything in the database
         # Call the verification function explicitly here, now that we have current_user
-        regent_info = await verify_regent_exists(current_user.user_id)
+        #regent_info = await verify_regent_exists(current_user.user_id)
 
-
-        statement = select(Question).where(Question.id == id)
-        results = await session.exec(statement)
-        question = results.one()
-
-        if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
-        
-        question.question_text = question_data.question_text
-        question.topic_id = question_data.question_text
-        session.add(question)
-        session.commit()
-        session.refresh(question)
-
-        return QuestionRead.model_validate(question)
-        
+        result = question.update_question(session,question_data)
+        return result
         
     except ValueError as ve:
         # Handle specific validation errors like user exists
@@ -109,45 +92,33 @@ async def put_question(
         )
     except Exception as e:
         # Handle other errors during creation
-        logger.error(f"Failed to create user {question_data.question_text} by regent {current_user.user_id}: {e}")
+        logger.error(f"Failed to create user {question_data.question_text}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while creating the user in Keycloak."
         )
 
 
-@router.delete("/question/{id}", response_model=str)
-async def put_question(
+@router.delete("/{id}", response_model=str)
+async def delete_question(
     id: int,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
+    #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
     # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Delete question from provided id"""
     try:
         # 1. Verify current_user is regent BEFORE creating anything in the database
         # Call the verification function explicitly here, now that we have current_user
-        regent_info = await verify_regent_exists(current_user.user_id)
+        #regent_info = await verify_regent_exists(current_user.user_id)
 
 
-        statement = select(Question).where(Question.id == id)
-        results = await session.exec(statement)
-        question = results.one()
+        result = question.delete_question(session,id)
 
-        if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
-        
-        session.delete(question)
-        session.commit()
-
-        statement = select(Question).where(Question.id == id)
-        results = await session.exec(statement)
-        question = results.first()
-
-        if question is None:
+        if result:
             return "Question deleted successfully"
         else:
-            raise ValueError("question is not None")
+            raise ValueError("Question still exists.")
         
         
     except ValueError as ve:

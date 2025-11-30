@@ -12,7 +12,10 @@ class Topic(SQLModel, table=True):
     
     # Relationships
     subject: "Subject" = Relationship(back_populates="topics")
-    questions: List["Question"] = Relationship(back_populates="topic")
+    questions: List["Question"] = Relationship(
+        back_populates="topic",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"}
+    )    
     exam_configs: List["ExamConfig"] = Relationship(back_populates="topic")
 
 # Workbook schemas
@@ -24,11 +27,8 @@ class TopicCreate(SQLModel):
 class TopicUpdate(SQLModel):
     """Schema for updating workbook data"""
     name: Optional[str] = Field(default = None,max_length=100)
+    subject_id : Optional[int]
 
-class TopicRead(SQLModel):
-    """Schema for reading workbook data"""
-    name: str
-    subject_id: int
 
 class TopicPublic(SQLModel):
     """Schema for public workbook data (limited info)"""
@@ -36,15 +36,6 @@ class TopicPublic(SQLModel):
     name: str
     subject_id : int
 
-class TopicCreateRequest(SQLModel):
-    """Schema for the request to create a topic via the API."""
-    name: str
-    subject_id: int
-
-class TopicCreateResponse(SQLModel):
-    """Schema for the response to create a topic via the API."""
-    name: str
-    subject_id: int
 
 
 

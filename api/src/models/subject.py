@@ -8,8 +8,11 @@ class Subject(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(max_length=100)
-    # Ensure "Topic" is in quotes to handle forward reference
-    topics: List["Topic"] = Relationship(back_populates="subject")
+    # The topic relationship uses a string forward reference to avoid circular imports
+    topics: List["Topic"] = Relationship(
+        back_populates="subject",
+        sa_relationship_kwargs={"cascade": "all, delete-orphan"} 
+    )
 
 # --- Pydantic DTOs (Request/Response Schemas) ---
 
@@ -33,22 +36,24 @@ class SubjectRead(BaseModel):
     class Config:
         from_attributes = True
 
-# Used for the patch
+# Used for the patch/put
 class SubjectUpdate(BaseModel):
     name: Optional[str] = None
     regent_keycloak_id: Optional[str] = None
 
- # Adding a student to a subject
+# --- Student DTOs ---
+
 class StudentAddRequest(BaseModel):
     student_keycloak_ids: List[str]
 
-# View student information
 class StudentInfo(BaseModel):
     id: str   # This is the keycloak id
     username: Optional[str] = None
     email: Optional[str] = None
     first_name: Optional[str] = None
     last_name: Optional[str] = None
+
+# --- Professor Permission DTOs ---
 
 class ProfessorPermissions(BaseModel):
     """Base class defining the specific boolean permissions"""

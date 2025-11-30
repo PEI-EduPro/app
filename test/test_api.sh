@@ -6,6 +6,7 @@ API_URL="http://localhost:8000/api/subjects"
 REALM="master"
 CLIENT_ID="api-backend"
 CLIENT_SECRET="**********" # <--- PASTE SECRET HERE
+API_BASE="http://localhost:8000/api"
 
 echo "--- 1. SETTING UP KEYCLOAK ADMIN ---"
 ADMIN_TOKEN=$(curl -s -X POST $KC_URL/realms/$REALM/protocol/openid-connect/token \
@@ -207,5 +208,85 @@ echo "Subject Deleted (No Content)."
 echo -e "\n=== TEST 10: Verify Deletion ==="
 curl -s -X GET "$API_URL/" \
   -H "Authorization: Bearer $MANAGER_TOKEN" | jq
+
+
+# For safety, let's create a new subject specifically for the new tests to ensure clean state.
+
+echo -e "\n\n=== SETUP FOR NEW FEATURES ==="
+echo "Creating a dedicated subject for Topics/Questions..."
+SUBJECT_RESPONSE=$(curl -s -X POST "$API_BASE/subjects/" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"Análise Real\",
+    \"regent_keycloak_id\": \"$REGENT_ID\"
+  }")
+NEW_SUBJECT_ID=$(echo $SUBJECT_RESPONSE | jq -r '.id')
+echo "New Subject ID: $NEW_SUBJECT_ID"
+
+# ==============================================================================
+# NEW FEATURE TESTS (Topics -> Questions -> Options)
+# ==============================================================================
+
+echo -e "\n=== TEST 11: POST /api/topics (Create Topic) ==="
+# Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
+TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"Diferenciação em R\", 
+    \"subject_id\": $NEW_SUBJECT_ID
+  }")
+
+echo "Response: $TOPIC_RESPONSE"
+TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
+echo "Created Topic ID: $TOPIC_ID"
+
+echo -e "\n=== TEST 12: GET /api/topics/{id} (Read Topic) ==="
+# Note: The PR implemented getting by NAME, not ID.
+curl -s -X GET "$API_BASE/topics/$TOPIC_ID" \
+  -H "Authorization: Bearer $REGENT_TOKEN" | jq
+
+echo -e "\n=== TEST 13: POST /api/questions (Create Question) ==="
+# Based on PR: {"topic_id": 1, "question_text": "Uma função é diferenciável se: "}
+QUESTION_RESPONSE=$(curl -s -X POST "$API_BASE/questions/" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"topic_id\": $TOPIC_ID,
+    \"question_text\": \"Uma função é diferenciável se: \"
+  }")
+
+echo "Response: $QUESTION_RESPONSE"
+QUESTION_ID=$(echo $QUESTION_RESPONSE | jq -r '.id')
+echo "Created Question ID: $QUESTION_ID"
+
+echo -e "\n=== TEST 14: POST /api/question-options (Create Option) ==="
+# Based on PR: {"question_id": 1, "option_text": "For contínua.", "value": false}
+OPTION_RESPONSE=$(curl -s -X POST "$API_BASE/question-options/" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"question_id\": $QUESTION_ID,
+    \"option_text\": \"For contínua.\",
+    \"value\": false
+  }")
+
+echo "Response: $OPTION_RESPONSE"
+
+echo -e "\n=== TEST 15: GET /api/questions/{id} (Verify Question & Options) ==="
+# Assuming GET question returns the question details
+curl -s -X GET "$API_BASE/questions/$QUESTION_ID" \
+  -H "Authorization: Bearer $REGENT_TOKEN" | jq
+
+# ==============================================================================
+# CLEANUP
+# ==============================================================================
+echo -e "\n=== CLEANUP: Delete Subject (Cascades to Topics/Questions) ==="
+curl -s -X DELETE "$API_BASE/subjects/$NEW_SUBJECT_ID" \
+  -H "Authorization: Bearer $MANAGER_TOKEN"
+
+echo "Cleanup complete."
+
 
 echo -e "\n\nDONE."
