@@ -29,7 +29,7 @@ async def create_question(
         #regent_info = await verify_regent_exists(current_user.user_id)
 
         # 2. Create the Topic in the local database
-        db_question = question.create_question(session,question_data)
+        db_question = await question.create_question(session,question_data)
 
         logger.info(f"Question '{db_question.question_text}' created in successfully with ID: {db_question.id}")
 
@@ -44,22 +44,21 @@ async def create_question(
             detail=str(ve)
         )
     except Exception as e:
-        # Handle other errors during creation
-        logger.error(f"Failed to create user {question_data.question_text} by regent {current_user.user_id}: {e}")
+        logger.error(f"Failed to create question '{question_data.question_text}': {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the user in Keycloak."
+            detail="An internal error occurred while creating the question."
         )
+
     
     
 @router.get("/{id}", response_model=QuestionPublic)
 async def get_question(
     id: int,
     session: AsyncSession = Depends(get_session)
-    # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Get topic info from provided id"""
-    result = question.get_question_by_id(session,id)
+    result = await question.get_question_by_id(session,id)
 
     if not result:
         raise HTTPException(status_code=404, detail="Question not found")
@@ -93,7 +92,7 @@ async def put_question(
         )
     except Exception as e:
         # Handle other errors during creation
-        logger.error(f"Failed to create user {question_data.question_text} by regent {current_user.user_id}: {e}")
+        logger.error(f"Failed to create user {question_data.question_text}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An error occurred while creating the user in Keycloak."
@@ -101,7 +100,7 @@ async def put_question(
 
 
 @router.delete("/{id}", response_model=str)
-async def put_question(
+async def delete_question(
     id: int,
     session: AsyncSession = Depends(get_session),
     #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists

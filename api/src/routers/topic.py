@@ -33,7 +33,7 @@ async def create_topic(
         #regent_info = await verify_regent_exists(current_user.user_id)
 
         # 2. Create the Topic in the local database
-        db_topic = question.create_question(session,topic_data)
+        db_topic = await topic.create_topic(session,topic_data)
 
         logger.info(f"Topic '{db_topic.name}' created in database with ID: {db_topic.id}")
 
@@ -60,12 +60,12 @@ async def create_topic(
 
 @router.get("/{id}", response_model=TopicPublic)
 async def read_topic(
-    topic_id: str,
+    id: int,
     session: AsyncSession = Depends(get_session)
 ):
     """Get topic info from provided name"""
     # FIX: Use select statement filtering by name
-    result = topic.get_topic_by_id(session,topic_id)
+    result = await topic.get_topic_by_id(session,id)
     
     if not result:
         raise HTTPException(status_code=404, detail="Topic not found")

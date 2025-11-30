@@ -242,9 +242,9 @@ echo "Response: $TOPIC_RESPONSE"
 TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
 echo "Created Topic ID: $TOPIC_ID"
 
-echo -e "\n=== TEST 12: GET /api/topics/{name} (Read Topic) ==="
+echo -e "\n=== TEST 12: GET /api/topics/{id} (Read Topic) ==="
 # Note: The PR implemented getting by NAME, not ID.
-curl -s -X GET "$API_BASE/topics/Diferenciação%20em%20R" \
+curl -s -X GET "$API_BASE/topics/$TOPIC_ID" \
   -H "Authorization: Bearer $REGENT_TOKEN" | jq
 
 echo -e "\n=== TEST 13: POST /api/questions (Create Question) ==="

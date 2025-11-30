@@ -2,7 +2,6 @@ from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
 
-
 # Question model
 class Question(SQLModel, table=True):
     __tablename__ = "question"

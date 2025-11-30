@@ -10,7 +10,7 @@ async def create_question(
     question_data: QuestionCreate
 ) -> QuestionPublic:
     """Create a new question"""
-    question = Question(question_data)
+    question = Question.model_validate(question_data)
     session.add(question)
     await session.commit()
     await session.refresh(question)
@@ -20,7 +20,8 @@ async def create_question(
 async def get_question_by_id(session: AsyncSession, question_id: int) -> Optional[QuestionPublic]:
     """Get a question by its ID"""
     statement = select(Question).where(Question.id == question_id)
-    result = await session.exec(statement).first()
+    result = await session.exec(statement)
+    result = result.one_or_none()
     return QuestionPublic.model_validate(result)
 
 
@@ -30,15 +31,13 @@ async def update_question(
 ) -> Optional[QuestionPublic]:
     """Update a question"""
     statement = select(Question).where(Question.id == question_data.id)
-    question = await session.exec(statement).first()
+    question = await session.exec(statement)
+    question = question.one_or_none()
 
     if not question:
             raise HTTPException(status_code=404, detail="Question not found")
     
-    # Update fields
-    for key, value in question_data.items():
-        if hasattr(question, key) and value is not None:
-            setattr(question, key, value)
+    question.sqlmodel_update(question_data)
     
     session.add(question)
     await session.commit()
@@ -49,7 +48,8 @@ async def update_question(
 async def delete_question(session: AsyncSession, question_id: int) -> bool:
     """Delete a question by ID"""
     statement = select(Question).where(Question.id == question_id)
-    question = await session.exec(statement).first()
+    question = await session.exec(statement)
+    question = question.one_or_none()
     
     if not question:
         return False

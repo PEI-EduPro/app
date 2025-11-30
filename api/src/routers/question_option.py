@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
-from api.src.services import question_option
+from src.services import question_option
 from src.models.question_option import QuestionOption, QuestionOptionCreate, QuestionOptionPublic
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, require_subject_regent, verify_regent_exists
@@ -21,9 +21,9 @@ async def create_question_option(
     """
     try:
         # Create the QuestionOption in the local database
-        db_question_option = question_option.create_question(session,question_option_data)
+        db_question_option = await question_option.create_question(session,question_option_data)
 
-        logger.info(f"Question option '{db_question_option.option_text}' created successfully with ID: {db_question_option.id}")  # Fixed logging
+        logger.info(f"Question option '{db_question_option.option_text}' ")  # Fixed logging
 
         # Return success response
         return db_question_option
