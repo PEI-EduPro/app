@@ -1,0 +1,211 @@
+#!/bin/bash
+
+# --- CONFIGURATION ---
+KC_URL="http://localhost:8080"
+API_URL="http://localhost:8000/api/subjects"
+REALM="master"
+CLIENT_ID="api-backend"
+CLIENT_SECRET="**********" # <--- PASTE SECRET HERE
+
+echo "--- 1. SETTING UP KEYCLOAK ADMIN ---"
+ADMIN_TOKEN=$(curl -s -X POST $KC_URL/realms/$REALM/protocol/openid-connect/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=admin" \
+  -d "password=admin" \
+  -d "grant_type=password" \
+  -d "client_id=admin-cli" | jq -r '.access_token')
+
+if [ "$ADMIN_TOKEN" == "null" ]; then echo "Failed to get Admin Token"; exit 1; fi
+
+# Function to create a user and return their ID
+create_user() {
+    USERNAME=$1
+    PASSWORD=$2
+    FIRST=$3
+    LAST=$4
+    
+    # Create User
+    curl -s -X POST $KC_URL/admin/realms/$REALM/users \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "{
+        \"username\": \"$USERNAME\",
+        \"email\": \"$USERNAME@example.com\",
+        \"firstName\": \"$FIRST\",
+        \"lastName\": \"$LAST\",
+        \"enabled\": true,
+        \"emailVerified\": true,
+        \"credentials\": [{ \"type\": \"password\", \"value\": \"$PASSWORD\", \"temporary\": false }]
+      }"
+    
+    # Get ID
+    USER_ID=$(curl -s -X GET "$KC_URL/admin/realms/$REALM/users?username=$USERNAME" \
+      -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.[0].id')
+    echo $USER_ID
+}
+
+# Function to assign a realm role to a user
+assign_role() {
+    USER_ID=$1
+    ROLE_NAME=$2
+    
+    # Get Role ID
+    ROLE_ID=$(curl -s -X GET "$KC_URL/admin/realms/$REALM/roles/$ROLE_NAME" \
+      -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.id')
+    
+    if [ "$ROLE_ID" == "null" ]; then
+        echo "Warning: Role '$ROLE_NAME' does not exist in Keycloak. Skipping assignment."
+        return
+    fi
+
+    # Assign Role
+    curl -s -X POST "$KC_URL/admin/realms/$REALM/users/$USER_ID/role-mappings/realm" \
+      -H "Authorization: Bearer $ADMIN_TOKEN" \
+      -H "Content-Type: application/json" \
+      -d "[{ \"id\": \"$ROLE_ID\", \"name\": \"$ROLE_NAME\" }]"
+    
+    echo "Role '$ROLE_NAME' assigned to user $USER_ID"
+}
+
+echo "--- 2. CREATING USERS ---"
+echo "Creating Manager..."
+MANAGER_ID=$(create_user "manager_user" "123" "Manager" "Boss")
+echo "Manager ID: $MANAGER_ID"
+
+echo "Creating Regent..."
+REGENT_ID=$(create_user "regent_user" "123" "Regent" "Teacher")
+echo "Regent ID: $REGENT_ID"
+
+echo "Creating Professor..."
+PROF_ID=$(create_user "prof_user" "123" "Professor" "Helper")
+echo "Professor ID: $PROF_ID"
+
+echo "Creating Student..."
+STUDENT_ID=$(create_user "student_user" "123" "Student" "Learner")
+echo "Student ID: $STUDENT_ID"
+
+echo "--- 3. ASSIGNING ROLES ---"
+assign_role $MANAGER_ID "manager"
+# Assign professor role to Regent and Professor
+assign_role $REGENT_ID "professor" 
+assign_role $PROF_ID "professor"
+# Assign student role to Student
+assign_role $STUDENT_ID "student"
+
+
+echo "--- 4. GETTING TOKENS ---"
+get_token() {
+    curl -s -X POST $KC_URL/realms/$REALM/protocol/openid-connect/token \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "username=$1" \
+    -d "password=$2" \
+    -d "grant_type=password" \
+    -d "client_id=$CLIENT_ID" \
+    -d "client_secret=$CLIENT_SECRET" | jq -r '.access_token'
+}
+
+MANAGER_TOKEN=$(get_token "manager_user" "123")
+REGENT_TOKEN=$(get_token "regent_user" "123")
+STUDENT_TOKEN=$(get_token "student_user" "123")
+
+echo "Tokens acquired."
+
+# ==============================================================================
+# API TESTS START HERE
+# ==============================================================================
+
+echo -e "\n\n=== TEST 1: POST /subject (Create Subject) ==="
+# Manager creates a subject and assigns regent_user
+RESPONSE=$(curl -s -X POST "$API_URL/" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"Math 101\",
+    \"regent_keycloak_id\": \"$REGENT_ID\"
+  }")
+
+echo "Response: $RESPONSE"
+SUBJECT_ID=$(echo $RESPONSE | jq -r '.id')
+echo "Created Subject ID: $SUBJECT_ID"
+
+echo -e "\n=== TEST 2: PUT /subject/{id} (Update Subject Name) ==="
+# Manager renames the subject
+curl -s -X PUT "$API_URL/$SUBJECT_ID" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Advanced Mathematics 101"
+  }' | jq
+
+echo -e "\n=== TEST 3: POST /subject/{id}/professors (Add Professor) ==="
+# Manager adds 'prof_user' with specific permissions
+curl -s -X POST "$API_URL/$SUBJECT_ID/professors" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"professor_keycloak_id\": \"$PROF_ID\",
+    \"edit_topics\": false,
+    \"edit_questions\": true,
+    \"view_question_bank\": true,
+    \"add_students\": false,
+    \"generate_exams\": false,
+    \"view_grades\": false,
+    \"auto_correct_exams\": false
+  }" | jq
+
+echo -e "\n=== TEST 4: PUT /subject/{id}/professors/{pid} (Update Permissions) ==="
+# Manager grants 'add_students' permission to the professor
+curl -s -X PUT "$API_URL/$SUBJECT_ID/professors/$PROF_ID" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "edit_questions": true,
+    "add_students": true
+  }' | jq
+
+echo -e "\n=== TEST 5: POST /subject/{id}/students (Add Student) ==="
+# Manager adds 'student_user' to the subject
+curl -s -X POST "$API_URL/$SUBJECT_ID/students" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"student_keycloak_ids\": [\"$STUDENT_ID\"]
+  }" | jq
+
+echo -e "\n=== TEST 6: GET /subject/{id}/students (View Students) ==="
+# Regent (not manager) tries to view students. Should succeed.
+echo "Requesting as Regent User..."
+REGENT_TOKEN=$(get_token "regent_user" "123")
+curl -s -X GET "$API_URL/$SUBJECT_ID/students" \
+  -H "Authorization: Bearer $REGENT_TOKEN" | jq
+
+echo -e "\n=== TEST 7: GET /subject (List access check) ==="
+echo "Manager View (Should see subject):"
+curl -s -X GET "$API_URL/" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" | jq
+
+echo "Student View (Should see subject because they were added):"
+# Note: We need to refresh the Student Token to see the new group claim!
+STUDENT_TOKEN_REFRESHED=$(get_token "student_user" "123")
+
+curl -s -X GET "$API_URL/" \
+  -H "Authorization: Bearer $STUDENT_TOKEN_REFRESHED" | jq
+
+echo -e "\n=== TEST 8: DELETE /subject/{id}/professors/{pid} (Remove Professor) ==="
+curl -s -X DELETE "$API_URL/$SUBJECT_ID/professors/$PROF_ID" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" 
+
+echo "Professor removed (No Content)."
+
+echo -e "\n=== TEST 9: DELETE /subject/{id} (Delete Subject) ==="
+# Delete the subject and cleanup Keycloak groups
+curl -s -X DELETE "$API_URL/$SUBJECT_ID" \
+  -H "Authorization: Bearer $MANAGER_TOKEN"
+
+echo "Subject Deleted (No Content)."
+
+echo -e "\n=== TEST 10: Verify Deletion ==="
+curl -s -X GET "$API_URL/" \
+  -H "Authorization: Bearer $MANAGER_TOKEN" | jq
+
+echo -e "\n\nDONE."

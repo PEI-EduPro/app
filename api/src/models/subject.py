@@ -1,6 +1,8 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
+from pydantic import BaseModel
 
+# --- Database Table ---
 class Subject(SQLModel, table=True):
     __tablename__ = "subject"
     
@@ -14,7 +16,8 @@ class SubjectUpdate(SQLModel):
     name: Optional[str]
     regent_id: Optional[str]
 
-class SubjectCreate(SQLModel):
+# Used for POST /subject input
+class SubjectCreateRequest(BaseModel):
     name: str
     regent_keycloak_id: str
 
