@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
+from src.services import question
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, require_subject_regent, verify_regent_exists
 from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
@@ -28,15 +29,12 @@ async def create_question(
         #regent_info = await verify_regent_exists(current_user.user_id)
 
         # 2. Create the Topic in the local database
-        db_question = Question.model_validate(question_data)
-        session.add(db_question)
-        await session.commit()
-        await session.refresh(db_question) # Get the auto-generated ID
+        db_question = question.create_question(session,question_data)
 
         logger.info(f"Question '{db_question.question_text}' created in successfully with ID: {db_question.id}")
 
         # Return success response
-        return QuestionPublic.model_validate(db_question)
+        return db_question
         
     except ValueError as ve:
         # Handle specific validation errors like user exists
@@ -61,10 +59,12 @@ async def get_question(
     # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Get topic info from provided id"""
-    result = await session.get(Question, id)
+    result = question.get_question_by_id(session,id)
+
     if not result:
         raise HTTPException(status_code=404, detail="Question not found")
-    return QuestionPublic.model_validate(result)
+    
+    return result
 
 
 @router.put("/{id}", response_model=QuestionPublic)
@@ -81,22 +81,8 @@ async def put_question(
         # Call the verification function explicitly here, now that we have current_user
         #regent_info = await verify_regent_exists(current_user.user_id)
 
-
-        statement = select(Question).where(Question.id == id)
-        results = await session.exec(statement)
-        question = results.one()
-
-        if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
-        
-        question.question_text = question_data.question_text
-        question.topic_id = question_data.topic_id
-        session.add(question)
-        session.commit()
-        session.refresh(question)
-
-        return QuestionPublic.model_validate(question)
-        
+        result = question.update_question(session,question_data)
+        return result
         
     except ValueError as ve:
         # Handle specific validation errors like user exists
@@ -128,24 +114,12 @@ async def put_question(
         #regent_info = await verify_regent_exists(current_user.user_id)
 
 
-        statement = select(Question).where(Question.id == id)
-        results = await session.exec(statement)
-        question = results.one()
+        result = question.delete_question(session,id)
 
-        if not question:
-            raise HTTPException(status_code=404, detail="Question not found")
-        
-        session.delete(question)
-        session.commit()
-
-        statement = select(Question).where(Question.id == id)
-        results = await session.exec(statement)
-        question = results.first()
-
-        if question is None:
+        if result:
             return "Question deleted successfully"
         else:
-            raise ValueError("question is not None")
+            raise ValueError("Question still exists.")
         
         
     except ValueError as ve:
