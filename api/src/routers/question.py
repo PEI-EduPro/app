@@ -1,5 +1,7 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
+from src.models.question_option import QuestionOptionPublic
 from src.services import question
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, require_subject_regent, verify_regent_exists
@@ -57,11 +59,24 @@ async def get_question(
     id: int,
     session: AsyncSession = Depends(get_session)
 ):
-    """Get topic info from provided id"""
+    """Get question info from provided id"""
     result = await question.get_question_by_id(session,id)
 
     if not result:
         raise HTTPException(status_code=404, detail="Question not found")
+    
+    return result
+
+@router.get("/{id}/question-options", response_model=List[QuestionOptionPublic])
+async def get_question(
+    id: int,
+    session: AsyncSession = Depends(get_session)
+):
+    """Get question options info from provided question id"""
+    result = await question.get_question_options_by_question_id(session,id)
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Question options not found")
     
     return result
 

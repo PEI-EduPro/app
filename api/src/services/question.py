@@ -1,9 +1,13 @@
+import logging
 from fastapi import HTTPException
+from pydantic import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.models.question_option import QuestionOption, QuestionOptionPublic
 from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
 from typing import Optional, List
 
+logger = logging.getLogger(__name__)
 
 async def create_question(
     session: AsyncSession,
@@ -57,3 +61,19 @@ async def delete_question(session: AsyncSession, question_id: int) -> bool:
     await session.delete(question)
     await session.commit()
     return True
+
+
+async def get_question_options_by_question_id(session: AsyncSession, question_id: int) -> Optional[List[QuestionOptionPublic]]:
+    """Retrieve question_options respective to provided question ID"""
+    statement = select(QuestionOption).where(QuestionOption.question_id == question_id)
+    result = await session.exec(statement)
+    items = result.all() 
+    
+    validated_items = []
+    for item in items:
+        try:
+            validated_item = QuestionOptionPublic.model_validate(item)
+            validated_items.append(validated_item)
+        except ValidationError as e:
+            logger.error(f"Validation error for item {item.id}: {e}")
+    return validated_items

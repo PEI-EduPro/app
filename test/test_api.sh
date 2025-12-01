@@ -274,7 +274,16 @@ OPTION_RESPONSE=$(curl -s -X POST "$API_BASE/question-options/" \
 
 echo "Response: $OPTION_RESPONSE"
 
-echo -e "\n=== TEST 15: GET /api/questions/{id} (Verify Question & Options) ==="
+echo -e "\n=== TEST 15: GET /api/questions/{id}/question-options (Professor Gets Options) ==="
+# Professor gets all options for a question
+PROF_TOKEN=$(get_token "prof_user" "123")
+RESPONSE=$(curl -s -X GET "$API_BASE/questions/$QUESTION_ID/question-options" \
+  -H "Authorization: Bearer $PROF_TOKEN")
+echo "Raw Response: $RESPONSE"
+echo "$RESPONSE" | jq 2>/dev/null || echo "Failed to parse JSON"
+
+
+echo -e "\n=== TEST 16: GET /api/questions/{id} (Verify Question & Options) ==="
 # Assuming GET question returns the question details
 curl -s -X GET "$API_BASE/questions/$QUESTION_ID" \
   -H "Authorization: Bearer $REGENT_TOKEN" | jq
