@@ -8,6 +8,7 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   getSortedRowModel,
+  getPaginationRowModel,
   type SortingState,
   useReactTable,
 } from "@tanstack/react-table"
@@ -29,6 +30,8 @@ const data: Subject[] = [
   { id: "1", name: "Arquiteturas" },
   { id: "2", name: "Definição de requisitos avançada" },
   { id: "3", name: "Introdução à tomada de decisão" },
+  { id: "4", name: "Engenharia de software" },
+  { id: "5", name: "Banco de dados" },
 ]
 
 export type Subject = {
@@ -37,9 +40,9 @@ export type Subject = {
 }
 
 export type TopicSelection = {
-  id: string;
-  name: string;
-};
+  id: string
+  name: string
+}
 
 // Table columns
 export const columns: ColumnDef<Subject>[] = [
@@ -47,12 +50,9 @@ export const columns: ColumnDef<Subject>[] = [
     id: "select",
     header: ({ table }) => {
       const allSelected = table.getIsAllPageRowsSelected()
-      //const someSelected = table.getIsSomePageRowsSelected()
-
       return (
         <Checkbox
-          checked={allSelected}                        // only true if all rows are selected
-          //indeterminate={someSelected && !allSelected} // dash if some (but not all) are selected
+          checked={allSelected}
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
         />
@@ -90,11 +90,13 @@ interface SubjectTableProps {
 export function SubjectTable({ selectedTopics, onChange }: SubjectTableProps) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
-
-  // Initialize rowSelection from selectedTopics
   const [rowSelection, setRowSelection] = React.useState(
     selectedTopics.reduce((acc, topic) => ({ ...acc, [topic.id]: true }), {})
   )
+
+  // Pagination state
+  const [pageIndex, setPageIndex] = React.useState(0)
+  const [pageSize, setPageSize] = React.useState(10)  // número de tópico por "página"
 
   const table = useReactTable({
     data,
@@ -103,24 +105,31 @@ export function SubjectTable({ selectedTopics, onChange }: SubjectTableProps) {
       sorting,
       columnFilters,
       rowSelection,
+      pagination: { pageIndex, pageSize },
     },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onRowSelectionChange: setRowSelection,
+    onPaginationChange: (updater) => {
+      const newPagination =
+        typeof updater === "function" ? updater({ pageIndex, pageSize }) : updater
+      setPageIndex(newPagination.pageIndex)
+      setPageSize(newPagination.pageSize)
+    },
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   })
 
-  // Sync rowSelection changes back to RHF - MOVED AFTER table declaration
+  // Sync selected rows back to parent
   React.useEffect(() => {
-    const selectedRows = table.getFilteredSelectedRowModel().rows;
-    const selectedTopics = selectedRows.map(row => ({
+    const selectedRows = table.getFilteredSelectedRowModel().rows
+    const selectedTopics = selectedRows.map((row) => ({
       id: row.original.id,
-      name: row.original.name
-    }));
-    
-    onChange(selectedTopics);
+      name: row.original.name,
+    }))
+    onChange(selectedTopics)
   }, [rowSelection, onChange, table])
 
   return (
@@ -130,9 +139,7 @@ export function SubjectTable({ selectedTopics, onChange }: SubjectTableProps) {
         <Input
           placeholder="Pesquisa por nome..."
           value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
-          onChange={(e) =>
-            table.getColumn("name")?.setFilterValue(e.target.value)
-          }
+          onChange={(e) => table.getColumn("name")?.setFilterValue(e.target.value)}
         />
       </div>
 
@@ -172,6 +179,33 @@ export function SubjectTable({ selectedTopics, onChange }: SubjectTableProps) {
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between space-x-2">
+        <Button
+          type="button"
+          className="bg-white text-black font-medium"
+          variant="outline"
+          size="sm"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          Anterior
+        </Button>
+        <span className="text-sm text-muted-foreground">
+          Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+        </span>
+        <Button
+          type="button"
+          className="bg-white text-black font-medium"
+          variant="outline"
+          size="sm"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          Próximo
+        </Button>
       </div>
 
       {/* Selection Info */}

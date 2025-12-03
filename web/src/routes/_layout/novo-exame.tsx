@@ -26,7 +26,7 @@ function NovoExame() {
         Novo Exame
       </div>
       <div className="flex flex-col items-center">
-        <div className="w-[450px] h-auto">
+        <div className="w-[700px] h-auto">
           <NovoExameForm />
         </div>
       </div>
