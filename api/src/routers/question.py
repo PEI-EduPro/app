@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from src.services import question
@@ -11,9 +12,9 @@ import logging
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/", response_model=QuestionPublic)#, dependencies=[Depends(require_subject_regent)])
+@router.post("/", response_model=List[QuestionPublic])#, dependencies=[Depends(require_subject_regent)])
 async def create_question(
-    question_data: QuestionCreate,
+    question_data: List[QuestionCreate],
     #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
     session: AsyncSession = Depends(get_session)
 ):
@@ -29,12 +30,13 @@ async def create_question(
         #regent_info = await verify_regent_exists(current_user.user_id)
 
         # 2. Create the Topic in the local database
-        db_question = await question.create_question(session,question_data)
+        db_questions = await question.create_question(session,question_data)
 
-        logger.info(f"Question '{db_question.question_text}' created in successfully with ID: {db_question.id}")
+        question_ids = [q.id for q in db_questions]
+        logger.info(f"Created {len(db_questions)} questions successfully with IDs: {question_ids}")
 
         # Return success response
-        return db_question
+        return db_questions
         
     except ValueError as ve:
         # Handle specific validation errors like user exists

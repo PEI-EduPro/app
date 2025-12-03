@@ -247,19 +247,31 @@ echo -e "\n=== TEST 12: GET /api/topics/{id} (Read Topic) ==="
 curl -s -X GET "$API_BASE/topics/$TOPIC_ID" \
   -H "Authorization: Bearer $REGENT_TOKEN" | jq
 
-echo -e "\n=== TEST 13: POST /api/questions (Create Question) ==="
-# Based on PR: {"topic_id": 1, "question_text": "Uma função é diferenciável se: "}
+echo -e "\n=== TEST 13: POST /api/questions (Create Multiple Questions) ==="
+# Create multiple questions at once
 QUESTION_RESPONSE=$(curl -s -X POST "$API_BASE/questions/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"topic_id\": $TOPIC_ID,
-    \"question_text\": \"Uma função é diferenciável se: \"
-  }")
+  -d "[
+    {
+      \"topic_id\": $TOPIC_ID,
+      \"question_text\": \"Uma função é diferenciável se: \"
+    },
+    {
+      \"topic_id\": $TOPIC_ID,
+      \"question_text\": \"O limite de uma função existe quando: \"
+    },
+    {
+      \"topic_id\": $TOPIC_ID,
+      \"question_text\": \"Uma função contínua é aquela que: \"
+    }
+  ]")
 
 echo "Response: $QUESTION_RESPONSE"
-QUESTION_ID=$(echo $QUESTION_RESPONSE | jq -r '.id')
-echo "Created Question ID: $QUESTION_ID"
+# Extract the first question ID for later tests
+QUESTION_ID=$(echo $QUESTION_RESPONSE | jq -r '.[0].id')
+echo "Created Questions. First Question ID: $QUESTION_ID"
+echo "All Question IDs: $(echo $QUESTION_RESPONSE | jq -r '.[].id')"
 
 echo -e "\n=== TEST 14: POST /api/question-options (Create Option) ==="
 # Based on PR: {"question_id": 1, "option_text": "For contínua.", "value": false}

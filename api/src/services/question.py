@@ -7,14 +7,18 @@ from typing import Optional, List
 
 async def create_question(
     session: AsyncSession,
-    question_data: QuestionCreate
-) -> QuestionPublic:
+    question_data: List[QuestionCreate]
+) -> List[QuestionPublic]:
     """Create a new question"""
-    question = Question.model_validate(question_data)
-    session.add(question)
+    questions = [Question.model_validate(x) for x in question_data]
+    
+    session.add_all(questions)  # More efficient than individual adds
     await session.commit()
-    await session.refresh(question)
-    return QuestionPublic.model_validate(question)
+    
+    for question in questions:
+        await session.refresh(question)
+    
+    return [QuestionPublic.model_validate(q) for q in questions]
 
 
 async def get_question_by_id(session: AsyncSession, question_id: int) -> Optional[QuestionPublic]:
