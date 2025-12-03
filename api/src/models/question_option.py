@@ -13,7 +13,7 @@ class QuestionOption(SQLModel, table=True):
     order_position: Optional[int] = Field(default=None)  # For displaying options in specific order
     
     # Relationships
-    question: "Question" = Relationship(back_populates="options")
+    question: "Question" = Relationship(back_populates="question_options")
 
 # QuestionOption schemas
 class QuestionOptionCreate(SQLModel):

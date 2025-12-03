@@ -228,7 +228,7 @@ echo "New Subject ID: $NEW_SUBJECT_ID"
 # NEW FEATURE TESTS (Topics -> Questions -> Options)
 # ==============================================================================
 
-echo -e "\n=== TEST 11: POST /api/topics (Create Topic) ==="
+echo -e "\n=== TEST 11.1: POST /api/topics (Create Topic) ==="
 # Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
 TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -241,6 +241,60 @@ TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
 echo "Response: $TOPIC_RESPONSE"
 TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
 echo "Created Topic ID: $TOPIC_ID"
+
+echo -e "\n=== TEST 11.2: POST /api/topics (Create Topic) ==="
+# Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
+TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"Integracao\", 
+    \"subject_id\": $NEW_SUBJECT_ID
+  }")
+
+echo "Response: $TOPIC_RESPONSE"
+TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
+echo "Created Topic ID: $TOPIC_ID"
+
+echo -e "\n=== TEST 11.3: POST /api/topics (Create Topic) ==="
+# Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
+TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"name\": \"Transformadas de Laplace\", 
+    \"subject_id\": $NEW_SUBJECT_ID
+  }")
+
+echo "Response: $TOPIC_RESPONSE"
+TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
+echo "Created Topic ID: $TOPIC_ID"
+
+echo -e "\n=== TEST 11.4: POST /api/exams/generate (Create Exam Config) ==="
+# Create exam configuration with the three topics created above
+EXAM_RESPONSE=$(curl -s -X POST "$API_BASE/exams/generate" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"subject_id\": $NEW_SUBJECT_ID,
+    \"fraction\": -20,
+    \"topics\": [\"Diferenciação em R\", \"Integracao\", \"Transformadas de Laplace\"],
+    \"number_questions\": {
+      \"Diferenciação em R\": 1,
+      \"Integracao\": 2,
+      \"Transformadas de Laplace\": 3
+    },
+    \"relative_quotations\": {
+      \"Diferenciação em R\": 1,
+      \"Integracao\": 2,
+      \"Transformadas de Laplace\": 2
+    }
+  }")
+
+echo "Response: $EXAM_RESPONSE"
+EXAM_CONFIG_ID=$(echo $EXAM_RESPONSE | jq -r '.id // .exam_config_id // .')
+echo "Created Exam Config ID: $EXAM_CONFIG_ID"
+
 
 echo -e "\n=== TEST 12: GET /api/topics/{id} (Read Topic) ==="
 # Note: The PR implemented getting by NAME, not ID.

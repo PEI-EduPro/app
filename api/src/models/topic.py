@@ -12,11 +12,12 @@ class Topic(SQLModel, table=True):
     
     # Relationships
     subject: "Subject" = Relationship(back_populates="topics")
+    topic_configs: List["TopicConfig"] = Relationship(back_populates="topic")
+
     questions: List["Question"] = Relationship(
         back_populates="topic",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
-    )    
-    exam_configs: List["ExamConfig"] = Relationship(back_populates="topic")
+    )
 
 # Workbook schemas
 class TopicCreate(SQLModel):
