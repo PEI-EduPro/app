@@ -59,7 +59,7 @@ async def generate_exams(
     
 
 @router.post("/generate-XML", response_model=str)#, dependencies=[Depends(require_subject_regent)])
-async def generate_exams(
+async def generate_exams_XML(
     exam_specs: dict, # Receive the request body data
     session: AsyncSession = Depends(get_session),
     #current_user: User = Depends(get_current_user_info)
