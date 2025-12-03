@@ -16,6 +16,16 @@ import "@/components/ui/table"
 import "@/components/topic-check-box"
 import { SubjectTable } from "@/components/topic-check-box";
 
+// Structure
+interface NovoExameI {
+  topics: Record<number,  {
+    number_questions: number,
+    relative_quotation: number
+  }>,
+  fraction: number,
+  number_exams: number
+}
+
 type TopicSelection = {
   id: string;
   name: string;
@@ -47,7 +57,6 @@ export const NovoExameForm = () => {
   const { handleSubmit, control, reset, watch, setValue, getValues } = form;
 
   const validateAndNormalizeData = (formData: NovoExameFormT): NovoExameFormT => {
-    // Create a copy of the form data
     const validated: NovoExameFormT = {
       ...formData,
       number_exams: formData.number_exams && formData.number_exams >= 1 
@@ -60,15 +69,12 @@ export const NovoExameForm = () => {
       relative_quotations: { ...formData.relative_quotations }
     };
 
-    // Ensure all topics have valid values
     formData.topics?.forEach(topic => {
-      // Validate number of questions
       const currentNumQuestions = validated.number_questions[topic.id];
       if (!currentNumQuestions || currentNumQuestions < 1 || isNaN(currentNumQuestions)) {
         validated.number_questions[topic.id] = 1;
       }
 
-      // Validate relative quotations
       const currentRelQuotation = validated.relative_quotations[topic.id];
       if (!currentRelQuotation || currentRelQuotation < 1 || isNaN(currentRelQuotation)) {
         validated.relative_quotations[topic.id] = 1;
@@ -82,21 +88,17 @@ export const NovoExameForm = () => {
     const currentStep = formStep;
     const formData = getValues();
     
-    // If moving to step 4 (summary page), validate and normalize data first
     if (currentStep === 3) {
       const validated = validateAndNormalizeData(formData);
       setValidatedData(validated);
       
-      // Update form with validated values to ensure consistency
       setValue("number_exams", validated.number_exams);
       setValue("fraction", validated.fraction);
       
-      // Update number questions
       Object.keys(validated.number_questions).forEach(key => {
         setValue(`number_questions.${key}`, validated.number_questions[key]);
       });
       
-      // Update relative quotations
       Object.keys(validated.relative_quotations).forEach(key => {
         setValue(`relative_quotations.${key}`, validated.relative_quotations[key]);
       });
@@ -110,17 +112,31 @@ export const NovoExameForm = () => {
   };
 
   const onSubmit = async (formData: NovoExameFormT) => {
-    // Use validatedData if available (from summary page), otherwise validate now
     const finalData = validatedData || validateAndNormalizeData(formData);
     
-    console.log("Form submitted:", finalData);
+    const novoExameData: NovoExameI = {
+      topics: {},
+      fraction: finalData.fraction,
+      number_exams: finalData.number_exams
+    };
+
+    finalData.topics.forEach(topic => {
+      const topicId = parseInt(topic.id);
+      if (!isNaN(topicId)) {
+        novoExameData.topics[topicId] = {
+          number_questions: finalData.number_questions[topic.id] || 1,
+          relative_quotation: finalData.relative_quotations[topic.id] || 1
+        };
+      }
+    });
+
+    console.log("Form submitted (transformed):", novoExameData);
     setFormStep(0);
     setValidatedData(null);
     reset();
     toast.success("Exame criado com sucesso!");
   };
 
-  // Helper to get data for display - uses validated data on summary page
   const getDisplayData = () => {
     if (formStep === 4 && validatedData) {
       return validatedData;
@@ -210,36 +226,52 @@ export const NovoExameForm = () => {
                     <FormItem key={topic.id} className="flex items-center gap-x-4">
                       <FormLabel className="flex-shrink-0 w-140">{topic.name}</FormLabel>
                       <FormControl className="flex-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="1"
-                          value={watch(`number_questions.${topic.id}`) || ""}
-                          onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            setValue(`number_questions.${topic.id}`, isNaN(value) || value < 1 ? 1 : value)
-                          }}
-                          onBlur={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (isNaN(value) || value < 1) {
-                              setValue(`number_questions.${topic.id}`, 1);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              !/[0-9]/.test(e.key) &&
-                              ![
-                                'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
-                                'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
-                                'Home', 'End'
-                              ].includes(e.key) &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="1"
+                        value={watch(`number_questions.${topic.id}`) || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          
+                          // Allow empty value for backspacing
+                          if (value === "") {
+                            setValue(`number_questions.${topic.id}`, NaN);
+                            return;
+                          }
+                          
+                          const numValue = parseInt(value);
+                          setValue(`number_questions.${topic.id}`, isNaN(numValue) || numValue < 1 ? 1 : numValue);
+                        }}
+                        onBlur={(e) => {
+                          const value = e.target.value;
+                          
+                          // Only validate and set to 1 on blur if empty
+                          if (value === "") {
+                            setValue(`number_questions.${topic.id}`, 1);
+                            return;
+                          }
+                          
+                          const numValue = parseInt(value);
+                          if (isNaN(numValue) || numValue < 1) {
+                            setValue(`number_questions.${topic.id}`, 1);
+                          }
+                        }}
+                        onKeyDown={(e) => {
+                          if (
+                            !/[0-9]/.test(e.key) &&
+                            ![
+                              'Backspace', 'Delete', 'Tab', 'Escape', 'Enter',
+                              'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+                              'Home', 'End'
+                            ].includes(e.key) &&
+                            !e.ctrlKey &&
+                            !e.metaKey
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
+                      />
                       </FormControl>
                     </FormItem>
                   ))}
@@ -287,12 +319,28 @@ export const NovoExameForm = () => {
                           placeholder="1"
                           value={watch(`relative_quotations.${topic.id}`) || ""}
                           onChange={(e) => {
-                            const value = parseInt(e.target.value);
-                            setValue(`relative_quotations.${topic.id}`, isNaN(value) || value < 1 ? 1 : value)
+                            const value = e.target.value;
+                            
+                            // Allow empty value for backspacing
+                            if (value === "") {
+                              setValue(`relative_quotations.${topic.id}`, NaN);
+                              return;
+                            }
+                            
+                            const numValue = parseInt(value);
+                            setValue(`relative_quotations.${topic.id}`, isNaN(numValue) || numValue < 1 ? 1 : numValue);
                           }}
                           onBlur={(e) => {
-                            const value = parseInt(e.target.value);
-                            if (isNaN(value) || value < 1) {
+                            const value = e.target.value;
+                            
+                            // Only validate and set to 1 on blur if empty
+                            if (value === "") {
+                              setValue(`relative_quotations.${topic.id}`, 1);
+                              return;
+                            }
+                            
+                            const numValue = parseInt(value);
+                            if (isNaN(numValue) || numValue < 1) {
                               setValue(`relative_quotations.${topic.id}`, 1);
                             }
                           }}
@@ -360,7 +408,7 @@ export const NovoExameForm = () => {
                   <FormField
                     control={control}
                     name="number_exams"
-                    render={({ field }) => (
+                    render={() => (
                       <FormItem className="flex items-center gap-x-4">
                         <FormLabel className="flex-shrink-0 w-140">
                           Número de exames
@@ -370,20 +418,31 @@ export const NovoExameForm = () => {
                             type="number"
                             min="1"
                             placeholder="1"
-                            value={field.value || ""}
+                            value={watch(`number_exams`) || ""}
                             onChange={(e) => {
-                              let value = parseInt(e.target.value);
+                              const value = e.target.value;
                               
-                              if (isNaN(value) || value < 1) {
-                                field.onChange(1);
-                              } else {
-                                field.onChange(value);
+                              // Allow empty value for backspacing
+                              if (value === "") {
+                                setValue(`number_exams`, NaN);
+                                return;
                               }
+                              
+                              const numValue = parseInt(value);
+                              setValue(`number_exams`, isNaN(numValue) || numValue < 1 ? 1 : numValue);
                             }}
                             onBlur={(e) => {
-                              const value = parseInt(e.target.value);
-                              if (isNaN(value) || value < 1) {
-                                field.onChange(1);
+                              const value = e.target.value;
+                              
+                              // Only validate and set to 1 on blur if empty
+                              if (value === "") {
+                                setValue(`number_exams`, 1);
+                                return;
+                              }
+                              
+                              const numValue = parseInt(value);
+                              if (isNaN(numValue) || numValue < 1) {
+                                setValue(`number_exams`, 1);
                               }
                             }}
                             onKeyDown={(e) => {
