@@ -26,7 +26,7 @@ router = APIRouter()
 
 async def verify_manager_or_regent(subject_id: int, user_info: User):
     """
-    Helper to enforce Manager or Regent access.
+    Helper to enforce Manager or estimate=628Regent access.
     Uses dot notation for the Pydantic User object.
     """
     username = user_info.username

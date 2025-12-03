@@ -12,7 +12,7 @@ class Question(SQLModel, table=True):
     
     # Relationships
     topic: "Topic" = Relationship(back_populates="questions")
-    options: List["QuestionOption"] = Relationship(
+    question_options: List["QuestionOption"] = Relationship(
         back_populates="question",
         sa_relationship_kwargs={"cascade": "all, delete-orphan"}
     )
