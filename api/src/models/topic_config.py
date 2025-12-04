@@ -4,19 +4,20 @@ from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
 
 
-# ExamConfig model
-class ExamConfig(SQLModel, table=True):
-    __tablename__ = "exam_config"
+# TopicConfig model
+class TopicConfig(SQLModel, table=True):
+    __tablename__ = "topic_config"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Replace foreign key to local 'professor' table with Keycloak user ID
-    creator_keycloak_id: str = Field(max_length=255) # Store the Keycloak ID of the creator
-    fraction: int = Field(default=0)
-    subject_id: int = Field(foreign_key="subject.id")
+    topic_id: int = Field(foreign_key="topic.id")
+    exam_config_id: int = Field(foreign_key="exam_config.id")
+    creator_keycloak_id: str = Field(max_length=255)
+    num_questions: int
+    relative_weight: float = Field(default=1.0)
     
-    topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
-                                                     sa_relationship_kwargs={"cascade": "all, delete-orphan"})
-    exams: List["Exam"] = Relationship(back_populates="exam_config")
+    # Relationships
+    topic: "Topic" = Relationship(back_populates="topic_configs")
+    exam_config: "ExamConfig" = Relationship(back_populates="topic_configs")
 
 # ExamConfig schemas
 class ExamConfigCreate(SQLModel):
@@ -40,7 +41,9 @@ class ExamConfigRead(SQLModel):
     id: int
     topic_id: int
     creator_keycloak_id: str  # Use Keycloak ID instead of local professor ID
+    num_questions: int
     fraction: int
+    relative_weight: float
 
 class ExamConfigPublic(SQLModel):
     """Schema for public exam config data (limited info)"""

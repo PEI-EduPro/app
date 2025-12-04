@@ -8,7 +8,7 @@ export const Route = createFileRoute("/")({
 function Index() {
   return (
     <div className="flex flex-col gap-[120px] mt-[170px]">
-      <h1 className="text-5xl font-semibold text-center mb-20">
+      <h1 className="font-rubik text-5xl font-semibold text-center mb-20">
         Bem-vind@ ao EduPro
       </h1>
       <div className="flex items-start justify-center gap-24 h-[360px]">

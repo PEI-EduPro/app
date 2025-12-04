@@ -1,11 +1,11 @@
+import asyncio
 import logging
+import jwt
+
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-import jwt
-from keycloak import KeycloakOpenID
-from src.core.settings import settings
 from src.core.keycloak import keycloak_client
-import asyncio
+from src.models.user import User
 
 logger = logging.getLogger(__name__)
 security = HTTPBearer()
@@ -39,38 +39,34 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
     # groups = user_info.get("groups", groups) # Fallback or additional check
 
     logger.info(f"Authenticated user: {username}, roles: {realm_roles}, groups: {groups}")
-    return {
-        "id": user_id,
-        "username": username,
-        "email": email,
-        "realm_roles": realm_roles,
-        "groups": groups,
-    }
+    user = User(user_id=user_id,username=username,email=email,realm_roles=realm_roles,groups=groups)
 
+    return user
+    
 
 def require_role(role_name: str):
     """Dependency factory to require a specific realm role"""
-    async def role_check(user_info: dict = Depends(get_current_user_info)):
-        if role_name not in user_info.get("realm_roles", []):
-            logger.warning(f"User {user_info['username']} lacks required role: {role_name}")
+    async def role_check(user_info: User = Depends(get_current_user_info)):
+        # CHANGE: Use dot notation .realm_roles instead of .get("realm_roles")
+        if role_name not in user_info.realm_roles:
+            logger.warning(f"User {user_info.username} lacks required role: {role_name}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires {role_name} role"
             )
-        logger.info(f"User {user_info['username']} has required role: {role_name}")
         return user_info
     return role_check
 
 def require_group(group_name: str):
     """Dependency factory to require a specific group membership"""
-    async def group_check(user_info: dict = Depends(get_current_user_info)):
-        if group_name not in user_info.get("groups", []):
-            logger.warning(f"User {user_info['username']} is not in required group: {group_name}")
+    async def group_check(user_info: User = Depends(get_current_user_info)):
+        # CHANGE: Use dot notation .groups instead of .get("groups")
+        if group_name not in user_info.groups:
+            logger.warning(f"User {user_info.username} is not in required group: {group_name}")
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Requires membership in group {group_name}"
             )
-        logger.info(f"User {user_info['username']} is in required group: {group_name}")
         return user_info
     return group_check
 

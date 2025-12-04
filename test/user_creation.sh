@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# This shit is outdated as fuck, it is not recommended to use.
+# Use the other testing scripts.
+
 echo "=== Complete User Authentication Test (Keycloak-Centric) ==="
 
 # Colors
@@ -35,7 +38,7 @@ fi
 
 # Step 2: Create New User in Keycloak
 echo -e "\n${YELLOW}2. Creating New User in Keycloak...${NC}"
-USER_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/admin/realms/EduPro/users \
+USER_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST http://localhost:8080/admin/realms/master/users \
   -H "Authorization: Bearer $ADMIN_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -68,7 +71,7 @@ else
     echo -e "${RED}✗ User creation failed in Keycloak (HTTP $HTTP_CODE)${NC}"
     if [ "$HTTP_CODE" = "409" ]; then
         echo "Note: User might already exist (HTTP 409). This is okay for testing authentication flow."
-        EXISTING_USER_ID=$(curl -s -X GET "http://localhost:8080/admin/realms/EduPro/users?username=newstudent" \
+        EXISTING_USER_ID=$(curl -s -X GET "http://localhost:8080/admin/realms/master/users?username=newstudent" \
           -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.[0].id')
         if [ -n "$EXISTING_USER_ID" ] && [ "$EXISTING_USER_ID" != "null" ]; then
              USER_LOCATION=$EXISTING_USER_ID
@@ -84,11 +87,11 @@ fi
 
 # Step 2.5: Assign 'student' role
 echo -e "\n${YELLOW}2.5. Assigning 'student' role to user in Keycloak...${NC}"
-ROLE_ID=$(curl -s -X GET "http://localhost:8080/admin/realms/EduPro/roles/student" \
+ROLE_ID=$(curl -s -X GET "http://localhost:8080/admin/realms/master/roles/student" \
   -H "Authorization: Bearer $ADMIN_TOKEN" | jq -r '.id')
 
 if [ -n "$ROLE_ID" ] && [ "$ROLE_ID" != "null" ]; then
-    ASSIGN_ROLE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://localhost:8080/admin/realms/EduPro/users/$USER_LOCATION/role-mappings/realm" \
+    ASSIGN_ROLE_RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "http://localhost:8080/admin/realms/master/users/$USER_LOCATION/role-mappings/realm" \
       -H "Authorization: Bearer $ADMIN_TOKEN" \
       -H "Content-Type: application/json" \
       --data "[{\"id\":\"$ROLE_ID\",\"name\":\"student\"}]")
@@ -106,7 +109,7 @@ fi
 
 # Step 3: Get Token as New User from Keycloak
 echo -e "\n${YELLOW}3. Getting Token as New User from Keycloak...${NC}"
-USER_TOKEN_RESPONSE=$(curl -s -X POST http://localhost:8080/realms/EduPro/protocol/openid-connect/token \
+USER_TOKEN_RESPONSE=$(curl -s -X POST http://localhost:8080/realms/master/protocol/openid-connect/token \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=newstudent" \
   -d "password=newpassword123" \
