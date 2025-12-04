@@ -23,6 +23,7 @@ import {
   SelectItem,
   SelectValue,
 } from "./ui/select";
+import { useAddUc } from "@/hooks/use-ucs";
 
 type NovaUCFormT = {
   nome: string;
@@ -36,6 +37,7 @@ type NovaUCFormT = {
 export function NovaUCForm() {
   const [formStep, setFormStep] = useState<number>(0);
   const totalSteps = 3;
+  const { mutate, isError } = useAddUc();
 
   const form = useForm<NovaUCFormT>({
     defaultValues: {
@@ -50,11 +52,12 @@ export function NovaUCForm() {
 
   const { handleSubmit, control, reset, watch, formState } = form;
 
-  const onSubmit = async (formData: unknown) => {
+  const onSubmit = async (formData: NovaUCFormT) => {
     console.log(formData);
+    mutate({ name: formData.nome });
+    if (isError) toast.error("An error occoured, please try again later");
     setFormStep(0);
     reset();
-    toast.success("Form successfully submitted");
   };
 
   const options = [
