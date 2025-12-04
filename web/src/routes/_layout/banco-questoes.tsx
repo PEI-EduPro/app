@@ -1,0 +1,409 @@
+import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { Card } from "@/components/ui/card";
+import { createFileRoute } from "@tanstack/react-router";
+import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import TopicModal from "@/components/TopicModal";
+import QuestionModal from "@/components/QuestionModal";
+
+export const Route = createFileRoute("/_layout/banco-questoes")({
+  component: BancoQuestões,
+});
+
+interface Question {
+  id: number;
+  text: string;
+  options: Record<number, string>; // Changed to generic record
+  answer: number;
+}
+
+interface Topic {
+  id: number;
+  name: string;
+  questions: Record<number, Question>;
+  isOpen: boolean;
+}
+
+function BancoQuestões() {
+  const [topics, setTopics] = useState<Topic[]>([
+    {
+      id: 1,
+      name: "Testes Unitários",
+      questions: {
+        1: {
+          id: 1,
+          text: "Quantos anos tenho?",
+          options: {
+            1: "10",
+            2: "20",
+            3: "30",
+            4: "40"
+          },
+          answer: 1
+        }
+      },
+      isOpen: false
+    },
+    {
+      id: 2,
+      name: "Testes de Integração",
+      questions: {
+        1: {
+          id: 1,
+          text: "Quantas cadeiras chumbaste?",
+          options: {
+            1: "3",
+            2: "6",
+            3: "9",
+            4: "12"
+          },
+          answer: 3
+        }
+      },
+      isOpen: false
+    }
+  ]);
+
+  const [showTopicModal, setShowTopicModal] = useState(false);
+  const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<{
+    topicId: number;
+    question: Question;
+  } | null>(null);
+  const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
+
+  // Topic CRUD operations
+  const handleCreateTopic = (name: string) => {
+    const newTopic: Topic = {
+      id: Date.now(),
+      name,
+      questions: {},
+      isOpen: false
+    };
+    setTopics([...topics, newTopic]);
+  };
+
+  const handleUpdateTopic = (id: number, name: string) => {
+    setTopics(topics.map(topic => 
+      topic.id === id ? { ...topic, name } : topic
+    ));
+  };
+
+  const handleDeleteTopic = (id: number) => {
+    if (confirm("Tem certeza que deseja excluir este tópico e todas as suas questões?")) {
+      setTopics(topics.filter(topic => topic.id !== id));
+    }
+  };
+
+  // Question CRUD operations
+  const handleCreateQuestion = (topicId: number, question: Omit<Question, "id">) => {
+    setTopics(topics.map(topic => {
+      if (topic.id === topicId) {
+        const newId = Math.max(0, ...Object.keys(topic.questions).map(Number)) + 1;
+        return {
+          ...topic,
+          questions: {
+            ...topic.questions,
+            [newId]: { ...question, id: newId }
+          }
+        };
+      }
+      return topic;
+    }));
+  };
+
+  const handleUpdateQuestion = (topicId: number, questionId: number, question: Omit<Question, "id">) => {
+    setTopics(topics.map(topic => {
+      if (topic.id === topicId) {
+        return {
+          ...topic,
+          questions: {
+            ...topic.questions,
+            [questionId]: { ...question, id: questionId }
+          }
+        };
+      }
+      return topic;
+    }));
+  };
+
+  const handleDeleteQuestion = (topicId: number, questionId: number) => {
+    if (confirm("Tem certeza que deseja excluir esta questão?")) {
+      setTopics(topics.map(topic => {
+        if (topic.id === topicId) {
+          const { [questionId]: _, ...remainingQuestions } = topic.questions;
+          return { ...topic, questions: remainingQuestions };
+        }
+        return topic;
+      }));
+    }
+  };
+
+  const toggleTopic = (topicId: number) => {
+    setTopics(topics.map(topic => 
+      topic.id === topicId ? { ...topic, isOpen: !topic.isOpen } : topic
+    ));
+  };
+
+  const closeAllTopics = () => {
+    setTopics(topics.map(topic => ({ ...topic, isOpen: false })));
+  };
+
+  return (
+    <div className="py-3.5 px-6 w-full">
+      <AppBreadcrumb
+        page="Banco de Questões"
+        crumbs={[
+          {
+            name: "Unidades Curriculares",
+            link: "/unidades-curriculares",
+          },
+        ]}
+      />
+      <div className="flex justify-center mb-8">
+        <div className="text-center">
+          <div className="text-5xl">
+            UNIDADE CURRICULAR
+          </div>
+          <h1 className="text-3xl mt-4 text-[#3263A8]">
+            Banco de questões
+          </h1>
+        </div>
+      </div>
+
+      {/* Add Topic Button */}
+      <div className="flex justify-end mb-6">
+        <button
+          onClick={() => {
+            closeAllTopics();
+            setShowTopicModal(true);
+          }}
+          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors"
+        >
+          <Plus size={20} />
+          Adicionar Tópico
+        </button>
+      </div>
+
+      {/* Topics List - One per line */}
+      <div className="space-y-4">
+        {topics.map(topic => (
+          <Card key={topic.id} className="overflow-hidden">
+            {/* Topic Header */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+              <div 
+                className="flex items-center gap-3 flex-1"
+                onClick={() => toggleTopic(topic.id)}
+              >
+                {topic.isOpen ? (
+                  <ChevronDown size={20} className="text-gray-500" />
+                ) : (
+                  <ChevronRight size={20} className="text-gray-500" />
+                )}
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold text-gray-800">
+                    {topic.name}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    {Object.keys(topic.questions).length} {Object.keys(topic.questions).length === 1 ? 'questão' : 'questões'}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditingTopic(topic);
+                    setShowTopicModal(true);
+                  }}
+                  className="text-gray-600 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
+                  title="Editar tópico"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteTopic(topic.id);
+                  }}
+                  className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
+                  title="Excluir tópico"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Questions Content (Collapsible) */}
+            {topic.isOpen && (
+              <div className="p-4 border-t">
+                {Object.keys(topic.questions).length === 0 ? (
+                  <div className="text-center py-6 text-gray-500">
+                    <p className="mb-3">Nenhuma questão criada neste tópico</p>
+                    <button
+                      onClick={() => {
+                        setSelectedTopicId(topic.id);
+                        setShowQuestionModal(true);
+                      }}
+                      className="text-[#3263A8] hover:text-[#2a5390] font-medium text-sm"
+                    >
+                      Criar primeira questão
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {Object.entries(topic.questions).map(([id, question]) => (
+                      <QuestionItem
+                        key={question.id}
+                        question={question}
+                        topicId={topic.id}
+                        onEdit={() => {
+                          setEditingQuestion({
+                            topicId: topic.id,
+                            question
+                          });
+                          setShowQuestionModal(true);
+                        }}
+                        onDelete={() => handleDeleteQuestion(topic.id, question.id)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-center">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeAllTopics();
+                  setSelectedTopicId(topic.id);
+                  setShowQuestionModal(true);
+                }}
+                className="w-fit flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors"
+              >
+                <Plus size={16} />
+                Adicionar Questão
+              </button>
+            </div>
+          </Card>
+        ))}
+        
+        {/* Empty state */}
+        {topics.length === 0 && (
+          <Card className="p-8 border-dashed border-2 text-center">
+            <p className="text-gray-500 mb-4">Nenhum tópico criado ainda</p>
+            <button
+              onClick={() => setShowTopicModal(true)}
+              className="text-[#3263A8] hover:text-[#2a5390] font-medium"
+            >
+              Criar primeiro tópico
+            </button>
+          </Card>
+        )}
+      </div>
+
+      {/* Modals */}
+      <TopicModal
+        isOpen={showTopicModal}
+        onClose={() => {
+          setShowTopicModal(false);
+          setEditingTopic(null);
+        }}
+        onCreate={handleCreateTopic}
+        onUpdate={handleUpdateTopic}
+        editingTopic={editingTopic}
+      />
+
+      <QuestionModal
+        isOpen={showQuestionModal}
+        onClose={() => {
+          setShowQuestionModal(false);
+          setEditingQuestion(null);
+          setSelectedTopicId(null);
+        }}
+        onCreate={(question) => {
+          if (selectedTopicId) {
+            handleCreateQuestion(selectedTopicId, question);
+          }
+        }}
+        onUpdate={(questionId, question) => {
+          if (editingQuestion) {
+            handleUpdateQuestion(editingQuestion.topicId, questionId, question);
+          }
+        }}
+        editingQuestion={editingQuestion}
+        topicId={selectedTopicId}
+      />
+    </div>
+  );
+}
+
+// Question Item Component for inline display
+interface QuestionItemProps {
+  question: Question;
+  topicId: number;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function QuestionItem({ question, topicId, onEdit, onDelete }: QuestionItemProps) {
+  return (
+    <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="flex-1">
+        <div className="flex items-start gap-3">
+          <div className="mt-1">
+            <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-medium">
+              Q
+            </div>
+          </div>
+          <div className="flex-1">
+            <h4 className="font-medium text-gray-800 mb-2">{question.text}</h4>
+            <div className="space-y-2">
+              {Object.entries(question.options).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                    {parseInt(key) === question.answer && (
+                      <div className="w-2 h-2 rounded-full bg-white"></div>
+                    )}
+                  </div>
+                  <span className={`text-sm ${parseInt(key) === question.answer ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button
+          onClick={onEdit}
+          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          title="Editar questão"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+        <button
+          onClick={onDelete}
+          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+          title="Excluir questão"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export default BancoQuestões;
