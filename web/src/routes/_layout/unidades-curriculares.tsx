@@ -1,5 +1,6 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
+import { useGetUc } from "@/hooks/use-ucs";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 
@@ -10,7 +11,7 @@ export const Route = createFileRoute("/_layout/unidades-curriculares")({
 interface UCCArdProps {
   srcImage?: string;
   label: string;
-  id: string;
+  id: number;
 }
 function UCCard({ label, srcImage }: UCCArdProps) {
   return (
@@ -26,42 +27,7 @@ function UCCard({ label, srcImage }: UCCArdProps) {
 }
 
 function UCS() {
-  const cards: UCCArdProps[] = [
-    {
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-    {
-      srcImage: "/card-image.png",
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-    {
-      srcImage: "/card-image.png",
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-    {
-      srcImage: "/card-image.png",
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-    {
-      srcImage: "/card-image.png",
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-    {
-      srcImage: "/card-image.png",
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-    {
-      srcImage: "/card-image.png",
-      label: "Projeto de Engenharia Informatica",
-      id: "0",
-    },
-  ];
+  const { data } = useGetUc();
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -70,10 +36,10 @@ function UCS() {
         Unidades Curriculares
       </div>
       <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-x-[70px] gap-y-[50px]">
-        {cards.map((el, index) => (
+        {data?.map((el, index) => (
           <UCCard
-            label={el.label}
-            srcImage={el.srcImage}
+            label={el.name}
+            srcImage={"/card-image.png"}
             id={el.id}
             key={index}
           />

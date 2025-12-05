@@ -73,3 +73,4 @@ async def delete_subject(subject_id: int, session: AsyncSession = Depends(get_se
     success = await subject_service.delete_subject(session, subject_id)
     if not success:
         raise HTTPException(status_code=404, detail="Subject not found")
+    

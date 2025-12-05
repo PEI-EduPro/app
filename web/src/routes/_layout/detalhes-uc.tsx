@@ -302,7 +302,7 @@ function RouteComponent() {
               </>
             ) : (
               <>
-                <Link to="/detalhes-uc">
+                <Link to="/">
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#41B5C0] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
                       Manuais
@@ -310,7 +310,7 @@ function RouteComponent() {
                     <BookOpen className="size-[50px]" />
                   </Button>
                 </Link>
-                <Link to="/detalhes-uc">
+                <Link to="/">
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
                       Banco de Perguntas
@@ -318,7 +318,7 @@ function RouteComponent() {
                     <FileQuestionMark className="size-[50px]" />
                   </Button>
                 </Link>
-                <Link to="/detalhes-uc">
+                <Link to="/novo-exame">
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
                       Gerar Testes
