@@ -40,7 +40,9 @@ export function CustomTable(props: CustomTableProps) {
   const { isSelectable, data, rowNumber = 10, rowSelection, onChange } = props;
   const [sorting, setSorting] = useState<SortingState>([]);
 
-  const keys = data[0] ? Object.keys(data[0]) : [];
+  const keys = data[0]
+    ? Object.keys(data[0]).filter((key) => key !== "id")
+    : [];
 
   const selectColumn: ColumnDef<Record<string, string>> = {
     id: "select",
@@ -140,10 +142,10 @@ export function CustomTable(props: CustomTableProps) {
       {isSelectable && (
         <div className="flex items-center py-4">
           <Input
-            placeholder="Filter emails..."
-            value={(table.getColumn("email")?.getFilterValue() as string) ?? ""}
+            placeholder="Filtrar por nome..."
+            value={(table.getColumn("nome")?.getFilterValue() as string) ?? ""}
             onChange={(event) =>
-              table.getColumn("email")?.setFilterValue(event.target.value)
+              table.getColumn("nome")?.setFilterValue(event.target.value)
             }
           />
         </div>
