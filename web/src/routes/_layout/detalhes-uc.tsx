@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useGetUcById } from "@/hooks/use-ucs";
+import { useDeleteUcById, useGetUcById } from "@/hooks/use-ucs";
 import { cn } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -178,6 +178,7 @@ function RouteComponent() {
   const { ucId } = Route.useSearch();
 
   const { data: ucData } = useGetUcById(ucId);
+  const { mutate } = useDeleteUcById(ucId);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [profsSelection, setProfsSelection] = useState(data);
@@ -289,21 +290,16 @@ function RouteComponent() {
             {isEditing ? (
               <>
                 <Button
-                  className="cursor:pointer h-auto w-auto font-medium text-2xl py-[10px]"
+                  className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
                   size="lg"
                   variant="destructive"
-                  onClick={() => {
-                    setAlunosSelection(data);
-                    setProfsSelection(data);
-                    setIsEditing(false);
-                    setRegente({ value: "p1", label: "Joao Rafael" });
-                  }}
+                  onClick={() => mutate(ucId)}
                 >
-                  Cancelar
+                  Apagar Unidade Curricular
                 </Button>
                 <Button
                   size="lg"
-                  className="cursor:pointer h-auto w-auto font-medium text-2xl py-[10px]"
+                  className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
                   onClick={() => {
                     setIsEditing(false);
                   }}
