@@ -10,9 +10,9 @@ import { z } from "zod";
 
 const examConfgExample: NovoExameFormT = {
   topics: [
-    { id: "1", nome: "Topic 1" },
-    { id: "2", nome: "Topic 2" },
-    { id: "3", nome: "Topic 3" },
+    { id: "1", nome: "Arquiteturas" },
+    { id: "2", nome: "Definição de requisitos avançada" },
+    { id: "3", nome: "Introdução à tomada de decisão" },
   ],
   number_questions: {
     "1": 5,
