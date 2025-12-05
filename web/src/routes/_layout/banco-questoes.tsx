@@ -24,6 +24,34 @@ interface Topic {
   isOpen: boolean;
 }
 
+// o backend ainda tem de expor o endpoint para o banco de perguntas mas a ideia seria darem-nos algo assim:
+// Exemplo:
+// Na cadeira de TQS
+// {
+//   "Testes Unitários": {
+//     1: {
+//       text: "Quantos anos tenho?",
+//       options: {
+//         1: "10",
+//         2: "20",
+//         3: "30"
+//       },
+//       answer: 1
+//     }
+//   },
+//   "Testes de Integração": {
+//     1: {
+//       text: "Quantas cadeiras chumbaste?",
+//       options: {
+//         1: "3",
+//         2: "6",
+//         3: "9",
+//         4: "12"
+//       },
+//       answer: 3
+//     }
+//   }
+// }
 function BancoQuestões() {
   const [topics, setTopics] = useState<Topic[]>([
     {
@@ -32,14 +60,13 @@ function BancoQuestões() {
       questions: {
         1: {
           id: 1,
-          text: "Quantos anos tenho?",
+          text: "O que é testado num teste unitário?",
           options: {
-            1: "10",
-            2: "20",
-            3: "30",
-            4: "40"
+            1: "A interação entre vários módulos",
+            2: "O sistema completo do início ao fim",
+            3: "A menor unidade isolada de código"
           },
-          answer: 1
+          answer: 3
         }
       },
       isOpen: false
@@ -50,14 +77,14 @@ function BancoQuestões() {
       questions: {
         1: {
           id: 1,
-          text: "Quantas cadeiras chumbaste?",
+          text: "Qual é o principal objetivo de um teste de integração?",
           options: {
-            1: "3",
-            2: "6",
-            3: "9",
-            4: "12"
+            1: "Verificar a lógica de uma função isolada",
+            2: "Garantir que módulos funcionam corretamente em conjunto",
+            3: "Simular o comportamento do utilizador final",
+            4: "Avaliar o tempo de resposta da aplicação"
           },
-          answer: 3
+          answer: 2
         }
       },
       isOpen: false
@@ -360,7 +387,7 @@ function QuestionItem({ question, topicId, onEdit, onDelete }: QuestionItemProps
         <div className="flex items-start gap-3">
           <div className="mt-1">
             <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-medium">
-              Q
+              {question.id}
             </div>
           </div>
           <div className="flex-1">
@@ -368,12 +395,12 @@ function QuestionItem({ question, topicId, onEdit, onDelete }: QuestionItemProps
             <div className="space-y-2">
               {Object.entries(question.options).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`}>
+                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
                     {parseInt(key) === question.answer && (
                       <div className="w-2 h-2 rounded-full bg-white"></div>
                     )}
                   </div>
-                  <span className={`text-sm ${parseInt(key) === question.answer ? 'text-blue-600 font-medium' : 'text-gray-600'}`}>
+                  <span className={`text-sm ${parseInt(key) === question.answer ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
                     {value}
                   </span>
                 </div>
