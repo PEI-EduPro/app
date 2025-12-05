@@ -42,8 +42,8 @@ async def create_configs_and_exams(
         topic = result.first()
 
         if topic:
-            topic_config = TopicConfig(exam_config_id=ex_conf_id,
-                                        topic_id=topic.id,
+            topic_config = TopicConfig(exam_config_id=ex_conf_id, # type: ignore
+                                        topic_id=topic.id, # type: ignore
                                         num_questions=exam_specs["number_questions"][topic_name],
                                         relative_weight=exam_specs["relative_quotations"][topic_name],
                                         creator_keycloak_id=user_info.user_id

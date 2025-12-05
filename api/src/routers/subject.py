@@ -10,6 +10,7 @@ from src.models.subject import (
     SubjectUpdate,
 )
 import src.services.subject as subject_service
+
 import logging
 
 logger = logging.getLogger(__name__)
@@ -28,18 +29,30 @@ async def create_subject(
         logger.error(f"Error creating subject: {e}")
         raise HTTPException(status_code=500, detail="Failed to create subject")
 
+
 @router.get("/", response_model=List[SubjectRead])
 async def get_subjects(session: AsyncSession = Depends(get_session)):
     """Get all subjects."""
     return await subject_service.get_all_subjects(session)
 
-@router.get("/{subject_id}", response_model=SubjectRead)
-async def get_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+
+@router.get("/{subject_id}/all-questions", response_model=dict)
+async def get_all_by_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
     """Get subject by ID."""
-    subject = await subject_service.get_subject_by_id(session, subject_id)
+    result = await subject_service.get_topics_questions_and_options_by_subject_id(session, subject_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    return result
+
+
+@router.get("/{subject_id}", response_model=dict)
+async def get_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Get all question options, questions and topics by subject ID"""
+    subject = await subject_service.get_topics_questions_and_options_by_subject_id(session, subject_id)
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
+
 
 @router.put("/{subject_id}", response_model=SubjectRead)
 async def update_subject(
@@ -53,7 +66,8 @@ async def update_subject(
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
 
-@router.delete("/{subject_id}", status_code=status.HTTP_200_OK)
+
+@router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
     """Delete subject."""
     success = await subject_service.delete_subject(session, subject_id)
