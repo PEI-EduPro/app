@@ -53,9 +53,10 @@ async def update_subject(
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
 
-@router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{subject_id}", status_code=status.HTTP_200_OK)
 async def delete_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
     """Delete subject."""
     success = await subject_service.delete_subject(session, subject_id)
     if not success:
         raise HTTPException(status_code=404, detail="Subject not found")
+    
