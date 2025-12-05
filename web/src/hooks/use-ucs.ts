@@ -23,4 +23,11 @@ const useAddUc = () => {
   });
 };
 
-export { useGetUc, useAddUc };
+const useGetUcById = (ucId: number) =>
+  useQuery<UcI>({
+    queryKey: ["uc", ucId],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/`),
+    enabled: !!ucId,
+  });
+
+export { useGetUc, useAddUc, useGetUcById };

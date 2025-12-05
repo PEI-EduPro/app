@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetUcById } from "@/hooks/use-ucs";
 import { cn } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -19,8 +20,14 @@ import {
   Pencil,
 } from "lucide-react";
 import { useState } from "react";
+import { z } from "zod";
+
+const detalheUCSearchSchema = z.object({
+  ucId: z.number(),
+});
 
 export const Route = createFileRoute("/_layout/detalhes-uc")({
+  validateSearch: detalheUCSearchSchema,
   component: RouteComponent,
 });
 
@@ -168,6 +175,10 @@ function RouteComponent() {
     },
   ];
 
+  const { ucId } = Route.useSearch();
+
+  const { data: ucData } = useGetUcById(ucId);
+
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [profsSelection, setProfsSelection] = useState(data);
   const [alunosSelection, setAlunosSelection] = useState(data);
@@ -184,7 +195,7 @@ function RouteComponent() {
   return (
     <div className="py-3.5 px-6 w-full">
       <AppBreadcrumb
-        page="Projeto em Engenharia Informatica"
+        page={ucData?.name || "Detalhes UC"}
         crumbs={[
           {
             name: "Unidades Curriculares",
@@ -193,7 +204,7 @@ function RouteComponent() {
         ]}
       />
       <div className="flex flex-row gap-[20px] items-center justify-center text-5xl mb-35">
-        <span className="font-rubik">Projeto em Engenharia Informatica</span>
+        <span className="font-rubik">{ucData?.name}</span>
         <Pencil
           className={`cursor-pointer size-[50px] ${isEditing ? "fill-black stroke-1 stroke-white" : ""}`}
           onClick={() => {
@@ -318,10 +329,13 @@ function RouteComponent() {
                     <FileQuestionMark className="size-[50px]" />
                   </Button>
                 </Link>
-                <Link to="/novo-exame">
+                <Link
+                  to="/novo-exame"
+                  search={{ ucId: ucId, ucName: ucData?.name || "" }}
+                >
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
-                      Gerar Testes
+                      Gerar Exames
                     </span>
                     <ClipboardList className="size-[50px]" />
                   </Button>
