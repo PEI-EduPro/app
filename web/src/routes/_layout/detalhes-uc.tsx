@@ -330,7 +330,7 @@ function RouteComponent() {
                   </Button>
                 </Link>
                 <Link
-                  to="/novo-exame"
+                  to="/exames-uc"
                   search={{ ucId: ucId, ucName: ucData?.name || "" }}
                 >
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
