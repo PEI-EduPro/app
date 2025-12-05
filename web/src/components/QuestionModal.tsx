@@ -193,13 +193,17 @@ export default function QuestionModal({
                       <span className="w-8 text-sm font-medium text-gray-500">
                         {index + 1}.
                       </span>
-                      <input
-                        type="text"
-                        value={option.value}
-                        onChange={(e) => handleOptionChange(option.id, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
-                        placeholder={`Opção ${index + 1}`}
-                      />
+                    <input
+                      type="text"
+                      value={option.value}
+                      onChange={(e) => handleOptionChange(option.id, e.target.value)}
+                      className={`flex-1 px-3 py-2 border rounded-lg outline-none transition
+                        ${correctAnswer === option.id 
+                          ? "border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                          : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        }`}
+                      placeholder={`Opção ${index + 1}`}
+                    />
                     </label>
                     {options.length > 2 && (
                       <button
