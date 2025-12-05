@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -16,9 +16,11 @@ function Index() {
           <p className="text-2xl text-gray-700 leading-snug">
             Um sistema que gera e avalia <br /> unidades curriculares
           </p>
-          <Button className="py-[21px] px-[84px] text-4xl h-auto">
-            Log In
-          </Button>
+          <Link to="/unidades-curriculares">
+            <Button className="py-[21px] px-[84px] text-4xl h-auto">
+              Log In
+            </Button>
+          </Link>
           <p className="text-lg text-gray-600">
             Ainda não tens conta?{" "}
             <a href="#" className="text-[#41B5C0] hover:underline">
