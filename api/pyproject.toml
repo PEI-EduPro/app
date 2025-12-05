@@ -15,4 +15,5 @@ dependencies = [
     "asyncpg>=0.29.0",
     "sqlalchemy[asyncio]>=2.0.0",
     "beautifulsoup4>=4.12.0",
+    "lxml>=4.9.3",
 ]
