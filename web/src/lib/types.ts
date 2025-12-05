@@ -1,14 +1,8 @@
-export interface Product {
+export interface UcI {
   id: number;
   name: string;
-  description: string;
-  price: number;
-  in_stock: boolean;
 }
 
-export interface NewProduct {
+export interface NewUc {
   name: string;
-  description: string;
-  price: number;
-  in_stock: boolean;
 }

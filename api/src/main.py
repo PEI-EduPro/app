@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from src.core.db import create_db_and_tables
 from src.core.config import setup_logging
@@ -41,10 +42,22 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
+
 # Include routers
-from src.routers import user, subject
+from src.routers import user, subject, topic, question, question_option, exam
 app.include_router(user.router, prefix="/api/users", tags=["users"])
 app.include_router(subject.router, prefix="/api/subjects", tags=["subjects"])
+app.include_router(topic.router, prefix="/api/topics", tags=["topics"])
+app.include_router(question.router, prefix="/api/questions", tags=["questions"])
+app.include_router(question_option.router, prefix="/api/question-options", tags=["question-options"])
+app.include_router(exam.router, prefix="/api/exams", tags=["exams"])
 
 @app.get("/health")
 async def health_check():

@@ -215,16 +215,16 @@ class KeycloakClient:
             # Define the group hierarchy using flat names with a prefix
             base_group_name = f"s{subject_id}" # e.g., "s4"
             subgroups = [
-                "regent",      # Will become "s4/regent" when concatenated
-                "students",    # Will become "s4/students"
-                "professors",  # Will become "s4/professors"
-                "edit_topics", # Will become "s4/edit_topics"
-                "edit_questions", # Will become "s4/edit_questions"
-                "view_question_bank", # Will become "s4/view_question_bank"
-                "add_students", # Will become "s4/add_students"
-                "generate_exams", # Will become "s4/generate_exams"
-                "view_grades", # Will become "s4/view_grades"
-                "auto_correct_exams" # Will become "s4/auto_correct_exams"
+                "regent",
+                "students",
+                "professors",
+                "edit_topics",
+                "edit_questions",
+                "view_question_bank",
+                "add_students",
+                "generate_exams",
+                "view_grades",
+                "auto_correct_exams"
             ]
 
             # Create each subgroup as a flat group with a hierarchical name
@@ -286,5 +286,292 @@ class KeycloakClient:
             # Re-raise or return False based on how you want to handle errors in the endpoint
             raise e # Re-raise to be handled by the endpoint
 
+    async def update_subject_regent(self, subject_id: str, new_regent_id: str) -> bool:
+        """
+        Removes existing members from the subject's regent group and adds the new regent.
+        """
+        group_path = f"s{subject_id}/regent"
+        logger.info(f"Updating regent for group {group_path} to user {new_regent_id}")
+        
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # 1. Find the group ID
+            # get_group_by_path returns the group object or raises error if not found
+            # Note: Depending on python-keycloak version, we might need to search for it if get_group_by_path isn't available
+            # We will use a safe search approach:
+            group_id = None
+            groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+            
+            # This is a naive search. For production with thousands of groups, use search params.
+            # Since our groups are flat "s{id}/regent", we search for that name.
+            for g in groups:
+                if g['name'] == group_path:
+                    group_id = g['id']
+                    break
+            
+            if not group_id:
+                logger.error(f"Group {group_path} not found.")
+                return False
+
+            # 2. Remove existing members (The old regent)
+            members = await loop.run_in_executor(
+                None, 
+                lambda: self.admin_client.get_group_members(group_id)
+            )
+            
+            for member in members:
+                logger.info(f"Removing old regent {member['username']} from group {group_path}")
+                await loop.run_in_executor(
+                    None,
+                    lambda uid=member['id']: self.admin_client.group_user_remove(uid, group_id)
+                )
+
+            # 3. Add new regent
+            await loop.run_in_executor(
+                None,
+                lambda: self.admin_client.group_user_add(new_regent_id, group_id)
+            )
+            
+            logger.info(f"New regent {new_regent_id} assigned successfully.")
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to update regent: {e}")
+            logger.exception(e)
+            return False
+
+    async def delete_subject_groups(self, subject_id: str) -> bool:
+        """
+        Deletes all Keycloak groups associated with a subject.
+        """
+        logger.info(f"Deleting groups for subject ID: {subject_id}")
+        
+        # Must match the list used in creation
+        base_group_name = f"s{subject_id}"
+        subgroups = [
+            "regent", "students", "professors", "edit_topics", 
+            "edit_questions", "view_question_bank", "add_students", 
+            "generate_exams", "view_grades", "auto_correct_exams"
+        ]
+        
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # Get all groups once to map names to IDs
+            all_groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+            group_map = {g['name']: g['id'] for g in all_groups}
+
+            for sub in subgroups:
+                full_name = f"{base_group_name}/{sub}"
+                group_id = group_map.get(full_name)
+                
+                if group_id:
+                    logger.info(f"Deleting group: {full_name} (ID: {group_id})")
+                    await loop.run_in_executor(
+                        None,
+                        lambda gid=group_id: self.admin_client.delete_group(gid)
+                    )
+                else:
+                    logger.warning(f"Group {full_name} not found during deletion cleanup.")
+            
+            return True
+
+        except Exception as e:
+            logger.error(f"Error deleting subject groups: {e}")
+            return False
+
+    async def _get_group_id_by_name(self, group_name: str) -> str | None:
+        """Helper to find a group ID by its flat name (e.g., 's1/students')"""
+        loop = asyncio.get_event_loop()
+        groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+        for g in groups:
+            if g['name'] == group_name:
+                return g['id']
+        return None
+
+    async def get_subject_students(self, subject_id: str) -> list[dict]:
+        """Fetch all users in the subject's student group"""
+        group_name = f"s{subject_id}/students"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                logger.warning(f"Group {group_name} not found.")
+                return []
+
+            loop = asyncio.get_event_loop()
+            members = await loop.run_in_executor(
+                None, 
+                lambda: self.admin_client.get_group_members(group_id)
+            )
+            return members
+        except Exception as e:
+            logger.error(f"Failed to fetch students for subject {subject_id}: {e}")
+            return []
+
+    async def add_students_to_subject(self, subject_id: str, student_ids: list[str]) -> None:
+        """Add a list of users to the subject's student group"""
+        group_name = f"s{subject_id}/students"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+
+            loop = asyncio.get_event_loop()
+            for user_id in student_ids:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=user_id: self.admin_client.group_user_add(uid, group_id)
+                    )
+                    logger.info(f"Added user {user_id} to {group_name}")
+                except Exception as e:
+                    logger.error(f"Failed to add user {user_id} to group: {e}")
+                    # Continue adding others even if one fails
+        except Exception as e:
+            logger.error(f"Error in add_students_to_subject: {e}")
+            raise e
+
+
+    async def manage_professor_permissions(
+        self, 
+        subject_id: str, 
+        professor_id: str, 
+        permissions: dict[str, bool]
+    ) -> bool:
+        """
+        Adds/Removes user from permission subgroups based on the boolean dict.
+        Also ensures user is added to the base 'professors' group.
+        """
+        base_group = f"s{subject_id}"
+        professors_group_name = f"{base_group}/professors"
+        
+        # Valid permission subgroups mapping (DTO field name -> Group suffix)
+        # In your case, they are identical, but mapping ensures safety.
+        permission_map = {
+            "edit_topics": "edit_topics",
+            "edit_questions": "edit_questions",
+            "view_question_bank": "view_question_bank",
+            "add_students": "add_students",
+            "generate_exams": "generate_exams",
+            "view_grades": "view_grades",
+            "auto_correct_exams": "auto_correct_exams"
+        }
+
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # 1. Fetch all groups to get IDs efficiently
+            # We fetch all because we might need to touch 8 different groups
+            all_groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+            
+            # Create a lookup: {"s1/professors": "id_123", "s1/edit_topics": "id_456"}
+            group_id_map = {}
+            # Flatten the structure if needed, or just find by name
+            # Assuming flat structure as per your setup
+            for g in all_groups:
+                group_id_map[g['name']] = g['id']
+
+            # 2. Always ensure user is in the base 'professors' group
+            prof_group_id = group_id_map.get(professors_group_name)
+            if prof_group_id:
+                try:
+                    await loop.run_in_executor(
+                        None, 
+                        lambda: self.admin_client.group_user_add(professor_id, prof_group_id)
+                    )
+                except Exception:
+                    pass # User likely already in group, ignore
+
+            # 3. Iterate permissions and Add/Remove
+            for perm_key, is_active in permissions.items():
+                suffix = permission_map.get(perm_key)
+                if not suffix: 
+                    continue # Skip unknown keys
+                
+                full_group_name = f"{base_group}/{suffix}"
+                group_id = group_id_map.get(full_group_name)
+                
+                if not group_id:
+                    logger.warning(f"Group {full_group_name} not found in Keycloak.")
+                    continue
+
+                if is_active:
+                    # ADD to group
+                    try:
+                        await loop.run_in_executor(
+                            None, 
+                            lambda uid=professor_id, gid=group_id: self.admin_client.group_user_add(uid, gid)
+                        )
+                        logger.info(f"Added {professor_id} to {full_group_name}")
+                    except Exception:
+                        pass # Ignore if already member
+                else:
+                    # REMOVE from group
+                    try:
+                        await loop.run_in_executor(
+                            None, 
+                            lambda uid=professor_id, gid=group_id: self.admin_client.group_user_remove(uid, gid)
+                        )
+                        logger.info(f"Removed {professor_id} from {full_group_name}")
+                    except Exception:
+                        pass # Ignore if not a member
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error managing professor permissions: {e}")
+            raise e
+
+    async def remove_professor_from_subject(self, subject_id: str, professor_id: str) -> bool:
+        """
+        Removes a professor from the 'professors' group AND all permission subgroups.
+        """
+        base_group = f"s{subject_id}"
+        # List of all possible groups a professor might be in
+        subgroups = [
+            "professors", # Base group
+            "edit_topics", "edit_questions", "view_question_bank", 
+            "add_students", "generate_exams", "view_grades", 
+            "auto_correct_exams"
+        ]
+
+        try:
+            loop = asyncio.get_event_loop()
+            all_groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+            group_id_map = {g['name']: g['id'] for g in all_groups}
+
+            for sub in subgroups:
+                full_name = f"{base_group}/{sub}"
+                group_id = group_id_map.get(full_name)
+                
+                if group_id:
+                    try:
+                        await loop.run_in_executor(
+                            None,
+                            lambda uid=professor_id, gid=group_id: self.admin_client.group_user_remove(uid, gid)
+                        )
+                    except Exception:
+                        pass # Ignore if user wasn't in that specific subgroup
+
+            logger.info(f"Professor {professor_id} removed from all groups for subject {subject_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error removing professor: {e}")
+            return False
+
 
 keycloak_client = KeycloakClient()
+
+"""
+
+            self.admin_client = KeycloakAdmin(
+                server_url=settings.KEYCLOAK_SERVER_URL,
+                username=
+                password=
+                realm_name='EduPro'
+                user_realm_name="master"
+                verify=True
+            )
+
+"""
