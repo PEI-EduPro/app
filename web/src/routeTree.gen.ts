@@ -13,6 +13,7 @@ import { Route as LayoutRouteImport } from './routes/_layout'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
 import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
+import { Route as LayoutBancoQuestoesRouteImport } from './routes/_layout/banco-questoes'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -34,14 +35,21 @@ const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
   path: '/nova-uc',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutBancoQuestoesRoute = LayoutBancoQuestoesRouteImport.update({
+  id: '/banco-questoes',
+  path: '/banco-questoes',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
@@ -49,18 +57,20 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/_layout/nova-uc': typeof LayoutNovaUcRoute
   '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/nova-uc' | '/unidades-curriculares'
+  fullPaths: '/' | '/banco-questoes' | '/nova-uc' | '/unidades-curriculares'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/nova-uc' | '/unidades-curriculares'
+  to: '/' | '/banco-questoes' | '/nova-uc' | '/unidades-curriculares'
   id:
     | '__root__'
     | '/'
     | '/_layout'
+    | '/_layout/banco-questoes'
     | '/_layout/nova-uc'
     | '/_layout/unidades-curriculares'
   fileRoutesById: FileRoutesById
@@ -100,15 +110,24 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutNovaUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/banco-questoes': {
+      id: '/_layout/banco-questoes'
+      path: '/banco-questoes'
+      fullPath: '/banco-questoes'
+      preLoaderRoute: typeof LayoutBancoQuestoesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutBancoQuestoesRoute: typeof LayoutBancoQuestoesRoute
   LayoutNovaUcRoute: typeof LayoutNovaUcRoute
   LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutBancoQuestoesRoute: LayoutBancoQuestoesRoute,
   LayoutNovaUcRoute: LayoutNovaUcRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,
 }
