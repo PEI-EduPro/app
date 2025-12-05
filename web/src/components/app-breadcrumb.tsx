@@ -10,10 +10,11 @@ import { Link } from "@tanstack/react-router";
 
 export interface BreadcrumbProps {
   page: string;
-  crumbs?: {
-    name: string;
-    link: string;
-  }[];
+  crumbs?: 
+    {
+      name: string;
+      link: string;
+    }[];
 }
 
 export function AppBreadcrumb(props: BreadcrumbProps) {
