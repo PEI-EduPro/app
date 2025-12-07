@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_layout/banco-questoes")({
 interface Question {
   id: number;
   text: string;
-  options: Record<number, string>; // Changed to generic record
+  options: Record<number, string>;
   answer: number;
 }
 
@@ -24,34 +24,6 @@ interface Topic {
   isOpen: boolean;
 }
 
-// o backend ainda tem de expor o endpoint para o banco de perguntas mas a ideia seria darem-nos algo assim:
-// Exemplo:
-// Na cadeira de TQS
-// {
-//   "Testes Unitários": {
-//     1: {
-//       text: "Quantos anos tenho?",
-//       options: {
-//         1: "10",
-//         2: "20",
-//         3: "30"
-//       },
-//       answer: 1
-//     }
-//   },
-//   "Testes de Integração": {
-//     1: {
-//       text: "Quantas cadeiras chumbaste?",
-//       options: {
-//         1: "3",
-//         2: "6",
-//         3: "9",
-//         4: "12"
-//       },
-//       answer: 3
-//     }
-//   }
-// }
 function BancoQuestões() {
   const [topics, setTopics] = useState<Topic[]>([
     {
@@ -216,7 +188,7 @@ function BancoQuestões() {
       {/* Topics List - One per line */}
       <div className="space-y-4">
         {topics.map(topic => (
-          <Card key={topic.id} className="overflow-hidden">
+          <Card key={topic.id} className="overflow-hidden p-0">
             {/* Topic Header */}
             <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
               <div 
@@ -272,16 +244,7 @@ function BancoQuestões() {
               <div className="p-4 border-t">
                 {Object.keys(topic.questions).length === 0 ? (
                   <div className="text-center py-6 text-gray-500">
-                    <p className="mb-3">Nenhuma questão criada neste tópico</p>
-                    <button
-                      onClick={() => {
-                        setSelectedTopicId(topic.id);
-                        setShowQuestionModal(true);
-                      }}
-                      className="text-[#3263A8] hover:text-[#2a5390] font-medium text-sm"
-                    >
-                      Criar primeira questão
-                    </button>
+                    <p>Nenhuma questão criada neste tópico</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -325,13 +288,7 @@ function BancoQuestões() {
         {/* Empty state */}
         {topics.length === 0 && (
           <Card className="p-8 border-dashed border-2 text-center">
-            <p className="text-gray-500 mb-4">Nenhum tópico criado ainda</p>
-            <button
-              onClick={() => setShowTopicModal(true)}
-              className="text-[#3263A8] hover:text-[#2a5390] font-medium"
-            >
-              Criar primeiro tópico
-            </button>
+            <p className="text-gray-500">Nenhum tópico criado ainda</p>
           </Card>
         )}
       </div>
