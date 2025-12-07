@@ -8,166 +8,187 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as LayoutRouteImport } from './routes/_layout'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
-import { Route as LayoutNovoExameRouteImport } from './routes/_layout/novo-exame'
-import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
-import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
+import { Route as rootRouteImport } from "./routes/__root";
+import { Route as LayoutRouteImport } from "./routes/_layout";
+import { Route as IndexRouteImport } from "./routes/index";
+import { Route as LayoutUnidadesCurricularesRouteImport } from "./routes/_layout/unidades-curriculares";
+import { Route as LayoutNovoExameRouteImport } from "./routes/_layout/novo-exame";
+import { Route as LayoutNovaUcRouteImport } from "./routes/_layout/nova-uc";
+import { Route as LayoutDetalhesUcRouteImport } from "./routes/_layout/detalhes-uc";
+import { Route as LayoutExamesUcROuteImport } from "./routes/_layout/exames-uc";
 
 const LayoutRoute = LayoutRouteImport.update({
-  id: '/_layout',
+  id: "/_layout",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any);
 const LayoutUnidadesCurricularesRoute =
   LayoutUnidadesCurricularesRouteImport.update({
-    id: '/unidades-curriculares',
-    path: '/unidades-curriculares',
+    id: "/unidades-curriculares",
+    path: "/unidades-curriculares",
     getParentRoute: () => LayoutRoute,
-  } as any)
+  } as any);
 const LayoutNovoExameRoute = LayoutNovoExameRouteImport.update({
-  id: '/novo-exame',
-  path: '/novo-exame',
+  id: "/novo-exame",
+  path: "/novo-exame",
   getParentRoute: () => LayoutRoute,
-} as any)
+} as any);
 const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
-  id: '/nova-uc',
-  path: '/nova-uc',
+  id: "/nova-uc",
+  path: "/nova-uc",
   getParentRoute: () => LayoutRoute,
-} as any)
+} as any);
 const LayoutDetalhesUcRoute = LayoutDetalhesUcRouteImport.update({
-  id: '/detalhes-uc',
-  path: '/detalhes-uc',
+  id: "/detalhes-uc",
+  path: "/detalhes-uc",
   getParentRoute: () => LayoutRoute,
-} as any)
+} as any);
+const LayoutExamesUcRoute = LayoutExamesUcROuteImport.update({
+  id: "/exames-uc",
+  path: "/exames-uc",
+  getParentRoute: () => LayoutRoute,
+} as any);
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/detalhes-uc': typeof LayoutDetalhesUcRoute
-  '/nova-uc': typeof LayoutNovaUcRoute
-  '/novo-exame': typeof LayoutNovoExameRoute
-  '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
+  "/": typeof IndexRoute;
+  "/detalhes-uc": typeof LayoutDetalhesUcRoute;
+  "/exames-uc": typeof LayoutExamesUcRoute;
+  "/nova-uc": typeof LayoutNovaUcRoute;
+  "/novo-exame": typeof LayoutNovoExameRoute;
+  "/unidades-curriculares": typeof LayoutUnidadesCurricularesRoute;
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/detalhes-uc': typeof LayoutDetalhesUcRoute
-  '/nova-uc': typeof LayoutNovaUcRoute
-  '/novo-exame': typeof LayoutNovoExameRoute
-  '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
+  "/": typeof IndexRoute;
+  "/detalhes-uc": typeof LayoutDetalhesUcRoute;
+  "/exames-uc": typeof LayoutExamesUcRoute;
+  "/nova-uc": typeof LayoutNovaUcRoute;
+  "/novo-exame": typeof LayoutNovoExameRoute;
+  "/unidades-curriculares": typeof LayoutUnidadesCurricularesRoute;
 }
 export interface FileRoutesById {
-  __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/_layout': typeof LayoutRouteWithChildren
-  '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
-  '/_layout/nova-uc': typeof LayoutNovaUcRoute
-  '/_layout/novo-exame': typeof LayoutNovoExameRoute
-  '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
+  __root__: typeof rootRouteImport;
+  "/": typeof IndexRoute;
+  "/_layout": typeof LayoutRouteWithChildren;
+  "/_layout/detalhes-uc": typeof LayoutDetalhesUcRoute;
+  "/_layout/nova-uc": typeof LayoutNovaUcRoute;
+  "/_layout/novo-exame": typeof LayoutNovoExameRoute;
+  "/_layout/exames-uc": typeof LayoutExamesUcRoute;
+  "/_layout/unidades-curriculares": typeof LayoutUnidadesCurricularesRoute;
 }
 export interface FileRouteTypes {
-  fileRoutesByFullPath: FileRoutesByFullPath
+  fileRoutesByFullPath: FileRoutesByFullPath;
   fullPaths:
-    | '/'
-    | '/detalhes-uc'
-    | '/nova-uc'
-    | '/novo-exame'
-    | '/unidades-curriculares'
-  fileRoutesByTo: FileRoutesByTo
+    | "/"
+    | "/detalhes-uc"
+    | "/exames-uc"
+    | "/nova-uc"
+    | "/novo-exame"
+    | "/unidades-curriculares";
+  fileRoutesByTo: FileRoutesByTo;
   to:
-    | '/'
-    | '/detalhes-uc'
-    | '/nova-uc'
-    | '/novo-exame'
-    | '/unidades-curriculares'
+    | "/"
+    | "/detalhes-uc"
+    | "/exames-uc"
+    | "/nova-uc"
+    | "/novo-exame"
+    | "/unidades-curriculares";
   id:
-    | '__root__'
-    | '/'
-    | '/_layout'
-    | '/_layout/detalhes-uc'
-    | '/_layout/nova-uc'
-    | '/_layout/novo-exame'
-    | '/_layout/unidades-curriculares'
-  fileRoutesById: FileRoutesById
+    | "__root__"
+    | "/"
+    | "/_layout"
+    | "/_layout/detalhes-uc"
+    | "/_layout/nova-uc"
+    | "/_layout/novo-exame"
+    | "/_layout/exames-uc"
+    | "/_layout/unidades-curriculares";
+  fileRoutesById: FileRoutesById;
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  LayoutRoute: typeof LayoutRouteWithChildren
+  IndexRoute: typeof IndexRoute;
+  LayoutRoute: typeof LayoutRouteWithChildren;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/_layout': {
-      id: '/_layout'
-      path: ''
-      fullPath: ''
-      preLoaderRoute: typeof LayoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_layout/unidades-curriculares': {
-      id: '/_layout/unidades-curriculares'
-      path: '/unidades-curriculares'
-      fullPath: '/unidades-curriculares'
-      preLoaderRoute: typeof LayoutUnidadesCurricularesRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/novo-exame': {
-      id: '/_layout/novo-exame'
-      path: '/novo-exame'
-      fullPath: '/novo-exame'
-      preLoaderRoute: typeof LayoutNovoExameRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/nova-uc': {
-      id: '/_layout/nova-uc'
-      path: '/nova-uc'
-      fullPath: '/nova-uc'
-      preLoaderRoute: typeof LayoutNovaUcRouteImport
-      parentRoute: typeof LayoutRoute
-    }
-    '/_layout/detalhes-uc': {
-      id: '/_layout/detalhes-uc'
-      path: '/detalhes-uc'
-      fullPath: '/detalhes-uc'
-      preLoaderRoute: typeof LayoutDetalhesUcRouteImport
-      parentRoute: typeof LayoutRoute
-    }
+    "/_layout": {
+      id: "/_layout";
+      path: "";
+      fullPath: "";
+      preLoaderRoute: typeof LayoutRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/": {
+      id: "/";
+      path: "/";
+      fullPath: "/";
+      preLoaderRoute: typeof IndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/_layout/unidades-curriculares": {
+      id: "/_layout/unidades-curriculares";
+      path: "/unidades-curriculares";
+      fullPath: "/unidades-curriculares";
+      preLoaderRoute: typeof LayoutUnidadesCurricularesRouteImport;
+      parentRoute: typeof LayoutRoute;
+    };
+    "/_layout/novo-exame": {
+      id: "/_layout/novo-exame";
+      path: "/novo-exame";
+      fullPath: "/novo-exame";
+      preLoaderRoute: typeof LayoutNovoExameRouteImport;
+      parentRoute: typeof LayoutRoute;
+    };
+    "/_layout/nova-uc": {
+      id: "/_layout/nova-uc";
+      path: "/nova-uc";
+      fullPath: "/nova-uc";
+      preLoaderRoute: typeof LayoutNovaUcRouteImport;
+      parentRoute: typeof LayoutRoute;
+    };
+    "/_layout/detalhes-uc": {
+      id: "/_layout/detalhes-uc";
+      path: "/detalhes-uc";
+      fullPath: "/detalhes-uc";
+      preLoaderRoute: typeof LayoutDetalhesUcRouteImport;
+      parentRoute: typeof LayoutRoute;
+    };
+    "/_layout/exames-uc": {
+      id: "/_layout/exames-uc";
+      path: "/exames-uc";
+      fullPath: "/exames-uc";
+      preLoaderRoute: typeof LayoutExamesUcRouteImport;
+      parentRoute: typeof LayoutRoute;
+    };
   }
 }
 
 interface LayoutRouteChildren {
-  LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
-  LayoutNovaUcRoute: typeof LayoutNovaUcRoute
-  LayoutNovoExameRoute: typeof LayoutNovoExameRoute
-  LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
+  LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute;
+  LayoutExamesUcRoute: typeof LayoutExamesUcRoute;
+  LayoutNovaUcRoute: typeof LayoutNovaUcRoute;
+  LayoutNovoExameRoute: typeof LayoutNovoExameRoute;
+  LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute;
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
+  LayoutExamesUcRoute: LayoutExamesUcRoute,
   LayoutNovaUcRoute: LayoutNovaUcRoute,
   LayoutNovoExameRoute: LayoutNovoExameRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,
-}
+};
 
 const LayoutRouteWithChildren =
-  LayoutRoute._addFileChildren(LayoutRouteChildren)
+  LayoutRoute._addFileChildren(LayoutRouteChildren);
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LayoutRoute: LayoutRouteWithChildren,
-}
+};
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
-  ._addFileTypes<FileRouteTypes>()
+  ._addFileTypes<FileRouteTypes>();
