@@ -81,8 +81,8 @@ async def create_subject(session: AsyncSession, name: str) -> Subject:
 
 async def get_all_subjects(session: AsyncSession) -> List[Subject]:
     """Get all subjects."""
-    result = await session.exec(select(Subject))
-    return list(result.all())
+    result = await session.execute(select(Subject))
+    return list(result.scalars().all())
 
 async def get_subject_by_id(session: AsyncSession, subject_id: int) -> Optional[Subject]:
     """Get subject by ID."""

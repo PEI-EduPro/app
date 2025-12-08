@@ -50,7 +50,8 @@ async def update_question(
 async def delete_question(session: AsyncSession, question_option_id: int) -> bool:
     """Delete a question_option by ID"""
     statement = select(QuestionOption).where(QuestionOption.id == question_option_id)
-    question_option = await session.exec(statement).first()
+    result = await session.exec(statement)
+    question_option = result.first()
     
     if not question_option:
         return False
