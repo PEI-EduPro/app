@@ -1,10 +1,11 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Upload } from "lucide-react";
 import { useState } from "react";
 import TopicModal from "@/components/TopicModal";
 import QuestionModal from "@/components/QuestionModal";
+import XmlUploadButton from "@/components/XmlUploadButton";
 
 export const Route = createFileRoute("/_layout/banco-questoes")({
   component: BancoQuestões,
@@ -171,8 +172,11 @@ function BancoQuestões() {
         </div>
       </div>
 
-      {/* Add Topic Button */}
-      <div className="flex justify-end mb-6">
+      <div className="flex mb-6 justify-between">
+        {/* Upload XML File Button */}
+        <XmlUploadButton />
+
+        {/* Add Topic Button */}
         <button
           onClick={() => {
             closeAllTopics();
