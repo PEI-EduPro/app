@@ -278,7 +278,7 @@ function BancoQuestões() {
                 }}
                 className="w-fit flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors"
               >
-                <Plus size={16} />
+                <Plus size={16}/>
                 Adicionar Questão
               </button>
             </div>
