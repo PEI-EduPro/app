@@ -228,7 +228,7 @@ echo "New Subject ID: $NEW_SUBJECT_ID"
 # NEW FEATURE TESTS (Topics -> Questions -> Options)
 # ==============================================================================
 
-echo -e "\n=== TEST 11.1: POST /api/topics (Create Topic) ==="
+echo -e "\n=== TEST 11: POST /api/topics (Create Topic) ==="
 # Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
 TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -242,7 +242,7 @@ echo "Response: $TOPIC_RESPONSE"
 TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
 echo "Created Topic ID: $TOPIC_ID"
 
-echo -e "\n=== TEST 11.2: POST /api/topics (Create Topic) ==="
+echo -e "\n=== TEST 12: POST /api/topics (Create Topic) ==="
 # Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
 TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -256,7 +256,7 @@ echo "Response: $TOPIC_RESPONSE"
 TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
 echo "Created Topic ID: $TOPIC_ID"
 
-echo -e "\n=== TEST 11.3: POST /api/topics (Create Topic) ==="
+echo -e "\n=== TEST 13: POST /api/topics (Create Topic) ==="
 # Based on PR: {"name": "Diferenciação em R", "subject_id": 1}
 TOPIC_RESPONSE=$(curl -s -X POST "$API_BASE/topics/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -270,7 +270,7 @@ echo "Response: $TOPIC_RESPONSE"
 TOPIC_ID=$(echo $TOPIC_RESPONSE | jq -r '.id')
 echo "Created Topic ID: $TOPIC_ID"
 
-echo -e "\n=== TEST 11.4: POST /api/exams/generate (Create Exam Config) ==="
+echo -e "\n=== TEST 14: POST /api/exams/generate (Create Exam Config) ==="
 # Create exam configuration with the three topics created above
 EXAM_RESPONSE=$(curl -s -X POST "$API_BASE/exams/generate" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -296,12 +296,12 @@ EXAM_CONFIG_ID=$(echo $EXAM_RESPONSE | jq -r '.id // .exam_config_id // .')
 echo "Created Exam Config ID: $EXAM_CONFIG_ID"
 
 
-echo -e "\n=== TEST 12: GET /api/topics/{id} (Read Topic) ==="
+echo -e "\n=== TEST 15: GET /api/topics/{id} (Read Topic) ==="
 # Note: The PR implemented getting by NAME, not ID.
 curl -s -X GET "$API_BASE/topics/$TOPIC_ID" \
   -H "Authorization: Bearer $REGENT_TOKEN" | jq
 
-echo -e "\n=== TEST 13: POST /api/questions (Create Multiple Questions) ==="
+echo -e "\n=== TEST 16: POST /api/questions (Create Multiple Questions) ==="
 # Create multiple questions at once
 QUESTION_RESPONSE=$(curl -s -X POST "$API_BASE/questions/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -327,7 +327,8 @@ QUESTION_ID=$(echo $QUESTION_RESPONSE | jq -r '.[0].id')
 echo "Created Questions. First Question ID: $QUESTION_ID"
 echo "All Question IDs: $(echo $QUESTION_RESPONSE | jq -r '.[].id')"
 
-echo -e "\n=== TEST 14: POST /api/question-options (Create Option) ==="
+
+echo -e "\n=== TEST 17: POST /api/question-options (Create Option) ==="
 # Based on PR: {"question_id": 1, "option_text": "For contínua.", "value": false}
 OPTION_RESPONSE=$(curl -s -X POST "$API_BASE/question-options/" \
   -H "Authorization: Bearer $REGENT_TOKEN" \
@@ -340,7 +341,8 @@ OPTION_RESPONSE=$(curl -s -X POST "$API_BASE/question-options/" \
 
 echo "Response: $OPTION_RESPONSE"
 
-echo -e "\n=== TEST 15: GET /api/questions/{id}/question-options (Professor Gets Options) ==="
+
+echo -e "\n=== TEST 18: GET /api/questions/{id}/question-options (Professor Gets Options) ==="
 # Professor gets all options for a question
 PROF_TOKEN=$(get_token "prof_user" "123")
 RESPONSE=$(curl -s -X GET "$API_BASE/questions/$QUESTION_ID/question-options" \
@@ -349,10 +351,151 @@ echo "Raw Response: $RESPONSE"
 echo "$RESPONSE" | jq 2>/dev/null || echo "Failed to parse JSON"
 
 
-echo -e "\n=== TEST 16: GET /api/questions/{id} (Verify Question & Options) ==="
+echo -e "\n=== TEST 19: GET /api/questions/{id} (Verify Question & Options) ==="
 # Assuming GET question returns the question details
 curl -s -X GET "$API_BASE/questions/$QUESTION_ID" \
   -H "Authorization: Bearer $REGENT_TOKEN" | jq
+
+
+echo -e "\n=== TEST 20: GET /api/subjects/{subject_id}/all-questions ==="
+echo "Fetching all topics, questions, and options for subject ID: $NEW_SUBJECT_ID"
+
+ALL_Q_RESPONSE=$(curl -s -X GET "$API_BASE/subjects/$NEW_SUBJECT_ID/all-questions" \
+  -H "Authorization: Bearer $REGENT_TOKEN")
+
+echo "Raw Response:"
+echo "$ALL_Q_RESPONSE"
+
+echo "Formatted JSON:"
+echo "$ALL_Q_RESPONSE" | jq 2>/dev/null || echo "Failed to parse JSON"
+
+
+echo -e "\n=== TEST 21: POST /api/questions/{subject_id}/XML (Upload XML) ==="
+
+XML_PAYLOAD='<?xml version="1.0" encoding="UTF-8"?>
+<quiz>
+
+  <!-- Topic: Diferenciação em R -->
+  <question type="category">
+    <category>
+      <text>$course$/top/Diferenciacao em R</text>
+    </category>
+    <idnumber>TOPIC-1</idnumber>
+  </question>
+
+  <!-- Question 1 for Diferenciação em R -->
+  <question type="multichoice">
+    <name><text>Uma função é diferenciável</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Uma função é diferenciável se:</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>Ela possui derivada em todos os pontos do domínio.</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Ela é contínua apenas em alguns pontos.</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>Ela possui pontos de descontinuidade removível.</p>]]></text>
+    </answer>
+  </question>
+
+  <!-- Topic: Integracao -->
+  <question type="category">
+    <category>
+      <text>$course$/top/Integracao</text>
+    </category>
+    <idnumber>TOPIC-2</idnumber>
+  </question>
+
+  <!-- Question 1 for Integracao -->
+  <question type="multichoice">
+    <name><text>O limite de uma função</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>O limite de uma função existe quando:</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>O valor se aproxima de um número definido ao se aproximar do ponto.</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>O valor oscila infinitamente.</p>]]></text>
+    </answer>
+  </question>
+
+  <!-- Question 2 for Integracao -->
+  <question type="multichoice">
+    <name><text>Função integrável</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Uma função é integrável se:</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>O integral definido sobre o domínio existe e é finito.</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>O integral diverge em algum ponto.</p>]]></text>
+    </answer>
+  </question>
+
+  <!-- Topic: Transformadas de Laplace -->
+  <question type="category">
+    <category>
+      <text>$course$/top/Transformadas de Laplace</text>
+    </category>
+    <idnumber>TOPIC-3</idnumber>
+  </question>
+
+  <!-- Question 1 for Laplace -->
+  <question type="multichoice">
+    <name><text>Definição de Laplace</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>A Transformada de Laplace de f(t) é:</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>L{f(t)} = ∫₀^∞ e^(-st) f(t) dt</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>L{f(t)} = ∫₀^∞ f(t) dt</p>]]></text>
+    </answer>
+  </question>
+
+  <!-- Question 2 for Laplace -->
+  <question type="multichoice">
+    <name><text>Laplace e derivadas</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Qual a Transformada de Laplace da derivada de f(t)?</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>s F(s) - f(0)</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>F(s)/s</p>]]></text>
+    </answer>
+  </question>
+
+  <!-- Question 3 for Laplace -->
+  <question type="multichoice">
+    <name><text>Laplace de funções contínuas</text></name>
+    <questiontext format="html">
+      <text><![CDATA[<p>Se f(t) é contínua e limitada, então:</p>]]></text>
+    </questiontext>
+    <answer fraction="100" format="html">
+      <text><![CDATA[<p>A Transformada de Laplace existe para s > 0.</p>]]></text>
+    </answer>
+    <answer fraction="0" format="html">
+      <text><![CDATA[<p>A Transformada diverge para qualquer s.</p>]]></text>
+    </answer>
+  </question>
+
+</quiz>'
+
+# Send XML payload to your endpoint
+XML_RESPONSE=$(curl -s -X POST "$API_BASE/questions/$NEW_SUBJECT_ID/XML" \
+  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Content-Type: application/xml" \
+  -d "$XML_PAYLOAD")
+
+echo "Response: $XML_RESPONSE"
+
 
 # ==============================================================================
 # CLEANUP

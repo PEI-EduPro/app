@@ -23,4 +23,25 @@ const useAddUc = () => {
   });
 };
 
-export { useGetUc, useAddUc };
+const useGetUcById = (ucId: number) =>
+  useQuery<UcI>({
+    queryKey: ["uc", ucId],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/`),
+    enabled: !!ucId,
+  });
+
+const useDeleteUcById = (ucId: number) => {
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationKey: ["deleteUc", ucId],
+    mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}/`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["uc"] });
+      navigate({ to: "/unidades-curriculares" });
+    },
+  });
+};
+
+export { useGetUc, useAddUc, useGetUcById, useDeleteUcById };

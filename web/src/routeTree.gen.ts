@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
 import { Route as LayoutNovoExameRouteImport } from './routes/_layout/novo-exame'
 import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
+import { Route as LayoutExamesUcRouteImport } from './routes/_layout/exames-uc'
 import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
 import { Route as LayoutBancoQuestoesRouteImport } from './routes/_layout/banco-questoes'
 
@@ -42,6 +43,11 @@ const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
   path: '/nova-uc',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutExamesUcRoute = LayoutExamesUcRouteImport.update({
+  id: '/exames-uc',
+  path: '/exames-uc',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutDetalhesUcRoute = LayoutDetalhesUcRouteImport.update({
   id: '/detalhes-uc',
   path: '/detalhes-uc',
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
+  '/exames-uc': typeof LayoutExamesUcRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/novo-exame': typeof LayoutNovoExameRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -65,6 +72,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
+  '/exames-uc': typeof LayoutExamesUcRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/novo-exame': typeof LayoutNovoExameRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -75,6 +83,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
+  '/_layout/exames-uc': typeof LayoutExamesUcRoute
   '/_layout/nova-uc': typeof LayoutNovaUcRoute
   '/_layout/novo-exame': typeof LayoutNovoExameRoute
   '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -85,6 +94,7 @@ export interface FileRouteTypes {
     | '/'
     | '/banco-questoes'
     | '/detalhes-uc'
+    | '/exames-uc'
     | '/nova-uc'
     | '/novo-exame'
     | '/unidades-curriculares'
@@ -93,6 +103,7 @@ export interface FileRouteTypes {
     | '/'
     | '/banco-questoes'
     | '/detalhes-uc'
+    | '/exames-uc'
     | '/nova-uc'
     | '/novo-exame'
     | '/unidades-curriculares'
@@ -102,6 +113,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/_layout/banco-questoes'
     | '/_layout/detalhes-uc'
+    | '/_layout/exames-uc'
     | '/_layout/nova-uc'
     | '/_layout/novo-exame'
     | '/_layout/unidades-curriculares'
@@ -149,6 +161,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutNovaUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/exames-uc': {
+      id: '/_layout/exames-uc'
+      path: '/exames-uc'
+      fullPath: '/exames-uc'
+      preLoaderRoute: typeof LayoutExamesUcRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/detalhes-uc': {
       id: '/_layout/detalhes-uc'
       path: '/detalhes-uc'
@@ -169,6 +188,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutBancoQuestoesRoute: typeof LayoutBancoQuestoesRoute
   LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
+  LayoutExamesUcRoute: typeof LayoutExamesUcRoute
   LayoutNovaUcRoute: typeof LayoutNovaUcRoute
   LayoutNovoExameRoute: typeof LayoutNovoExameRoute
   LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
@@ -177,6 +197,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBancoQuestoesRoute: LayoutBancoQuestoesRoute,
   LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
+  LayoutExamesUcRoute: LayoutExamesUcRoute,
   LayoutNovaUcRoute: LayoutNovaUcRoute,
   LayoutNovoExameRoute: LayoutNovoExameRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,

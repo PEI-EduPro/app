@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from src.utils import parse_moodle_xml
 from src.models.question_option import QuestionOption, QuestionOptionPublic
 from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
 from typing import Optional, List
@@ -23,6 +24,16 @@ async def create_question(
         await session.refresh(question)
     
     return [QuestionPublic.model_validate(q) for q in questions]
+
+async def create_question_XML(
+    session: AsyncSession,
+    subject_id: int,
+    question_xml: str
+) -> dict:
+    """Create a new question"""
+    result = parse_moodle_xml(question_xml)
+    
+    return result
 
 
 async def get_question_by_id(session: AsyncSession, question_id: int) -> Optional[QuestionPublic]:
@@ -70,8 +81,8 @@ async def delete_question(session: AsyncSession, question_id: int) -> bool:
 async def get_question_options_by_question_id(session: AsyncSession, question_id: int) -> Optional[List[QuestionOptionPublic]]:
     """Retrieve question_options respective to provided question ID"""
     statement = select(QuestionOption).where(QuestionOption.question_id == question_id)
-    result = await session.exec(statement)
-    items = result.all() 
+    result = await session.execute(statement)
+    items = result.scalars().all()
     
     validated_items = []
     for item in items:

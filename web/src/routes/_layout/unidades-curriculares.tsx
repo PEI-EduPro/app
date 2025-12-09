@@ -13,9 +13,9 @@ interface UCCArdProps {
   label: string;
   id: number;
 }
-function UCCard({ label, srcImage }: UCCArdProps) {
+function UCCard({ label, srcImage, id }: UCCArdProps) {
   return (
-    <Link to="/detalhes-uc">
+    <Link to={`/detalhes-uc`} search={{ ucId: id }}>
       <Card className="w-80 h-57.5 py-0 overflow-hidden gap-2.5 hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
         <img src={srcImage || "/card-image.png"} />
         <span className="px-1.75 h-auto line-clamp-2 overflow-hidden text-ellipsis">

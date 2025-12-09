@@ -1,5 +1,5 @@
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Body, Depends, HTTPException, status
 from sqlmodel import select
 from src.models.question_option import QuestionOptionPublic
 from src.services import question
@@ -41,18 +41,30 @@ async def create_question(
         
     except ValueError as ve:
         # Handle specific validation errors like user exists
-        logger.warning(f"Failed to create question {question_data.question_text}: {ve}")
+        logger.warning(f"Failed to create questions : {ve}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
         )
     except Exception as e:
-        logger.error(f"Failed to create question '{question_data.question_text}': {e}")
+        logger.error(f"Failed to create questions: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal error occurred while creating the question."
         )
+    
 
+@router.post("/{subject_id}/XML", response_model=dict)#, dependencies=[Depends(require_subject_regent)])
+async def create_question_from_XML(
+    subject_id: int,
+    xml: str = Body(required=True,media_type="application/xml"),
+    #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
+    session: AsyncSession = Depends(get_session)
+):
+    "Create questions from XML file"
+    result = await question.create_question_XML(session,subject_id,xml)
+
+    return result
     
     
 @router.get("/{id}", response_model=QuestionPublic)
@@ -69,7 +81,7 @@ async def get_question(
     return result
 
 @router.get("/{id}/question-options", response_model=List[QuestionOptionPublic])
-async def get_question(
+async def get_question_options(
     id: int,
     session: AsyncSession = Depends(get_session)
 ):

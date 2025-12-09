@@ -7,7 +7,7 @@ class Subject(SQLModel, table=True):
     __tablename__ = "subject"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(max_length=100)
+    name: str = Field(unique=True,max_length=100)
     # The topic relationship uses a string forward reference to avoid circular imports
     topics: List["Topic"] = Relationship(
         back_populates="subject",
