@@ -8,7 +8,7 @@ class QuestionOption(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     question_id: int = Field(foreign_key="question.id", ondelete="CASCADE")
-    option_text: str = Field(unique=True,max_length=500)
+    option_text: str = Field(max_length=500)
     value: bool = Field(default=False)  # 100.0 for correct, negative for incorrect (based on penalty)
     order_position: Optional[int] = Field(default=None)  # For displaying options in specific order
     
