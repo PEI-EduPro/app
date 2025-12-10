@@ -65,11 +65,8 @@ function BancoQuestões() {
           acc[q.question_id] = {
             id: q.question_id,
             text: q.question_text,
-            options: Object.values(q.question_options || {}).reduce((opts: Record<number, string>, opt: any) => {
-              opts[opt.option_id] = opt.option_text;
-              return opts;
-            }, {}),
-            answer: Object.values(q.question_options || {}).find((opt: any) => opt.is_correct)?.option_id || 0,
+            options: q.question_options || {},
+            answer: q.answer || 0,
           };
           return acc;
         }, {}),
