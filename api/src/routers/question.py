@@ -99,67 +99,33 @@ async def put_question(
     id: int,
     question_data: QuestionUpdate,
     session: AsyncSession = Depends(get_session),
-    #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
-    # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Update question info from provided id"""
     try:
-        # 1. Verify current_user is regent BEFORE creating anything in the database
-        # Call the verification function explicitly here, now that we have current_user
-        #regent_info = await verify_regent_exists(current_user.user_id)
-
-        result = question.update_question(session,question_data)
+        result = await question.update_question(session, question_data)
         return result
-        
     except ValueError as ve:
-        # Handle specific validation errors like user exists
-        logger.warning(f"Failed to create question {question_data.question_text}: {ve}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
+        logger.warning(f"Failed to update question: {ve}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
-        # Handle other errors during creation
-        logger.error(f"Failed to create user {question_data.question_text}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the user in Keycloak."
-        )
+        logger.error(f"Failed to update question: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while updating the question.")
 
 
 @router.delete("/{id}", response_model=str)
 async def delete_question(
     id: int,
     session: AsyncSession = Depends(get_session),
-    #current_user: User = Depends(get_current_user_info), # This will be the regent's info due to verify_regent_exists
-    # session: AsyncSession = Depends(get_session) # Remove this dependency
 ):
     """Delete question from provided id"""
     try:
-        # 1. Verify current_user is regent BEFORE creating anything in the database
-        # Call the verification function explicitly here, now that we have current_user
-        #regent_info = await verify_regent_exists(current_user.user_id)
-
-
-        result = question.delete_question(session,id)
-
+        result = await question.delete_question(session, id)
         if result:
             return "Question deleted successfully"
-        else:
-            raise ValueError("Question still exists.")
-        
-        
+        raise ValueError("Question not found")
     except ValueError as ve:
-        # Handle specific validation errors like user exists
         logger.warning(f"Failed to delete question: {ve}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
-        # Handle other errors during creation
         logger.error(f"Failed to delete question: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while deleting the question."
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while deleting the question.")

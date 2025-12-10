@@ -31,10 +31,10 @@ class QuestionOptionUpdate(SQLModel):
 
 class QuestionOptionPublic(SQLModel):
     """Schema for public question option data (no fraction exposed)"""
-    #id: int
+    id: int
     question_id: int
     option_text: str
-    #order_position: Optional[int] = None
+    value: bool
 
 class QuestionOptionDelete(SQLModel):
     """Schema for deleting a question option"""

@@ -16,6 +16,11 @@ async def create_topic(
     await session.refresh(topic)
     return TopicPublic.model_validate(topic)
 
+async def get_all_topics(session: AsyncSession) -> List[TopicPublic]:
+    """Get all topics."""
+    result = await session.exec(select(Topic))
+    topics = result.all()
+    return [TopicPublic.model_validate(topic) for topic in topics]
 
 async def get_topic_by_id(session: AsyncSession, topic_id: int) -> Optional[TopicPublic]:
     """Get a topic by its ID"""

@@ -1,13 +1,20 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ChevronDown, ChevronRight, Upload, SquarePen, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Plus, ChevronDown, ChevronRight, SquarePen, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import TopicModal from "@/components/TopicModal";
 import QuestionModal from "@/components/QuestionModal";
 import XmlUploadButton from "@/components/XmlUploadButton";
+import { useQuestions, useSubject, useCreateTopic, useUpdateTopic, useDeleteTopic, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from "@/hooks/use-questions";
+import { z } from "zod";
+
+const bancoQuestoesSearchSchema = z.object({
+  ucId: z.number(),
+});
 
 export const Route = createFileRoute("/_layout/banco-questoes")({
+  validateSearch: bancoQuestoesSearchSchema,
   component: BancoQuestões,
 });
 
@@ -26,44 +33,18 @@ interface Topic {
 }
 
 function BancoQuestões() {
-  const [topics, setTopics] = useState<Topic[]>([
-    {
-      id: 1,
-      name: "Testes Unitários",
-      questions: {
-        1: {
-          id: 1,
-          text: "O que é testado num teste unitário?",
-          options: {
-            1: "A interação entre vários módulos",
-            2: "O sistema completo do início ao fim",
-            3: "A menor unidade isolada de código"
-          },
-          answer: 3
-        }
-      },
-      isOpen: false
-    },
-    {
-      id: 2,
-      name: "Testes de Integração",
-      questions: {
-        1: {
-          id: 1,
-          text: "Qual é o principal objetivo de um teste de integração?",
-          options: {
-            1: "Verificar a lógica de uma função isolada",
-            2: "Garantir que módulos funcionam corretamente em conjunto",
-            3: "Simular o comportamento do utilizador final",
-            4: "Avaliar o tempo de resposta da aplicação"
-          },
-          answer: 2
-        }
-      },
-      isOpen: false
-    }
-  ]);
+  const { ucId } = Route.useSearch();
+  const { data: subjectData } = useSubject(ucId);
+  const { data: apiData, isLoading, error } = useQuestions(ucId);
+  
+  const createTopicMutation = useCreateTopic(ucId);
+  const updateTopicMutation = useUpdateTopic(ucId);
+  const deleteTopicMutation = useDeleteTopic(ucId);
+  const createQuestionMutation = useCreateQuestion(ucId);
+  const updateQuestionMutation = useUpdateQuestion(ucId);
+  const deleteQuestionMutation = useDeleteQuestion(ucId);
 
+  const [topics, setTopics] = useState<Topic[]>([]);
   const [showTopicModal, setShowTopicModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
@@ -73,70 +54,76 @@ function BancoQuestões() {
   } | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
 
+  // Transform API data to local state format
+  useEffect(() => {
+    if (apiData && typeof apiData === 'object' && 'subject_topics' in apiData) {
+      const topicsObj = apiData.subject_topics as Record<string, any>;
+      const transformedTopics: Topic[] = Object.values(topicsObj).map((topic: any) => ({
+        id: topic.topic_id,
+        name: topic.topic_name,
+        questions: Object.values(topic.topic_questions || {}).reduce((acc: Record<number, Question>, q: any) => {
+          acc[q.question_id] = {
+            id: q.question_id,
+            text: q.question_text,
+            options: Object.values(q.question_options || {}).reduce((opts: Record<number, string>, opt: any) => {
+              opts[opt.option_id] = opt.option_text;
+              return opts;
+            }, {}),
+            answer: Object.values(q.question_options || {}).find((opt: any) => opt.is_correct)?.option_id || 0,
+          };
+          return acc;
+        }, {}),
+        isOpen: false,
+      }));
+      setTopics(transformedTopics);
+    }
+  }, [apiData]);
+
   // Topic CRUD operations
   const handleCreateTopic = (name: string) => {
-    const newTopic: Topic = {
-      id: Date.now(),
-      name,
-      questions: {},
-      isOpen: false
-    };
-    setTopics([...topics, newTopic]);
+    createTopicMutation.mutate(name);
   };
 
   const handleUpdateTopic = (id: number, name: string) => {
-    setTopics(topics.map(topic => 
-      topic.id === id ? { ...topic, name } : topic
-    ));
+    updateTopicMutation.mutate({ id, name });
   };
 
   const handleDeleteTopic = (id: number) => {
-    if (confirm("Tem certeza que deseja excluir este tópico e todas as suas questões?")) {
-      setTopics(topics.filter(topic => topic.id !== id));
+    if (confirm("Deseja apagar este tópico e todas as suas questões?")) {
+      deleteTopicMutation.mutate(id);
     }
   };
 
   // Question CRUD operations
   const handleCreateQuestion = (topicId: number, question: Omit<Question, "id">) => {
-    setTopics(topics.map(topic => {
-      if (topic.id === topicId) {
-        const newId = Math.max(0, ...Object.keys(topic.questions).map(Number)) + 1;
-        return {
-          ...topic,
-          questions: {
-            ...topic.questions,
-            [newId]: { ...question, id: newId }
-          }
-        };
-      }
-      return topic;
+    const questions = [{
+      topic_id: topicId,
+      question_text: question.text,
+    }];
+    
+    const options = Object.entries(question.options).map(([key, value]) => ({
+      question_id: 0,
+      option_text: value,
+      value: parseInt(key) === question.answer,
     }));
+    
+    createQuestionMutation.mutate({ questions, options });
   };
 
   const handleUpdateQuestion = (topicId: number, questionId: number, question: Omit<Question, "id">) => {
-    setTopics(topics.map(topic => {
-      if (topic.id === topicId) {
-        return {
-          ...topic,
-          questions: {
-            ...topic.questions,
-            [questionId]: { ...question, id: questionId }
-          }
-        };
+    updateQuestionMutation.mutate({
+      id: questionId,
+      data: {
+        id: questionId,
+        topic_id: topicId,
+        question_text: question.text,
       }
-      return topic;
-    }));
+    });
   };
 
-  const handleDeleteQuestion = (topicId: number, questionId: number) => {
-    if (confirm("Tem certeza que deseja excluir esta questão?")) {
-      setTopics(topics.map(topic => {
-        if (topic.id === topicId) {
-          const { [questionId]: _, ...remainingQuestions } = topic.questions;
-          return { ...topic, questions: remainingQuestions };
-        }
-        return topic;
-      }));
+  const handleDeleteQuestion = (_topicId: number, questionId: number) => {
+    if (confirm("Deseja apagar esta questão?")) {
+      deleteQuestionMutation.mutate(questionId);
     }
   };
 
@@ -150,21 +137,53 @@ function BancoQuestões() {
     setTopics(topics.map(topic => ({ ...topic, isOpen: false })));
   };
 
+  if (isLoading) {
+    return (
+      <div className="py-3.5 px-6 w-full">
+        <AppBreadcrumb
+          page="Banco de Questões"
+          crumbs={[
+            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+            { name: subjectData?.name || "...", link: `/detalhes-uc?ucId=${ucId}` },
+          ]}
+        />
+        <div className="flex justify-center items-center h-64">
+          <p className="text-gray-500">Carregando questões...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="py-3.5 px-6 w-full">
+        <AppBreadcrumb
+          page="Banco de Questões"
+          crumbs={[
+            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+            { name: subjectData?.name || "...", link: `/detalhes-uc?ucId=${ucId}` },
+          ]}
+        />
+        <div className="flex justify-center items-center h-64">
+          <p className="text-red-500">Erro ao carregar questões</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="py-3.5 px-6 w-full">
       <AppBreadcrumb
         page="Banco de Questões"
         crumbs={[
-          {
-            name: "Unidades Curriculares",
-            link: "/unidades-curriculares",
-          },
+          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+          { name: subjectData?.name || "...", link: `/detalhes-uc?ucId=${ucId}` },
         ]}
       />
       <div className="flex justify-center mb-8">
         <div className="text-center">
           <div className="text-5xl">
-            UNIDADE CURRICULAR
+            {subjectData?.name || "UNIDADE CURRICULAR"}
           </div>
           <h1 className="text-3xl mt-4 text-[#3263A8]">
             Banco de questões
@@ -248,7 +267,7 @@ function BancoQuestões() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {Object.entries(topic.questions).map(([id, question]) => (
+                    {Object.entries(topic.questions).map(([, question]) => (
                       <QuestionItem
                         key={question.id}
                         question={question}
@@ -337,7 +356,7 @@ interface QuestionItemProps {
   onDelete: () => void;
 }
 
-function QuestionItem({ question, topicId, onEdit, onDelete }: QuestionItemProps) {
+function QuestionItem({ question, onEdit, onDelete }: QuestionItemProps) {
   return (
     <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
       <div className="flex-1">
