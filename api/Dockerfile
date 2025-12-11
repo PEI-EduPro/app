@@ -1,5 +1,8 @@
 FROM python:3.12-alpine
 
+# Install LaTeX and required packages
+RUN apk add --no-cache texlive texmf-dist-latexextra
+
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 

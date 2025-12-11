@@ -6,13 +6,14 @@ from src.core.db import get_session
 from src.models.user import User
 from src.core.deps import get_current_user_info
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.post("/generate")
 async def generate_exams(
-    exam_specs: dict, # Receive the request body data
+    exam_specs: dict,
     session: AsyncSession = Depends(get_session),
     current_user: User = Depends(get_current_user_info)
 ):
@@ -21,10 +22,8 @@ async def generate_exams(
     Returns a ZIP file containing the generated exam PDFs.
     """
     try:
-        # Extract number of variations desired (default to 1)
         num_variations = exam_specs.get("num_variations", 1)
 
-        # Generate exams and get ZIP bytes
         zip_bytes = await exam.create_configs_and_exams(
             session, 
             exam_specs, 
@@ -48,10 +47,8 @@ async def generate_exams(
         )
     except Exception as e:
         logger.error(f"Failed to create configs: {e}")
-        logger.exception(e)
+        logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while generating exams."
+            detail=f"An error occurred: {str(e)}"
         )
-
-    

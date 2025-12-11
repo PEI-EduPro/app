@@ -1,99 +1,73 @@
-from reportlab.lib.pagesizes import A4
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.lib import colors
 import xml.etree.ElementTree as ET
-import io
+import tempfile
+from pathlib import Path
+from latex import build_pdf
+
 
 def xml_to_pdf(xml_content: str, exam_id: int) -> bytes:
-    """
-    Converts Exam XML to a PDF file in memory.
-    Returns the bytes of the PDF.
-    """
-    buffer = io.BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=A4,
-                            rightMargin=72, leftMargin=72,
-                            topMargin=72, bottomMargin=18)
-    
-    styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name='Justify', alignment=TA_JUSTIFY))
-    
-    # Custom styles
-    title_style = styles["Heading1"]
-    question_style = ParagraphStyle(
-        'QuestionStyle',
-        parent=styles['Normal'],
-        fontSize=11,
-        spaceAfter=6,
-        spaceBefore=12,
-        leading=14
-    )
-    option_style = ParagraphStyle(
-        'OptionStyle',
-        parent=styles['Normal'],
-        fontSize=10,
-        leftIndent=20,
-        spaceAfter=2,
-        leading=12
-    )
+    """Converts Exam XML to PDF bytes."""
+    root = ET.fromstring(xml_content)
+    latex_content, t_variants_content = xml_to_latex(root, exam_id)
+    return compile_latex_to_pdf(latex_content, t_variants_content)
 
-    story = []
-    
-    # 1. Parse XML
-    try:
-        root = ET.fromstring(xml_content)
-    except ET.ParseError:
-        return b"Error parsing XML"
 
-    # 2. Header
-    story.append(Paragraph(f"Exam #{exam_id}", title_style))
-    story.append(Spacer(1, 12))
-    
-    fraction = root.get('fraction', '0')
-    story.append(Paragraph(f"Penalty for incorrect answer: {fraction}%", styles["Normal"]))
-    story.append(Spacer(1, 24))
-
-    # 3. Questions
+def xml_to_latex(root: ET.Element, exam_id: int) -> tuple[str, str]:
+    """Convert XML exam structure to LaTeX strings."""
     questions = root.findall("question")
     
-    for idx, q in enumerate(questions, 1):
-        # Question Text
-        q_text_elem = q.find("text")
-        q_text = q_text_elem.text if q_text_elem is not None else "No text"
-        q_weight = q.get("weight", "1.0")
+    # Generate T-variants.tex content
+    t_variants = ""
+    for q in questions:
+        q_text = q.findtext("text", "No text")
+        q_weight = float(q.get("weight", "1"))
+        t_variants += f"\\question ({q_weight:.1f} pts) {q_text}\n"
         
-        full_q_text = f"<b>{idx}.</b> {q_text} <i>(Val: {q_weight})</i>"
-        story.append(Paragraph(full_q_text, question_style))
-        
-        # Options
         options_elem = q.find("options")
         if options_elem is not None:
-            options = options_elem.findall("option")
-            
-            # Create list items for options
-            list_items = []
-            for i, opt in enumerate(options):
-                opt_text = opt.text if opt.text else ""
-                
-                # Checkbox style placeholder (e.g., "[ ]")
-                item_content = Paragraph(f"{opt_text}", option_style)
-                list_items.append(ListItem(item_content, bulletColor=colors.black))
-            
-            # Create the list flowable
-            t_list = ListFlowable(
-                list_items,
-                bulletType='a',
-                start=1,
-                leftIndent=20
-            )
-            story.append(t_list)
-        
-        story.append(Spacer(1, 10))
-
-    # Build PDF
-    doc.build(story)
+            t_variants += "\\begin{choices}\n"
+            for opt in options_elem.findall("option"):
+                opt_text = opt.text or ""
+                cmd = "\\CorrectChoice" if opt.get("correct") == "true" else "\\choice"
+                t_variants += f"{cmd} {opt_text}\n"
+            t_variants += "\\end{choices}\n\n"
     
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return pdf_bytes
+    # Build main document using template structure
+    latex_doc = MAIN_TEMPLATE.replace("__EXAM_ID__", str(exam_id))
+    
+    return latex_doc, t_variants
+
+
+MAIN_TEMPLATE = r"""\documentclass[a4paper,addpoints,10pt]{exam}
+
+\input{H}
+\newcommand\tttnumber{__EXAM_ID__}
+\footer{}{Page \thepage\ of \numpages}{Exam ID: __EXAM_ID__}
+\begin{document}
+
+\Header{Exame Época Normal}{\Rules}{T-answers}{extra}
+
+\begin{questions}
+\input{T-variants}
+\end{questions}
+
+\end{document}
+"""
+
+
+def compile_latex_to_pdf(latex_content: str, t_variants_content: str) -> bytes:
+    """Compile LaTeX string to PDF and return bytes."""
+    templates_dir = Path(__file__).parent.parent / "latex_templates"
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir_path = Path(tmpdir)
+        
+        # Copy template files
+        for template_file in templates_dir.glob("*.tex"):
+            (tmpdir_path / template_file.name).write_text(template_file.read_text())
+        
+        # Write generated T-variants.tex
+        (tmpdir_path / "T-variants.tex").write_text(t_variants_content)
+        
+        # Build PDF
+        pdf = build_pdf(latex_content, texinputs=[str(tmpdir_path), ''])
+        return bytes(pdf)
