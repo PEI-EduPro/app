@@ -107,14 +107,24 @@ function BancoQuestões() {
     createQuestionMutation.mutate({ questions, options });
   };
 
-  const handleUpdateQuestion = (topicId: number, questionId: number, question: Omit<Question, "id">) => {
+  const handleUpdateQuestion = (topicId: number, questionId: number, question: Omit<Question, "id">, oldOptions: Record<number, string>) => {
+    const oldOptionIds = Object.keys(oldOptions).map(id => parseInt(id));
+    const newOptionEntries = Object.entries(question.options);
+    
+    const options = oldOptionIds.map((oldId, index) => ({
+      id: oldId,
+      option_text: newOptionEntries[index][1],
+      value: parseInt(newOptionEntries[index][0]) === question.answer,
+    }));
+    
     updateQuestionMutation.mutate({
       id: questionId,
       data: {
         id: questionId,
         topic_id: topicId,
         question_text: question.text,
-      }
+      },
+      options
     });
   };
 
@@ -190,7 +200,7 @@ function BancoQuestões() {
 
       <div className="flex mb-6 justify-between">
         {/* Upload XML File Button */}
-        <XmlUploadButton />
+        <XmlUploadButton subjectId={ucId} />
 
         {/* Add Topic Button */}
         <button
@@ -264,10 +274,11 @@ function BancoQuestões() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {Object.entries(topic.questions).map(([, question]) => (
+                    {Object.entries(topic.questions).map(([, question], index) => (
                       <QuestionItem
                         key={question.id}
                         question={question}
+                        questionNumber={index + 1}
                         topicId={topic.id}
                         onEdit={() => {
                           setEditingQuestion({
@@ -335,7 +346,7 @@ function BancoQuestões() {
         }}
         onUpdate={(questionId, question) => {
           if (editingQuestion) {
-            handleUpdateQuestion(editingQuestion.topicId, questionId, question);
+            handleUpdateQuestion(editingQuestion.topicId, questionId, question, editingQuestion.question.options);
           }
         }}
         editingQuestion={editingQuestion}
@@ -348,19 +359,20 @@ function BancoQuestões() {
 // Question Item Component for inline display
 interface QuestionItemProps {
   question: Question;
+  questionNumber: number;
   topicId: number;
   onEdit: () => void;
   onDelete: () => void;
 }
 
-function QuestionItem({ question, onEdit, onDelete }: QuestionItemProps) {
+function QuestionItem({ question, questionNumber, onEdit, onDelete }: QuestionItemProps) {
   return (
     <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
       <div className="flex-1">
         <div className="flex items-start gap-3">
           <div className="mt-1">
             <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-medium">
-              {question.id}
+              {questionNumber}
             </div>
           </div>
           <div className="flex-1">

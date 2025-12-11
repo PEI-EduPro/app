@@ -197,13 +197,13 @@ function RouteComponent() {
   return (
     <div className="py-3.5 px-6 w-full">
         <AppBreadcrumb
-          page={ucData?.name || "..."}
+          page={ucData?.name || "Detalhes"}
           crumbs={[
             { name: "Unidades Curriculares", link: "/unidades-curriculares" }
           ]}
         />
       <div className="flex flex-row gap-[20px] items-center justify-center text-5xl mb-35">
-        <span className="font-rubik">{ucData?.name}</span>
+        <span className="font-rubik">{ucData?.name || "Carregando..."}</span>
         <Pencil
           className={`cursor-pointer size-[50px] ${isEditing ? "fill-black stroke-1 stroke-white" : ""}`}
           onClick={() => {

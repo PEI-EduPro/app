@@ -66,8 +66,14 @@ export function useCreateQuestion(subjectId: number) {
 export function useUpdateQuestion(subjectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: any }) => 
-      apiClient.put(`/questions/${id}`, data),
+    mutationFn: async ({ id, data, options }: { id: number; data: any; options?: Array<{id: number; option_text: string; value: boolean}> }) => {
+      await apiClient.put(`/questions/${id}`, data);
+      if (options && options.length > 0) {
+        await Promise.all(options.map(opt => 
+          apiClient.put(`/question-options/${opt.id}`, { option_text: opt.option_text, value: opt.value })
+        ));
+      }
+    },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['questions', subjectId] }),
   });
 }

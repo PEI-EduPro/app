@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 interface Question {
   id: number;
   text: string;
-  options: Record<number, string>; // Changed to Record
+  options: Record<number, string>;
   answer: number;
 }
 
@@ -34,6 +34,8 @@ export default function QuestionModal({
     { id: 4, value: "" }
   ]);
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null);
+  const [showError, setShowError] = useState(false);
+  const [showQuestionError, setShowQuestionError] = useState(false);
 
   useEffect(() => {
     if (editingQuestion?.question) {
@@ -57,25 +59,28 @@ export default function QuestionModal({
       ]);
       setCorrectAnswer(null);
     }
+    setShowError(false);
+    setShowQuestionError(false);
   }, [editingQuestion]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!questionText.trim()) {
-      alert("Por favor, insira o texto da questão");
+      setShowQuestionError(true);
       return;
     }
     
     // Check for empty options
     const emptyOptions = options.filter(opt => !opt.value.trim());
-    if (emptyOptions.length > 0) {
-      alert("Por favor, preencha todas as opções");
-      return;
-    }
+    // if (emptyOptions.length > 0) {
+    //   alert("Por favor, preencha todas as opções");
+
+    //   return;
+    // }
     
-    if (correctAnswer === null) {
-      alert("Por favor, selecione a resposta correta");
+    if (correctAnswer === null || emptyOptions.length > 0) {
+      setShowError(true);
       return;
     }
 
@@ -152,11 +157,21 @@ export default function QuestionModal({
               </label>
               <textarea
                 value={questionText}
-                onChange={(e) => setQuestionText(e.target.value)}
+                onChange={(e) => {
+                  setQuestionText(e.target.value);
+                  setShowQuestionError(false);
+                }}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
                 placeholder="Escreva a questão aqui..."
                 rows={3}
               />
+              {showQuestionError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
+                  <p className="text-sm text-red-700">
+                    Por favor, insira o <span className="font-medium">texto da questão</span> antes de continuar.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Options */}
@@ -183,8 +198,12 @@ export default function QuestionModal({
                       id={`option-${option.id}`}
                       name="correct-answer"
                       checked={correctAnswer === option.id}
-                      onChange={() => setCorrectAnswer(option.id)}
-                      className="h-5 w-5 text-blue-600"
+                      onChange={() => {
+                        setCorrectAnswer(option.id);
+                        setShowError(false);
+                      }}
+                      className={`h-5 w-5 ${showError ? 'accent-red-500 border-red-500' : 'text-blue-600'}`}
+                      style={showError ? { accentColor: '#ef4444' } : {}}
                     />
                     <label
                       htmlFor={`option-${option.id}`}
@@ -218,9 +237,18 @@ export default function QuestionModal({
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-gray-500 mt-3">
-                Selecione a opção correta clicando no círculo ao lado
-              </p>
+              {showError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
+                  <p className="text-sm text-red-700">
+                    Por favor, <span className="font-medium">preencha todas as opções</span> e selecione a <span className="font-medium">resposta correta</span>.
+                  </p>
+                </div>
+              )}
+              {!showError && (
+                <p className="text-sm text-gray-500 mt-3">
+                  Selecione a opção correta clicando no círculo ao lado
+                </p>
+              )}
             </div>
 
             {/* Actions */}

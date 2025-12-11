@@ -14,13 +14,18 @@ class ApiClient {
     return response.json();
   }
   
-  async post<T>(endpoint: string, data: unknown): Promise<T> {
+  async post<T>(endpoint: string, data: unknown, options?: { headers?: Record<string, string> }): Promise<T> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    };
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
+      headers,
+      body: typeof data === 'string' && headers['Content-Type'] === 'application/xml' 
+        ? data 
+        : JSON.stringify(data),
     });
 
     if (!response.ok) {
