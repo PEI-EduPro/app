@@ -39,7 +39,3 @@ class TopicPublic(SQLModel):
     id: int
     name: str
     subject_id : int
-
-
-
-

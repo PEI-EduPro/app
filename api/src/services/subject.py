@@ -2,6 +2,7 @@ import logging
 from typing import List, Optional
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from src.models.question_option import QuestionOption
 from src.models.question import Question
@@ -9,12 +10,6 @@ from src.models.topic import Topic
 from src.models.subject import Subject
 
 logger = logging.getLogger(__name__)
-
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
-
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 
 async def get_topics_questions_and_options_by_subject_id(
     session: AsyncSession, subject_id: int
@@ -31,7 +26,7 @@ async def get_topics_questions_and_options_by_subject_id(
     )
 
     result = await session.exec(stmt)
-    subject: Subject | None = result.unique().scalar_one_or_none()
+    subject: Subject | None = result.unique().one_or_none()
 
     if not subject:
         return {}
@@ -81,8 +76,8 @@ async def create_subject(session: AsyncSession, name: str) -> Subject:
 
 async def get_all_subjects(session: AsyncSession) -> List[Subject]:
     """Get all subjects."""
-    result = await session.execute(select(Subject))
-    return list(result.scalars().all())
+    result = await session.exec(select(Subject))
+    return list(result.all())
 
 async def get_subject_by_id(session: AsyncSession, subject_id: int) -> Optional[Subject]:
     """Get subject by ID."""
@@ -108,3 +103,8 @@ async def delete_subject(session: AsyncSession, subject_id: int) -> bool:
     await session.delete(subject)
     await session.commit()
     return True
+
+async def get_topics_from_subject(session: AsyncSession, subject_id: int) -> List[Topic]:
+    """Get all topics from a subject."""
+    result = await session.exec(select(Topic).where(Topic.subject_id == subject_id))
+    return list(result.all())
