@@ -26,8 +26,10 @@ async def get_topic_by_id(session: AsyncSession, topic_id: int) -> Optional[Topi
     """Get a topic by its ID"""
     statement = select(Topic).where(Topic.id == topic_id)
     result = await session.exec(statement)
-    result = result.one_or_none()
-    return TopicPublic.model_validate(result)
+    topic = result.one_or_none()
+    if not topic:
+        return None
+    return TopicPublic.model_validate(topic)
 
 
 async def update_topic(
