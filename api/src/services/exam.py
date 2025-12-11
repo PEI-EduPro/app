@@ -1,10 +1,10 @@
 import logging
 import random
-import xml.etree.ElementTree as ET
-import zipfile
-import io
-from fastapi import HTTPException
-from pydantic import ValidationError
+import os
+import shutil
+import tempfile
+import subprocess
+from typing import Tuple, List, Dict
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -13,26 +13,20 @@ from src.models.topic_config import TopicConfig
 from src.models.topic import Topic
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
-from src.models.question_option import QuestionOption, QuestionOptionPublic
-from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
-from src.services.pdf_generator import xml_to_pdf
-from typing import Optional, List
+from src.models.question import Question
 
 logger = logging.getLogger(__name__)
 
-async def create_configs_and_exams(
+TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
+
+
+async def create_configs(
     session: AsyncSession,
     exam_specs: dict,
-    user_info: User,
-    num_variations: int = 1
-) -> bytes:
-    """
-    Create exam_config, topic_configs.
-    Then generate 'num_variations' unique exams, save them, 
-    render them to PDFs, and return a ZIP containing all PDFs.
-    """
+    user_info: User
+) -> Tuple[ExamConfig, List[TopicConfig]]:
+    """Create ExamConfig and TopicConfigs."""
     
-    # 1. Create ExamConfig (Shared parent for all variations)
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
@@ -42,127 +36,247 @@ async def create_configs_and_exams(
     await session.commit()
     await session.refresh(exam_config)
 
-    ex_conf_id = exam_config.id
-    
-    # 2. Create TopicConfigs
     topic_configs = []
-    # Store topic configs by topic ID for easy weight lookup later
-    topic_weights = {} 
-    
-    total_relative_mass = 0.0
-
     for topic_name in exam_specs["topics"]:
-        statement = select(Topic).where(Topic.name == topic_name)
-        result = await session.exec(statement)
+        result = await session.exec(select(Topic).where(Topic.name == topic_name))
         topic = result.first()
-
         if topic:
-            weight = exam_specs["relative_quotations"][topic_name]
-            num_q = exam_specs["number_questions"][topic_name]
-            
             topic_config = TopicConfig(
-                exam_config_id=ex_conf_id, # type: ignore
-                topic_id=topic.id, # type: ignore
-                num_questions=num_q,
-                relative_weight=weight,
+                exam_config_id=exam_config.id,
+                topic_id=topic.id,
+                num_questions=exam_specs["number_questions"][topic_name],
+                relative_weight=exam_specs["relative_quotations"][topic_name],
                 creator_keycloak_id=user_info.user_id
             )
             topic_configs.append(topic_config)
-            
-            # Accumulate mass for normalization
-            total_relative_mass += (weight * num_q)
-            topic_weights[topic.id] = weight # Temporary storage of relative weight
 
     session.add_all(topic_configs)
     await session.commit()
-    
-    # Calculate Normalization Factor (Scale to 20)
-    if total_relative_mass > 0:
-        normalization_factor = 20.0 / total_relative_mass
-    else:
-        normalization_factor = 1.0 # Default fallback if no questions or zero weights
 
-    # Update weights to be actual values (0-20 scale)
-    for tid in topic_weights:
-        topic_weights[tid] = topic_weights[tid] * normalization_factor
-    
-    # Prepare ZIP buffer
+    return exam_config, topic_configs
+
+
+def _compute_normalized_weights(topic_configs: List[TopicConfig]) -> Dict[int, float]:
+    """Compute normalized weights (20-point scale) from topic configs."""
+    total_mass = sum(tc.relative_weight * tc.num_questions for tc in topic_configs)
+    if total_mass <= 0:
+        return {tc.topic_id: 1.0 for tc in topic_configs}
+    norm = 20.0 / total_mass
+    return {tc.topic_id: tc.relative_weight * norm for tc in topic_configs}
+
+
+async def generate_exams_from_configs(
+    session: AsyncSession,
+    exam_config: ExamConfig,
+    topic_configs: List[TopicConfig],
+    num_variations: int = 1
+) -> bytes:
+    """Generate LaTeX exams and answer keys, return ZIP with PDFs."""
+    import zipfile
+    import io
+
+    topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
+    
+    with tempfile.TemporaryDirectory() as tmpdir:
+        exams_dir = os.path.join(tmpdir, "exams")
+        keys_dir = os.path.join(tmpdir, "answer_keys")
+        os.makedirs(exams_dir)
+        os.makedirs(keys_dir)
 
-    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
-        
-        # 3. Loop to generate variations
-        for i in range(num_variations):
+        # Copy base templates
+        for f in os.listdir(TEMPLATES_DIR):
+            if f.endswith(".tex"):
+                shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+
+        for var_num in range(1, num_variations + 1):
+            # Gather questions for this variation
             all_questions = []
-
-            # Re-select random questions for this variation
             for t_conf in topic_configs:
-                statement = (
+                result = await session.exec(
                     select(Question)
                     .where(Question.topic_id == t_conf.topic_id)
                     .options(selectinload(Question.question_options))
                     .order_by(func.random())
                     .limit(t_conf.num_questions)
                 )
-                result = await session.exec(statement)
-                questions = result.all()
-                
-                if len(questions) < t_conf.num_questions:
-                    logger.warning(f"Variation {i+1}: Topic {t_conf.topic_id} requested {t_conf.num_questions} but found {len(questions)}")
-                
-                all_questions.extend(questions)
-
-            # Scramble questions
+                all_questions.extend(result.all())
+            
             random.shuffle(all_questions)
 
-            # Build XML
-            root = ET.Element("exam")
-            root.set("fraction", str(exam_config.fraction))
-            root.set("subject_id", str(exam_config.subject_id))
-            root.set("variation", str(i + 1)) # Add variation number to XML
+            # Generate T-variants.tex content and get answer positions
+            questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights)
+            num_questions = len(all_questions)
 
-            for q in all_questions:
-                q_elem = ET.SubElement(root, "question")
-                q_elem.set("id", str(q.id))
-                weight = topic_weights.get(q.topic_id, 1.0)
-                q_elem.set("weight", str(weight))
-                
-                text_elem = ET.SubElement(q_elem, "text")
-                text_elem.text = q.question_text
-                
-                # Debug logging
-                options_list = list(q.question_options)
-                logger.info(f"Processing Q {q.id} (Topic {q.topic_id}) - Found {len(options_list)} options")
+            # Write variant questions file
+            with open(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
+                f.write(questions_latex)
 
-                opts_elem = ET.SubElement(q_elem, "options")
-                
-                # Scramble options
-                random.shuffle(options_list)
+            # Update Rules.tex with actual number of questions and fraction
+            _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
-                for opt in options_list:
-                    opt_elem = ET.SubElement(opts_elem, "option")
-                    opt_elem.set("id", str(opt.id))
-                    opt_elem.set("correct", str(opt.value).lower())
-                    opt_elem.text = opt.option_text
+            # Generate exam PDF (blank answer grid)
+            _write_blank_answers(tmpdir, num_questions)
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num)
+            if exam_pdf:
+                with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
+                    f.write(exam_pdf)
 
-            exam_xml_str = ET.tostring(root, encoding='unicode')
+            # Generate answer key PDF (marked grid)
+            _write_answer_key(tmpdir, answers_map, num_questions)
+            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num)
+            if key_pdf:
+                with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
+                    f.write(key_pdf)
 
-            # 4. Save Exam Variation
-            new_exam = Exam(
-                exam_config_id=ex_conf_id, # type: ignore
-                exam_xml=exam_xml_str
-            )
+            # Save exam to DB
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
             session.add(new_exam)
             await session.commit()
-            await session.refresh(new_exam) # Get ID
 
-            # 5. Generate PDF
-            pdf_bytes = xml_to_pdf(exam_xml_str, new_exam.id)
-            
-            # 6. Add to ZIP
-            filename = f"exam_{new_exam.id}_var_{i+1}.pdf"
-            zip_file.writestr(filename, pdf_bytes)
+        # Create ZIP
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
+            for f in os.listdir(exams_dir):
+                zf.write(os.path.join(exams_dir, f), f"exams/{f}")
+            for f in os.listdir(keys_dir):
+                zf.write(os.path.join(keys_dir, f), f"answer_keys/{f}")
 
-    # Return ZIP bytes
     return zip_buffer.getvalue()
 
+
+def _generate_questions_latex(questions: list, topic_weights: Dict[int, float]) -> Tuple[str, Dict[int, str]]:
+    """Generate LaTeX for questions and return answer map."""
+    lines = []
+    answers_map = {}
+    
+    for q_num, q in enumerate(questions, 1):
+        weight = topic_weights.get(q.topic_id, 1.0)
+        lines.append(f"\\question")
+        lines.append(f"({weight:.2f} pts) {q.question_text}")
+        lines.append("")
+        
+        options = list(q.question_options)
+        random.shuffle(options)
+        
+        lines.append("\\begin{choices}")
+        for i, opt in enumerate(options):
+            cmd = "\\CorrectChoice" if opt.value else "\\choice"
+            lines.append(f"  {cmd} {opt.option_text}")
+            if opt.value:
+                answers_map[q_num] = chr(ord('A') + i)
+        lines.append("\\end{choices}")
+        lines.append("")
+    
+    return "\n".join(lines), answers_map
+
+
+def _get_answers_map(questions: list) -> Dict[int, str]:
+    """Return dict mapping question number (1-indexed) to correct answer letter."""
+    answers = {}
+    for idx, q in enumerate(questions, 1):
+        options = list(q.question_options)
+        random.seed(q.id)
+        random.shuffle(options)
+        for i, opt in enumerate(options):
+            if opt.value:
+                answers[idx] = chr(ord('A') + i)
+                break
+    return answers
+
+
+def _update_rules(workdir: str, num_questions: int, fraction: float):
+    """Update Rules.tex with actual number of questions and fraction."""
+    rules_path = os.path.join(workdir, "Rules.tex")
+    with open(rules_path, "r") as f:
+        content = f.read()
+    content = content.replace("#NUM_QUESTIONS", str(num_questions))
+    content = content.replace("#FRACTION", str(fraction))
+    with open(rules_path, "w") as f:
+        f.write(content)
+
+
+def _write_blank_answers(workdir: str, num_questions: int):
+    """Write blank T-answers.tex for student exam."""
+    cols = num_questions
+    header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
+    
+    rows = []
+    for letter in ['A', 'B', 'C', 'D']:
+        cells = [" " for _ in range(1, cols + 1)]
+        rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
+    
+    content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
+\\begin{{center}}
+\\qrcode[height=0.75in]{{\\tttnumber}}
+\\hspace{{0.25cm}}
+\\begin{{tabular}}{{|l|{'l|' * cols}}}
+\\hline
+ &{header}\\\\ \\hline
+{chr(10).join(rows)}
+\\end{{tabular}}
+\\end{{center}}
+\\vspace{{0.25cm}}
+"""
+    with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
+        f.write(content)
+
+
+def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int):
+    """Write T-answers.tex with X marks in correct cells."""
+    cols = num_questions
+    header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
+    
+    rows = []
+    for letter in ['A', 'B', 'C', 'D']:
+        cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
+        rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
+    
+    content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
+\\begin{{center}}
+\\qrcode[height=0.75in]{{\\tttnumber}}
+\\hspace{{0.25cm}}
+\\begin{{tabular}}{{|l|{'l|' * cols}}}
+\\hline
+ &{header}\\\\ \\hline
+{chr(10).join(rows)}
+\\end{{tabular}}
+\\end{{center}}
+\\vspace{{0.25cm}}
+"""
+    with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
+        f.write(content)
+
+
+def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
+    """Compile LaTeX to PDF, return PDF bytes or None on failure."""
+    main_path = os.path.join(workdir, main_file)
+    with open(main_path, "r") as f:
+        content = f.read()
+    content = content.replace("\\newcommand\\tttnumber{0}", f"\\newcommand\\tttnumber{{{var_num}}}")
+    content = content.replace("#FOOTER", "")
+    with open(main_path, "w") as f:
+        f.write(content)
+
+    try:
+        subprocess.run(
+            ["pdflatex", "-interaction=nonstopmode", main_file],
+            cwd=workdir, capture_output=True, timeout=30
+        )
+        pdf_path = os.path.join(workdir, main_file.replace(".tex", ".pdf"))
+        if os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as f:
+                return f.read()
+    except Exception as e:
+        logger.error(f"LaTeX compilation failed: {e}")
+    return None
+
+
+async def create_configs_and_exams(
+    session: AsyncSession,
+    exam_specs: dict,
+    user_info: User,
+    num_variations: int = 1
+) -> bytes:
+    """Backward-compatible function combining config creation and exam generation."""
+    exam_config, topic_configs = await create_configs(session, exam_specs, user_info)
+    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations)
