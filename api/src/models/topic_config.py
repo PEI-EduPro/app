@@ -11,7 +11,7 @@ class TopicConfig(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     topic_id: int = Field(foreign_key="topic.id")
     exam_config_id: int = Field(foreign_key="exam_config.id")
-    creator_keycloak_id: str = Field(max_length=255)
+    #creator_keycloak_id: str = Field(max_length=255)
     num_questions: int
     relative_weight: float = Field(default=1.0)
     

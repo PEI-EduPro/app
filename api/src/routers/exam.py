@@ -14,7 +14,7 @@ router = APIRouter()
 async def generate_exams(
     exam_specs: dict, # Receive the request body data
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user_info)
+    #current_user: User = Depends(get_current_user_info)
 ):
     """
     Generate exams based on specifications.
@@ -27,8 +27,7 @@ async def generate_exams(
         # Generate exams and get ZIP bytes
         zip_bytes = await exam.create_configs_and_exams(
             session, 
-            exam_specs, 
-            current_user, 
+            exam_specs,  
             num_variations
         )
 

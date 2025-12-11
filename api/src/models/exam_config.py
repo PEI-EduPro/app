@@ -10,7 +10,7 @@ class ExamConfig(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     # Replace foreign key to local 'professor' table with Keycloak user ID
-    creator_keycloak_id: str = Field(max_length=255) # Store the Keycloak ID of the creator
+    #creator_keycloak_id: str = Field(max_length=255) # Store the Keycloak ID of the creator
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
     

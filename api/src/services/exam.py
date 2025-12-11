@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    user_info: User,
+    #user_info: User,
     num_variations: int = 1
 ) -> bytes:
     """
@@ -36,7 +36,7 @@ async def create_configs_and_exams(
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
-        creator_keycloak_id=user_info.user_id
+        #creator_keycloak_id=user_info.user_id
     )
     session.add(exam_config)
     await session.commit()
@@ -65,7 +65,7 @@ async def create_configs_and_exams(
                 topic_id=topic.id, # type: ignore
                 num_questions=num_q,
                 relative_weight=weight,
-                creator_keycloak_id=user_info.user_id
+                #creator_keycloak_id=user_info.user_id
             )
             topic_configs.append(topic_config)
             
