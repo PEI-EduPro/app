@@ -166,3 +166,21 @@ async def create_configs_and_exams(
     # Return ZIP bytes
     return zip_buffer.getvalue()
 
+async def get_exam_configs_by_subject(
+    session: AsyncSession, 
+    subject_id: int
+) -> List[ExamConfig]:
+    """
+    Get all exam configurations for a specific subject, 
+    including topic configurations and their topic details.
+    """
+    statement = (
+        select(ExamConfig)
+        .where(ExamConfig.subject_id == subject_id)
+        .options(
+            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic)
+        )
+    )
+    result = await session.exec(statement)
+    return list(result.all())
+

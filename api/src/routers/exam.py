@@ -1,14 +1,52 @@
 # src/routers/exam.py
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.services import exam
 from src.core.db import get_session
 from src.models.user import User
+from src.models.exam_config import ExamConfigResponse
+from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+@router.get("/subject/{subject_id}/configs", response_model=List[ExamConfigResponse])
+async def get_subject_exam_configs(
+    subject_id: int,
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all exam configurations for a subject.
+    """
+    configs = await exam.get_exam_configs_by_subject(session, subject_id)
+    
+    response = []
+    for config in configs:
+        topic_configs_dto = []
+        for tc in config.topic_configs:
+            # Safely access the topic name if it exists
+            topic_name = tc.topic.name if tc.topic else "Unknown Topic"
+            
+            topic_configs_dto.append(TopicConfigDTO(
+                id=tc.id,
+                topic_id=tc.topic_id,
+                topic_name=topic_name,
+                num_questions=tc.num_questions,
+                relative_weight=tc.relative_weight
+            ))
+            
+        response.append(ExamConfigResponse(
+            id=config.id,
+            subject_id=config.subject_id,
+            fraction=config.fraction,
+            creator_keycloak_id=config.creator_keycloak_id,
+            topic_configs=topic_configs_dto
+        ))
+        
+    return response
 
 @router.post("/generate")
 async def generate_exams(
