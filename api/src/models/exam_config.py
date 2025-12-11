@@ -2,6 +2,7 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
+from src.models.topic_config import TopicConfigDTO
 
 
 # ExamConfig model
@@ -50,3 +51,10 @@ class ExamConfigPublic(SQLModel):
     # creator_keycloak_id: str
     num_questions: int
     relative_weight: float
+
+class ExamConfigResponse(SQLModel):
+    id: int
+    subject_id: int
+    fraction: int
+    creator_keycloak_id: str
+    topic_configs: List[TopicConfigDTO]

@@ -1,1 +1,3 @@
 *.zip
+generated_exams/
+*.pdf

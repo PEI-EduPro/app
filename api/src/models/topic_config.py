@@ -1,4 +1,4 @@
-# src/models/exam_config.py
+# src/models/topic_config.py
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
@@ -19,7 +19,15 @@ class TopicConfig(SQLModel, table=True):
     topic: "Topic" = Relationship(back_populates="topic_configs")
     exam_config: "ExamConfig" = Relationship(back_populates="topic_configs")
 
-# ExamConfig schemas
+# DTOs
+class TopicConfigDTO(SQLModel):
+    id: int
+    topic_id: int
+    topic_name: str
+    num_questions: int
+    relative_weight: float
+
+# ExamConfig schemas (Restored)
 class ExamConfigCreate(SQLModel):
     """Schema for creating a new exam configuration"""
     topic_id: int
