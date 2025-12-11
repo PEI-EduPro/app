@@ -17,4 +17,5 @@ dependencies = [
     "beautifulsoup4>=4.12.0",
     "lxml>=4.9.3",
     "reportlab>=4.4.5",
+    "latex>=0.7.0",
 ]

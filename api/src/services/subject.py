@@ -102,9 +102,19 @@ async def update_subject(session: AsyncSession, subject_id: int, name: Optional[
 
 async def delete_subject(session: AsyncSession, subject_id: int) -> bool:
     """Delete subject."""
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+    
     subject = await session.get(Subject, subject_id)
     if not subject:
         return False
+    
+    # Delete exam_configs and their related exams
+    result = await session.exec(select(ExamConfig).where(ExamConfig.subject_id == subject_id))
+    exam_configs = result.all()
+    for ec in exam_configs:
+        await session.delete(ec)
+    
     await session.delete(subject)
     await session.commit()
     return True
