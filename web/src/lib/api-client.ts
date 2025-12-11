@@ -1,5 +1,3 @@
-
-
 class ApiClient {
   private baseUrl: string;
   constructor(baseUrl: string) {
@@ -13,12 +11,12 @@ class ApiClient {
     }
     return response.json();
   }
-  
+
   async post<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(data),
     });
@@ -31,9 +29,9 @@ class ApiClient {
 
   async delete<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -41,6 +39,25 @@ class ApiClient {
       throw new Error(`Error deleting ${endpoint}: ${response.statusText}`);
     }
     return response.json();
+  }
+
+  async download(endpoint: string, data: unknown): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Error downloading ${endpoint}: ${response.statusText}. Details: ${errorText.substring(0, 100)}...`
+      );
+    }
+
+    return response.blob();
   }
 }
 

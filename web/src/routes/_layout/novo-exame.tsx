@@ -67,7 +67,10 @@ function NovoExame() {
       </div>
       <div className="flex flex-col items-center">
         <div className="w-[700px] h-auto">
-          <NovoExameForm examData={examId ? examConfgExample : undefined} />
+          <NovoExameForm
+            examData={examId ? examConfgExample : undefined}
+            ucID={ucId}
+          />
         </div>
       </div>
     </div>

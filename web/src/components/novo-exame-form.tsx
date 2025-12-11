@@ -15,18 +15,8 @@ import { Input } from "@/components/ui/input";
 import "@/components/ui/table";
 import { CustomTable } from "./custom-table";
 import { ExamConfigCard } from "./exam-config-card";
-
-interface NovoExameI {
-  topics: Record<
-    number,
-    {
-      number_questions: number;
-      relative_quotation: number;
-    }
-  >;
-  fraction: number;
-  number_exams: number;
-}
+import { useAddExamConfig } from "@/hooks/use-exams";
+import type { NewExamConfigI } from "@/lib/types";
 
 type TopicSelection = {
   id: string;
@@ -41,13 +31,18 @@ export type NovoExameFormT = {
   fraction: number;
 };
 
-export const NovoExameForm = (props: { examData?: NovoExameFormT }) => {
-  const { examData = null } = props;
+export const NovoExameForm = (props: {
+  examData?: NovoExameFormT;
+  ucID: number;
+}) => {
+  const { examData = null, ucID } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null
   );
   const totalSteps = 5;
+
+  const { mutate, isPending, isSuccess } = useAddExamConfig();
 
   const data: Record<string, string>[] = [
     { id: "1", nome: "Arquiteturas" },
@@ -144,27 +139,33 @@ export const NovoExameForm = (props: { examData?: NovoExameFormT }) => {
   const onSubmit = async (formData: NovoExameFormT) => {
     const finalData = validatedData || validateAndNormalizeData(formData);
 
-    const novoExameData: NovoExameI = {
-      topics: {},
+    const novoExameData: NewExamConfigI = {
+      subject_id: ucID,
+      topics: finalData.topics.map((topic) => parseInt(topic.id)),
       fraction: finalData.fraction,
-      number_exams: finalData.number_exams,
+      num_variations: finalData.number_exams,
+      number_questions: {},
+      relative_quotations: {},
     };
 
     finalData.topics.forEach((topic) => {
       const topicId = parseInt(topic.id);
       if (!isNaN(topicId)) {
-        novoExameData.topics[topicId] = {
-          number_questions: finalData.number_questions[topic.id] || 1,
-          relative_quotation: finalData.relative_quotations[topic.id] || 1,
-        };
+        novoExameData.number_questions[topicId] =
+          finalData.number_questions[topic.id];
+        novoExameData.relative_quotations[topicId] =
+          finalData.relative_quotations[topic.id];
       }
     });
 
-    console.log("Form submitted (transformed):", novoExameData);
-    setFormStep(0);
-    setValidatedData(null);
-    reset();
-    toast.success("Exame criado com sucesso!");
+    mutate(novoExameData);
+
+    if (isSuccess && !isPending) {
+      setFormStep(0);
+      setValidatedData(null);
+      reset();
+      toast.success("Exame criado com sucesso!");
+    }
   };
 
   const getDisplayData = () => {
