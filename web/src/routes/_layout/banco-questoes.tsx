@@ -108,23 +108,25 @@ function BancoQuestões() {
   };
 
   const handleUpdateQuestion = (topicId: number, questionId: number, question: Omit<Question, "id">, oldOptions: Record<number, string>) => {
-    const oldOptionIds = Object.keys(oldOptions).map(id => parseInt(id));
-    const newOptionEntries = Object.entries(question.options);
+    const oldIds = new Set(Object.keys(oldOptions).map(id => parseInt(id)));
+    const newIds = new Set(Object.keys(question.options).map(id => parseInt(id)));
     
-    const options = oldOptionIds.map((oldId, index) => ({
-      id: oldId,
-      option_text: newOptionEntries[index][1],
-      value: parseInt(newOptionEntries[index][0]) === question.answer,
-    }));
+    const toUpdate = Object.entries(question.options)
+      .filter(([id]) => oldIds.has(parseInt(id)))
+      .map(([id, text]) => ({ id: parseInt(id), option_text: text, value: parseInt(id) === question.answer }));
+    
+    const toCreate = Object.entries(question.options)
+      .filter(([id]) => !oldIds.has(parseInt(id)))
+      .map(([id, text]) => ({ question_id: questionId, option_text: text, value: parseInt(id) === question.answer }));
+    
+    const toDelete = [...oldIds].filter(id => !newIds.has(id));
     
     updateQuestionMutation.mutate({
       id: questionId,
-      data: {
-        id: questionId,
-        topic_id: topicId,
-        question_text: question.text,
-      },
-      options
+      data: { id: questionId, topic_id: topicId, question_text: question.text },
+      toUpdate,
+      toCreate,
+      toDelete
     });
   };
 

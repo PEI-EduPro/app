@@ -66,12 +66,24 @@ export function useCreateQuestion(subjectId: number) {
 export function useUpdateQuestion(subjectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, data, options }: { id: number; data: any; options?: Array<{id: number; option_text: string; value: boolean}> }) => {
+    mutationFn: async ({ id, data, toUpdate, toCreate, toDelete }: { 
+      id: number; 
+      data: any; 
+      toUpdate?: Array<{id: number; option_text: string; value: boolean}>;
+      toCreate?: Array<{question_id: number; option_text: string; value: boolean}>;
+      toDelete?: number[];
+    }) => {
       await apiClient.put(`/questions/${id}`, data);
-      if (options && options.length > 0) {
-        await Promise.all(options.map(opt => 
+      if (toUpdate?.length) {
+        await Promise.all(toUpdate.map(opt => 
           apiClient.put(`/question-options/${opt.id}`, { option_text: opt.option_text, value: opt.value })
         ));
+      }
+      if (toCreate?.length) {
+        await apiClient.post('/question-options/', toCreate);
+      }
+      if (toDelete?.length) {
+        await Promise.all(toDelete.map(optId => apiClient.delete(`/question-options/${optId}`)));
       }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['questions', subjectId] }),
