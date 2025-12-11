@@ -1,7 +1,6 @@
 # src/models/exam_config.py
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
 
 
 # ExamConfig model
@@ -22,10 +21,10 @@ class ExamConfig(SQLModel, table=True):
 class ExamConfigCreate(SQLModel):
     """Schema for creating a new exam configuration"""
     topic_id: int
-    creator_keycloak_id: str  # Use Keycloak ID instead of local professor ID
+    #creator_keycloak_id: str  # Use Keycloak ID instead of local professor ID
     num_questions: int
     fraction: int = 0
-    relative_weight: float = 1.0
+    #relative_weight: float = 1.0
 
 class ExamConfigUpdate(SQLModel):
     """Schema for updating exam configuration"""

@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.post("/generate")
 async def generate_exams(
-    exam_specs: dict, # Receive the request body data
+    exam_specs: dict,
     session: AsyncSession = Depends(get_session),
     #current_user: User = Depends(get_current_user_info)
 ):
@@ -21,10 +21,8 @@ async def generate_exams(
     Returns a ZIP file containing the generated exam PDFs.
     """
     try:
-        # Extract number of variations desired (default to 1)
         num_variations = exam_specs.get("num_variations", 1)
 
-        # Generate exams and get ZIP bytes
         zip_bytes = await exam.create_configs_and_exams(
             session, 
             exam_specs,  

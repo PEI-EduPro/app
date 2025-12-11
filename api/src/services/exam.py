@@ -23,7 +23,6 @@ logger = logging.getLogger(__name__)
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    #user_info: User,
     num_variations: int = 1
 ) -> bytes:
     """
@@ -36,7 +35,6 @@ async def create_configs_and_exams(
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
-        #creator_keycloak_id=user_info.user_id
     )
     session.add(exam_config)
     await session.commit()
@@ -46,32 +44,28 @@ async def create_configs_and_exams(
     
     # 2. Create TopicConfigs
     topic_configs = []
-    # Store topic configs by topic ID for easy weight lookup later
     topic_weights = {} 
-    
     total_relative_mass = 0.0
 
-    for topic_name in exam_specs["topics"]:
-        statement = select(Topic).where(Topic.name == topic_name)
+    for topic_id in exam_specs["topics"]:
+        statement = select(Topic).where(Topic.id == topic_id)
         result = await session.exec(statement)
         topic = result.first()
 
         if topic:
-            weight = exam_specs["relative_quotations"][topic_name]
-            num_q = exam_specs["number_questions"][topic_name]
+            weight = exam_specs["relative_quotations"][topic_id]
+            num_q = exam_specs["number_questions"][topic_id]
             
             topic_config = TopicConfig(
-                exam_config_id=ex_conf_id, # type: ignore
-                topic_id=topic.id, # type: ignore
+                exam_config_id=ex_conf_id,
+                topic_id=topic.id,
                 num_questions=num_q,
                 relative_weight=weight,
-                #creator_keycloak_id=user_info.user_id
             )
             topic_configs.append(topic_config)
             
-            # Accumulate mass for normalization
             total_relative_mass += (weight * num_q)
-            topic_weights[topic.id] = weight # Temporary storage of relative weight
+            topic_weights[topic.id] = weight
 
     session.add_all(topic_configs)
     await session.commit()
