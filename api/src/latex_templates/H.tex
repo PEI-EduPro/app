@@ -1,0 +1,83 @@
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{etoolbox}
+\usepackage{graphicx}
+\usepackage{qrcode}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage{float}
+\usepackage{newunicodechar}
+\newunicodechar{∫}{$\int$}
+\newunicodechar{∑}{$\sum$}
+\newunicodechar{√}{$\sqrt{}$}
+\newunicodechar{π}{$\pi$}
+\newunicodechar{α}{$\alpha$}
+\newunicodechar{β}{$\beta$}
+\newunicodechar{γ}{$\gamma$}
+\newunicodechar{δ}{$\delta$}
+\newunicodechar{θ}{$\theta$}
+\newunicodechar{λ}{$\lambda$}
+\newunicodechar{μ}{$\mu$}
+\newunicodechar{σ}{$\sigma$}
+\newunicodechar{ω}{$\omega$}
+\newunicodechar{≤}{$\leq$}
+\newunicodechar{≥}{$\geq$}
+\newunicodechar{≠}{$\neq$}
+\newunicodechar{±}{$\pm$}
+\newunicodechar{×}{$\times$}
+\newunicodechar{÷}{$\div$}
+\newunicodechar{∞}{$\infty$}
+
+\let\oldlabel=\label
+\def\label#1{}
+
+\providetoggle{english}
+\settoggle{english}{false}
+\newcommand\SetEnglish{\settoggle{english}{true}}
+
+\setlength{\textheight}{27cm}
+\setlength{\textwidth}{19cm}
+\setlength{\oddsidemargin}{-1.5cm}
+\setlength{\topmargin}{-2cm}
+\pagestyle{head}
+\renewcommand\baselinestretch{0.9}
+
+
+\firstpageheader{ss}{ss}{ss}
+\runningheader{xxxx}{dasasa}{xxxxxxx}
+
+\newcommand\Header[4]{
+	\cleardoublepage
+	\begin{center}
+	\huge
+	\input{UC}
+
+	\vspace{0.3cm}
+	%\Large
+	\normalsize
+	#1 %\fbox{\tttnumber}
+	\\
+	\input{date}
+
+	\vspace{0.3cm}
+	\iftoggle{english}{
+	\textbf{Number}:\enspace\hrulefill\\
+	\textbf{Name}:\enspace\hrulefill
+	}{
+	\textbf{Número mecanográfico}:\enspace\hrulefill\\
+	\textbf{Nome}:\enspace\hrulefill
+	}
+
+	\vspace{0.3cm}
+	\normalsize
+	\fbox{
+		\begin{minipage}{.97\columnwidth}
+			\input{Rules}
+			#2
+
+			\input{#3}
+			\input{#4}
+		\end{minipage}
+		}
+	\end{center}
+}
