@@ -22,15 +22,17 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
 
 async def create_configs(
     session: AsyncSession,
-    exam_specs: dict,
-    #user_info: User
+    exam_specs: dict
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
+    # Using a dummy user ID since authentication is disabled
+    dummy_user_id = "default_user"
+
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
-        fraction=exam_specs["fraction"]
-        # creator_keycloak_id=user_info.user_id  # Commented out - 
+        fraction=exam_specs["fraction"],
+        creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
     await session.commit()
@@ -45,15 +47,11 @@ async def create_configs(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][topic_name],
-                relative_weight=exam_specs["relative_quotations"][topic_name]
+                relative_weight=exam_specs["relative_quotations"][topic_name],
+                creator_keycloak_id=dummy_user_id
             )
             topic_configs.append(topic_config)
-        else:
-            logger.warning(f"Topic '{topic_name}' not found, skipping")
 
-    if not topic_configs:
-        logger.error(f"No topic configs created for exam_config {exam_config.id}")
-    
     session.add_all(topic_configs)
     await session.commit()
 
@@ -79,6 +77,8 @@ async def generate_exams_from_configs(
     import zipfile
     import io
 
+    if shutil.which("pdflatex") is None:
+        raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
     if not topic_configs:
         raise ValueError("No topic configurations provided - cannot generate exams")
 
@@ -140,6 +140,9 @@ async def generate_exams_from_configs(
             new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
             session.add(new_exam)
             await session.commit()
+
+        if not os.listdir(exams_dir):
+             raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
 
         # Create ZIP
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -210,18 +213,24 @@ def _write_blank_answers(workdir: str, num_questions: int):
     rows = []
     for letter in ['A', 'B', 'C', 'D']:
         cells = [" " for _ in range(1, cols + 1)]
-        rows.append(f"{letter}& " + " & ".join(cells) + " \\ \hline")
+        rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
+\\begin{{minipage}}{{0.15\\textwidth}}
 \\qrcode[height=0.75in]{{\\tttnumber}}
-\\hspace{{0.25cm}}
+\\end{{minipage}}%
+\\begin{{minipage}}{{0.80\\textwidth}}
+\\scriptsize
+\\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
- &{header}\\ \hline
+ &{header}\\\\ \\hline
 {chr(10).join(rows)}
 \end{{tabular}}
 \end{{center}}
+\\end{{minipage}}
+\\end{{center}}
 \\vspace{{0.25cm}}
 """
     with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
@@ -236,18 +245,24 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
     rows = []
     for letter in ['A', 'B', 'C', 'D']:
         cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
-        rows.append(f"{letter}& " + " & ".join(cells) + " \\ \hline")
+        rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
+\\begin{{minipage}}{{0.15\\textwidth}}
 \\qrcode[height=0.75in]{{\\tttnumber}}
-\\hspace{{0.25cm}}
+\\end{{minipage}}%
+\\begin{{minipage}}{{0.80\\textwidth}}
+\\scriptsize
+\\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
- &{header}\\ \hline
+ &{header}\\\\ \\hline
 {chr(10).join(rows)}
 \end{{tabular}}
 \end{{center}}
+\\end{{minipage}}
+\\end{{center}}
 \\vspace{{0.25cm}}
 """
     with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
@@ -281,7 +296,6 @@ def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    #user_info: User,
     num_variations: int = 1
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
