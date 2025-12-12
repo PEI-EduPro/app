@@ -75,6 +75,9 @@ async def generate_exams_from_configs(
     import zipfile
     import io
 
+    if shutil.which("pdflatex") is None:
+        raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
+
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
     
@@ -133,6 +136,9 @@ async def generate_exams_from_configs(
             new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
             session.add(new_exam)
             await session.commit()
+
+        if not os.listdir(exams_dir):
+             raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
 
         # Create ZIP
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
@@ -207,14 +213,20 @@ def _write_blank_answers(workdir: str, num_questions: int):
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
+\\begin{{minipage}}{{0.15\\textwidth}}
 \\qrcode[height=0.75in]{{\\tttnumber}}
-\\hspace{{0.25cm}}
+\\end{{minipage}}%
+\\begin{{minipage}}{{0.80\\textwidth}}
+\\scriptsize
+\\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
  &{header}\\ \hline
 {chr(10).join(rows)}
 \end{{tabular}}
 \end{{center}}
+\\end{{minipage}}
+\\end{{center}}
 \\vspace{{0.25cm}}
 """
     with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
@@ -233,14 +245,20 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
+\\begin{{minipage}}{{0.15\\textwidth}}
 \\qrcode[height=0.75in]{{\\tttnumber}}
-\\hspace{{0.25cm}}
+\\end{{minipage}}%
+\\begin{{minipage}}{{0.80\\textwidth}}
+\\scriptsize
+\\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
  &{header}\\ \hline
 {chr(10).join(rows)}
 \end{{tabular}}
 \end{{center}}
+\\end{{minipage}}
+\\end{{center}}
 \\vspace{{0.25cm}}
 """
     with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
