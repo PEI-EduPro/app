@@ -320,6 +320,9 @@ else
     cat generated_exams.zip 2>/dev/null || echo "No response file created"
 fi
 
+echo -e "\n--- 3.1 GET EXAM CONFIGS ---"
+echo "Fetching exam configs for subject $SUBJECT_ID..."
+curl -s -X GET "$API_BASE/exams/subject/$SUBJECT_ID/configs" | jq .
 
 echo -e "\n--- 4. CLEANUP ---"
 curl -s -X DELETE "$API_BASE/subjects/$SUBJECT_ID" \
