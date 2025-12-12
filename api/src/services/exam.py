@@ -22,15 +22,17 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
 
 async def create_configs(
     session: AsyncSession,
-    exam_specs: dict,
-    #user_info: User
+    exam_specs: dict
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
+    # Using a dummy user ID since authentication is disabled
+    dummy_user_id = "default_user"
+
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
-        fraction=exam_specs["fraction"]
-        # creator_keycloak_id=user_info.user_id  # Commented out - 
+        fraction=exam_specs["fraction"],
+        creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
     await session.commit()
@@ -45,15 +47,11 @@ async def create_configs(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][topic_name],
-                relative_weight=exam_specs["relative_quotations"][topic_name]
+                relative_weight=exam_specs["relative_quotations"][topic_name],
+                creator_keycloak_id=dummy_user_id
             )
             topic_configs.append(topic_config)
-        else:
-            logger.warning(f"Topic '{topic_name}' not found, skipping")
 
-    if not topic_configs:
-        logger.error(f"No topic configs created for exam_config {exam_config.id}")
-    
     session.add_all(topic_configs)
     await session.commit()
 
@@ -298,7 +296,6 @@ def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    #user_info: User,
     num_variations: int = 1
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""

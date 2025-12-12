@@ -10,7 +10,7 @@ class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    # creator_keycloak_id: str = Field(max_length=255)  # Commented out
+    creator_keycloak_id: str = Field(max_length=255)
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
     
