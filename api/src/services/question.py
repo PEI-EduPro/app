@@ -39,11 +39,15 @@ async def create_question_XML(
     created_options = 0
     
     for topic_data in parsed.get("topics", []):
-        # Create topic
-        topic = Topic(name=topic_data["name"], subject_id=subject_id)
-        session.add(topic)
-        await session.flush()
-        created_topics += 1
+        # Check if topic exists, create if not
+        result = await session.exec(select(Topic).where(Topic.name == topic_data["name"], Topic.subject_id == subject_id))
+        topic = result.first()
+        
+        if not topic:
+            topic = Topic(name=topic_data["name"], subject_id=subject_id)
+            session.add(topic)
+            await session.flush()
+            created_topics += 1
         
         for q_data in topic_data.get("questions", []):
             # Create question
