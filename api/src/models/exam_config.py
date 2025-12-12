@@ -1,7 +1,21 @@
 # src/models/exam_config.py
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
+
+
+# TopicConfig model - junction table between Topic and ExamConfig
+class TopicConfig(SQLModel, table=True):
+    __tablename__ = "topic_config"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    topic_id: int = Field(foreign_key="topic.id")
+    exam_config_id: int = Field(foreign_key="exam_config.id")
+    num_questions: int
+    relative_weight: float = Field(default=1.0)
+    
+    # Relationships
+    topic: "Topic" = Relationship(back_populates="topic_configs")
+    exam_config: "ExamConfig" = Relationship(back_populates="topic_configs")
 
 
 # ExamConfig model
@@ -9,8 +23,7 @@ class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    # Replace foreign key to local 'professor' table with Keycloak user ID
-    creator_keycloak_id: str = Field(max_length=255) # Store the Keycloak ID of the creator
+    # creator_keycloak_id: str = Field(max_length=255)  # Commented out
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
     
@@ -21,32 +34,25 @@ class ExamConfig(SQLModel, table=True):
 # ExamConfig schemas
 class ExamConfigCreate(SQLModel):
     """Schema for creating a new exam configuration"""
-    topic_id: int
-    creator_keycloak_id: str  # Use Keycloak ID instead of local professor ID
-    num_questions: int
+    # creator_keycloak_id: str  # Commented out
     fraction: int = 0
-    relative_weight: float = 1.0
+    subject_id: int
 
 class ExamConfigUpdate(SQLModel):
     """Schema for updating exam configuration"""
-    topic_id: Optional[int] = None
-    creator_keycloak_id: Optional[str] = None  # Use Keycloak ID instead of local professor ID
-    num_questions: Optional[int] = None
+    # creator_keycloak_id: Optional[str] = None  # Commented out
     fraction: Optional[int] = None
-    relative_weight: Optional[float] = None
+    subject_id: Optional[int] = None
 
 class ExamConfigRead(SQLModel):
     """Schema for reading exam configuration data"""
     id: int
-    topic_id: int
-    creator_keycloak_id: str  # Use Keycloak ID instead of local professor ID
+    # creator_keycloak_id: str  # Commented out
     fraction: int
+    subject_id: int
 
 class ExamConfigPublic(SQLModel):
     """Schema for public exam config data (limited info)"""
     id: int
-    topic_id: int
-    # Potentially remove creator_keycloak_id from public schema if not needed
-    # creator_keycloak_id: str
-    num_questions: int
-    relative_weight: float
+    fraction: int
+    subject_id: int

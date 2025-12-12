@@ -9,9 +9,8 @@ from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.user import User
-from src.models.topic_config import TopicConfig
+from src.models.exam_config import ExamConfig, TopicConfig
 from src.models.topic import Topic
-from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
 from src.models.question import Question
 
@@ -29,8 +28,8 @@ async def create_configs(
     
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
-        fraction=exam_specs["fraction"],
-        creator_keycloak_id=user_info.user_id
+        fraction=exam_specs["fraction"]
+        # creator_keycloak_id=user_info.user_id  # Commented out - 
     )
     session.add(exam_config)
     await session.commit()
@@ -45,8 +44,7 @@ async def create_configs(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][topic_name],
-                relative_weight=exam_specs["relative_quotations"][topic_name],
-                creator_keycloak_id=user_info.user_id
+                relative_weight=exam_specs["relative_quotations"][topic_name]
             )
             topic_configs.append(topic_config)
 
