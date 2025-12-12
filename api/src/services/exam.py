@@ -209,7 +209,7 @@ def _write_blank_answers(workdir: str, num_questions: int):
     rows = []
     for letter in ['A', 'B', 'C', 'D']:
         cells = [" " for _ in range(1, cols + 1)]
-        rows.append(f"{letter}& " + " & ".join(cells) + " \\ \hline")
+        rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
@@ -221,7 +221,7 @@ def _write_blank_answers(workdir: str, num_questions: int):
 \\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
- &{header}\\ \hline
+ &{header}\\\\ \\hline
 {chr(10).join(rows)}
 \end{{tabular}}
 \end{{center}}
@@ -241,7 +241,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
     rows = []
     for letter in ['A', 'B', 'C', 'D']:
         cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
-        rows.append(f"{letter}& " + " & ".join(cells) + " \\ \hline")
+        rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
@@ -253,7 +253,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
 \\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
- &{header}\\ \hline
+ &{header}\\\\ \\hline
 {chr(10).join(rows)}
 \end{{tabular}}
 \end{{center}}
