@@ -51,5 +51,5 @@ class ExamConfigResponse(SQLModel):
     id: int
     subject_id: int
     fraction: int
-    creator_keycloak_id: str
+    #creator_keycloak_id: str
     topic_configs: List[TopicConfigDTO]

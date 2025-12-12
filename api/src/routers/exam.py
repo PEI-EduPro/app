@@ -43,7 +43,7 @@ async def get_subject_exam_configs(
             id=config.id,
             subject_id=config.subject_id,
             fraction=config.fraction,
-            creator_keycloak_id=config.creator_keycloak_id,
+            #creator_keycloak_id=config.creator_keycloak_id,
             topic_configs=topic_configs_dto
         ))
         
@@ -53,7 +53,7 @@ async def get_subject_exam_configs(
 async def generate_exams(
     exam_specs: dict,
     session: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user_info)
+    #current_user: User = Depends(get_current_user_info)
 ):
     """
     Generate exams based on specifications.
@@ -65,7 +65,7 @@ async def generate_exams(
         zip_bytes = await exam.create_configs_and_exams(
             session, 
             exam_specs, 
-            current_user, 
+            #current_user, 
             num_variations
         )
 

@@ -80,6 +80,8 @@ async def get_question_by_id(session: AsyncSession, question_id: int) -> Optiona
     statement = select(Question).where(Question.id == question_id)
     result = await session.exec(statement)
     result = result.one_or_none()
+    if result is None:
+        return None
     return QuestionPublic.model_validate(result)
 
 
