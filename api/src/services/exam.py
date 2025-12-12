@@ -9,9 +9,9 @@ from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.user import User
+from src.models.exam_config import ExamConfig
 from src.models.topic_config import TopicConfig
 from src.models.topic import Topic
-from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
 from src.models.question import Question
 
@@ -23,14 +23,14 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
 async def create_configs(
     session: AsyncSession,
     exam_specs: dict,
-    user_info: User
+    #user_info: User
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
-        fraction=exam_specs["fraction"],
-        creator_keycloak_id=user_info.user_id
+        fraction=exam_specs["fraction"]
+        # creator_keycloak_id=user_info.user_id  # Commented out - 
     )
     session.add(exam_config)
     await session.commit()
@@ -45,11 +45,15 @@ async def create_configs(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][topic_name],
-                relative_weight=exam_specs["relative_quotations"][topic_name],
-                creator_keycloak_id=user_info.user_id
+                relative_weight=exam_specs["relative_quotations"][topic_name]
             )
             topic_configs.append(topic_config)
+        else:
+            logger.warning(f"Topic '{topic_name}' not found, skipping")
 
+    if not topic_configs:
+        logger.error(f"No topic configs created for exam_config {exam_config.id}")
+    
     session.add_all(topic_configs)
     await session.commit()
 
@@ -77,6 +81,8 @@ async def generate_exams_from_configs(
 
     if shutil.which("pdflatex") is None:
         raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
+    if not topic_configs:
+        raise ValueError("No topic configurations provided - cannot generate exams")
 
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
@@ -292,11 +298,11 @@ def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    user_info: User,
+    #user_info: User,
     num_variations: int = 1
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    exam_config, topic_configs = await create_configs(session, exam_specs, user_info)
+    exam_config, topic_configs = await create_configs(session, exam_specs)
     return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations)
 
 

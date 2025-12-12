@@ -47,8 +47,8 @@ async def get_all_by_subject(subject_id: int, session: AsyncSession = Depends(ge
 
 @router.get("/{subject_id}", response_model=SubjectRead)
 async def get_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
-    """Get all question options, questions and topics by subject ID"""
-    subject = await subject_service.get_subject_by_id(session,subject_id)
+    """Get subject by ID"""
+    subject = await subject_service.get_subject_by_id(session, subject_id)
     if not subject:
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject

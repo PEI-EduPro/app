@@ -1,16 +1,17 @@
-# src/routers/subject.py
+# src/routers/topic.py
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.services import topic
 from src.services import question
 from src.core.db import get_session
-from src.core.deps import require_subject_regent, verify_regent_exists # Import the new dependency
-from src.models.topic import Topic, TopicCreate, TopicPublic
+from src.core.deps import require_subject_regent, verify_regent_exists
+from src.models.topic import Topic, TopicCreate, TopicPublic, TopicUpdate
 from src.models.user import User
 from src.core.deps import get_current_user_info
 import logging
 from sqlmodel import select
-
+from typing import List
+import src.services.topic as topic_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -56,7 +57,10 @@ async def create_topic(
             detail="An error occurred while creating the topic in the database."
         )
 
-# ... (keep existing endpoints like GET, PUT, etc.) ...
+@router.get("/", response_model=List[TopicPublic])
+async def get_subjects(session: AsyncSession = Depends(get_session)):
+    """Get all topics."""
+    return await topic_service.get_all_topics(session)
 
 @router.get("/{id}", response_model=TopicPublic)
 async def read_topic(
@@ -64,11 +68,27 @@ async def read_topic(
     session: AsyncSession = Depends(get_session)
 ):
     """Get topic info from provided name"""
-    # FIX: Use select statement filtering by name
     result = await topic.get_topic_by_id(session,id)
     
     if not result:
         raise HTTPException(status_code=404, detail="Topic not found")
     return TopicPublic.model_validate(result)
-    
-    
+
+@router.put("/{id}", response_model=TopicPublic)
+async def update_topic(
+    id: int,
+    topic_data: topic.TopicUpdate,
+    session: AsyncSession = Depends(get_session)
+):
+    """Update topic"""
+    return await topic.update_topic(session, topic_data, id)
+
+@router.delete("/{id}")
+async def delete_topic(
+    id: int,
+    session: AsyncSession = Depends(get_session)
+):
+    """Delete topic"""
+    if await topic.delete_topic(session, id):
+        return {"message": "Topic deleted successfully"}
+    raise HTTPException(status_code=404, detail="Topic not found")
