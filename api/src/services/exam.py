@@ -14,6 +14,7 @@ from src.models.topic_config import TopicConfig
 from src.models.topic import Topic
 from src.models.exam import Exam
 from src.models.question import Question
+from src.models.question_option import QuestionOption
 
 logger = logging.getLogger(__name__)
 
@@ -103,16 +104,27 @@ async def generate_exams_from_configs(
                 result = await session.exec(
                     select(Question)
                     .where(Question.topic_id == t_conf.topic_id)
-                    .options(selectinload(Question.question_options))
                     .order_by(func.random())
                     .limit(t_conf.num_questions)
                 )
                 all_questions.extend(result.all())
             
+            # Load options for all questions
+            q_ids = [q.id for q in all_questions]
+            opts_by_q = {}
+            if q_ids:
+                opts_result = await session.exec(
+                    select(QuestionOption).where(QuestionOption.question_id.in_(q_ids))
+                )
+                all_opts = opts_result.all()
+                logger.info(f"Loaded {len(all_opts)} options for {len(q_ids)} questions")
+                for opt in all_opts:
+                    opts_by_q.setdefault(opt.question_id, []).append(opt)
+            
             random.shuffle(all_questions)
 
             # Generate T-variants.tex content and get answer positions
-            questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights)
+            questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
             num_questions = len(all_questions)
 
             # Write variant questions file
@@ -154,7 +166,7 @@ async def generate_exams_from_configs(
     return zip_buffer.getvalue()
 
 
-def _generate_questions_latex(questions: list, topic_weights: Dict[int, float]) -> Tuple[str, Dict[int, str]]:
+def _generate_questions_latex(questions: list, topic_weights: Dict[int, float], opts_by_q: Dict[int, list], num_options: int = 4) -> Tuple[str, Dict[int, str]]:
     """Generate LaTeX for questions and return answer map."""
     lines = []
     answers_map = {}
@@ -165,15 +177,29 @@ def _generate_questions_latex(questions: list, topic_weights: Dict[int, float]) 
         lines.append(f"({weight:.2f} pts) {q.question_text}")
         lines.append("")
         
-        options = list(q.question_options)
-        random.shuffle(options)
+        all_opts = opts_by_q.get(q.id, [])
+        logger.info(f"Question {q.id} has {len(all_opts)} options")
+        correct_opts = [o for o in all_opts if o.value]
+        wrong_opts = [o for o in all_opts if not o.value]
+        
+        # Pick one correct option
+        correct = correct_opts[0] if correct_opts else None
+        
+        # Fill wrong options up to num_options - 1
+        random.shuffle(wrong_opts)
+        selected_wrong = wrong_opts[:num_options - 1]
+        
+        # Build final options list
+        final_opts = ([correct] if correct else []) + selected_wrong
+        random.shuffle(final_opts)
         
         lines.append("\\begin{choices}")
-        for i, opt in enumerate(options):
-            cmd = "\\CorrectChoice" if opt.value else "\\choice"
-            lines.append(f"  {cmd} {opt.option_text}")
-            if opt.value:
+        for i, opt in enumerate(final_opts):
+            if opt and opt.value:
+                lines.append(f"  \\CorrectChoice {opt.option_text}")
                 answers_map[q_num] = chr(ord('A') + i)
+            elif opt:
+                lines.append(f"  \\choice {opt.option_text}")
         lines.append("\\end{choices}")
         lines.append("")
     
