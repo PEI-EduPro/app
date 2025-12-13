@@ -9,6 +9,12 @@ async def create_question_options(
     options_data: List[QuestionOptionCreate]
 ) -> List[QuestionOptionPublic]:
     """Create multiple question options"""
+    # Check for duplicate option texts within the same question
+    for qid in set(o.question_id for o in options_data):
+        texts = [o.option_text.strip().lower() for o in options_data if o.question_id == qid]
+        if len(texts) != len(set(texts)):
+            raise HTTPException(status_code=400, detail="Duplicate option texts are not allowed")
+    
     options = [QuestionOption.model_validate(x) for x in options_data]
     session.add_all(options)
     await session.commit()
