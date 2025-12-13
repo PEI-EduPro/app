@@ -7,14 +7,14 @@ from src.models.question_option import QuestionOption
 from src.models.question import Question
 from src.models.topic import Topic
 from src.models.subject import Subject
+from sqlalchemy import func
+from src.models.topic import TopicPublic
 
 logger = logging.getLogger(__name__)
 
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 
-from sqlalchemy import select
-from sqlalchemy.orm import joinedload
 
 async def get_topics_questions_and_options_by_subject_id(
     session: AsyncSession, subject_id: int
@@ -68,6 +68,16 @@ async def get_topics_questions_and_options_by_subject_id(
         result_subject["subject_topics"][topic.id] = topic_data
 
     return result_subject
+
+async def get_all_subject_topics(session: AsyncSession, subject_id: int) -> List[tuple[TopicPublic, int]]:
+    stmt = (
+        select(Topic, func.count(Question.id))
+        .outerjoin(Question, Question.topic_id == Topic.id)
+        .where(Topic.subject_id == subject_id)
+        .group_by(Topic.id)
+    )
+    result = await session.execute(stmt)
+    return [(TopicPublic.model_validate(topic), count) for topic, count in result.all()]
 
 
 

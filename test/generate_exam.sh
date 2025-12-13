@@ -274,6 +274,12 @@ create_topic_content "Trigonometry" 10
 echo "All topics and questions created."
 
 
+echo -e "\n--- 2.1 TEST GET SUBJECT TOPICS ---"
+echo "Fetching topics for subject $SUBJECT_ID..."
+TOPICS_RESP=$(curl -s -X GET "$API_BASE/subjects/$SUBJECT_ID/topics" \
+  -H "Authorization: Bearer $REGENT_TOKEN")
+echo "$TOPICS_RESP" | jq .
+
 echo -e "\n--- 3. TEST EXAM GENERATION ---"
 
 echo "Generating 3 exam variations (requesting ZIP)..."
