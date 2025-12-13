@@ -2,12 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
 import { type NewExamConfigI, type ExamConfigI } from "@/lib/types";
 
-const useGetExamConfig = () =>
-  useQuery<ExamConfigI[]>({
-    queryKey: ["examConfig"],
-    queryFn: () => apiClient.get("/exams/"),
-  });
-
 const saveFile = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -40,5 +34,12 @@ const useAddExamConfig = () => {
     },
   });
 };
+
+const useGetExamConfig = (ucId: number) =>
+  useQuery<ExamConfigI[]>({
+    queryKey: ["examConfig", ucId],
+    queryFn: () => apiClient.get(`/exams/subject/${ucId}/configs`),
+    enabled: !!ucId,
+  });
 
 export { useAddExamConfig, useGetExamConfig };

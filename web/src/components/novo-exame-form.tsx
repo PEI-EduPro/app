@@ -169,10 +169,21 @@ export const NovoExameForm = (props: {
   };
 
   const getDisplayData = () => {
-    if (formStep === 4 && validatedData) {
-      return validatedData;
-    }
-    return getValues();
+    const formData =
+      formStep === 4 && validatedData ? validatedData : getValues();
+
+    return {
+      id: 0, // dummy id for display purposes
+      subject_id: ucID,
+      fraction: formData.fraction,
+      num_variations: formData.number_exams,
+      topic_configs: formData.topics.map((topic) => ({
+        topic_id: parseInt(topic.id),
+        topic_name: topic.nome,
+        number_questions: formData.number_questions[topic.id] || 1,
+        relative_weight: formData.relative_quotations[topic.id] || 1,
+      })),
+    };
   };
 
   return (

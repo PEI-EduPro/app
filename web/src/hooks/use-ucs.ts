@@ -17,7 +17,7 @@ const useAddUc = () => {
     mutationKey: ["addUc"],
     mutationFn: (props: NewUcI) => apiClient.post("/subjects/", props),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["product"] });
+      queryClient.invalidateQueries({ queryKey: ["uc"] });
       navigate({ to: "/unidades-curriculares" });
     },
   });
@@ -44,4 +44,11 @@ const useDeleteUcById = (ucId: number) => {
   });
 };
 
-export { useGetUc, useAddUc, useGetUcById, useDeleteUcById };
+// const useGetUcQuestionsById = (ucId: number) =>
+//   useQuery<UcI>({
+//     queryKey: ["uc", ucId],
+//     queryFn: () => apiClient.get(`/subjects/${ucId}/all-questions`)
+//   })
+
+// export { useGetUc, useAddUc, useGetUcById, useDeleteUcById , useGetUcQuestionsById };
+export { useGetUc, useAddUc, useGetUcById, useDeleteUcById};

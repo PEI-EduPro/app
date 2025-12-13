@@ -16,6 +16,7 @@ import { Route as LayoutNovoExameRouteImport } from './routes/_layout/novo-exame
 import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
 import { Route as LayoutExamesUcRouteImport } from './routes/_layout/exames-uc'
 import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
+import { Route as LayoutBancoQuestoesRouteImport } from './routes/_layout/banco-questoes'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -52,9 +53,15 @@ const LayoutDetalhesUcRoute = LayoutDetalhesUcRouteImport.update({
   path: '/detalhes-uc',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutBancoQuestoesRoute = LayoutBancoQuestoesRouteImport.update({
+  id: '/banco-questoes',
+  path: '/banco-questoes',
+  getParentRoute: () => LayoutRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/exames-uc': typeof LayoutExamesUcRoute
   '/nova-uc': typeof LayoutNovaUcRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/exames-uc': typeof LayoutExamesUcRoute
   '/nova-uc': typeof LayoutNovaUcRoute
@@ -73,6 +81,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/_layout/exames-uc': typeof LayoutExamesUcRoute
   '/_layout/nova-uc': typeof LayoutNovaUcRoute
@@ -83,6 +92,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/banco-questoes'
     | '/detalhes-uc'
     | '/exames-uc'
     | '/nova-uc'
@@ -91,6 +101,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/banco-questoes'
     | '/detalhes-uc'
     | '/exames-uc'
     | '/nova-uc'
@@ -100,6 +111,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_layout'
+    | '/_layout/banco-questoes'
     | '/_layout/detalhes-uc'
     | '/_layout/exames-uc'
     | '/_layout/nova-uc'
@@ -163,10 +175,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDetalhesUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/banco-questoes': {
+      id: '/_layout/banco-questoes'
+      path: '/banco-questoes'
+      fullPath: '/banco-questoes'
+      preLoaderRoute: typeof LayoutBancoQuestoesRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutBancoQuestoesRoute: typeof LayoutBancoQuestoesRoute
   LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
   LayoutExamesUcRoute: typeof LayoutExamesUcRoute
   LayoutNovaUcRoute: typeof LayoutNovaUcRoute
@@ -175,6 +195,7 @@ interface LayoutRouteChildren {
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutBancoQuestoesRoute: LayoutBancoQuestoesRoute,
   LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
   LayoutExamesUcRoute: LayoutExamesUcRoute,
   LayoutNovaUcRoute: LayoutNovaUcRoute,

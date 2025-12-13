@@ -2,60 +2,48 @@ from fastapi import HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.question_option import QuestionOption, QuestionOptionCreate, QuestionOptionPublic, QuestionOptionUpdate
-from typing import Optional, List
+from typing import List, Optional
 
-
-async def create_question(
+async def create_question_options(
     session: AsyncSession,
-    question_data: QuestionOptionCreate
-) -> QuestionOptionPublic:
-    """Create a new question_option"""
-    question_option = QuestionOption.model_validate(question_data)
-    session.add(question_option)
+    options_data: List[QuestionOptionCreate]
+) -> List[QuestionOptionPublic]:
+    """Create multiple question options"""
+    options = [QuestionOption.model_validate(x) for x in options_data]
+    session.add_all(options)
     await session.commit()
-    await session.refresh(question_option)
-    return QuestionOptionPublic.model_validate(question_option)
+    for option in options:
+        await session.refresh(option)
+    return [QuestionOptionPublic.model_validate(o) for o in options]
 
-
-async def get_question_option_by_id(session: AsyncSession, question_id: int) -> Optional[QuestionOptionPublic]:
-    """Get a question_option by its ID"""
-    statement = select(QuestionOption).where(QuestionOption.id == question_id)
-    result = await session.exec(statement)
-    result = result.one_or_none()
-    return QuestionOptionPublic.model_validate(result)
-
-
-async def update_question(
+async def update_question_option(
     session: AsyncSession,
-    question_option_data: QuestionOptionUpdate
+    option_id: int,
+    option_data: QuestionOptionUpdate
 ) -> Optional[QuestionOptionPublic]:
-    """Update a question_option"""
-    statement = select(QuestionOption).where(QuestionOption.id == question_option_data.id)
-    question_option = await session.exec(statement)
-    question_option = question_option.one_or_none()
-
-    if not question_option:
-            raise HTTPException(status_code=404, detail="QuestionOption not found")
-    
-    # Update fields
-    data = question_option_data.model_dump()
-    question_option.sqlmodel_update(data)
-    
-    session.add(question_option)
-    await session.commit()
-    await session.refresh(question_option)
-    return QuestionOptionPublic.model_validate(question_option)
-
-
-async def delete_question(session: AsyncSession, question_option_id: int) -> bool:
-    """Delete a question_option by ID"""
-    statement = select(QuestionOption).where(QuestionOption.id == question_option_id)
+    """Update a question option"""
+    statement = select(QuestionOption).where(QuestionOption.id == option_id)
     result = await session.exec(statement)
-    question_option = result.first()
+    option = result.one_or_none()
     
-    if not question_option:
+    if not option:
+        raise HTTPException(status_code=404, detail="Question option not found")
+    
+    option.sqlmodel_update(option_data.model_dump(exclude_unset=True))
+    session.add(option)
+    await session.commit()
+    await session.refresh(option)
+    return QuestionOptionPublic.model_validate(option)
+
+async def delete_question_option(session: AsyncSession, option_id: int) -> bool:
+    """Delete a question option"""
+    statement = select(QuestionOption).where(QuestionOption.id == option_id)
+    result = await session.exec(statement)
+    option = result.one_or_none()
+    
+    if not option:
         return False
     
-    await session.delete(question_option)
+    await session.delete(option)
     await session.commit()
     return True

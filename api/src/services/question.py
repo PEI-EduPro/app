@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.utils import parse_moodle_xml
 from src.models.question_option import QuestionOption, QuestionOptionPublic
 from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
+from src.models.topic import Topic
 from typing import Optional, List
 
 logger = logging.getLogger(__name__)
@@ -30,10 +31,48 @@ async def create_question_XML(
     subject_id: int,
     question_xml: str
 ) -> dict:
-    """Create a new question"""
-    result = parse_moodle_xml(question_xml)
+    """Create topics, questions and options from Moodle XML"""
+    parsed = parse_moodle_xml(question_xml)
     
-    return result
+    created_topics = 0
+    created_questions = 0
+    created_options = 0
+    
+    for topic_data in parsed.get("topics", []):
+        # Check if topic exists, create if not
+        result = await session.exec(select(Topic).where(Topic.name == topic_data["name"], Topic.subject_id == subject_id))
+        topic = result.first()
+        
+        if not topic:
+            topic = Topic(name=topic_data["name"], subject_id=subject_id)
+            session.add(topic)
+            await session.flush()
+            created_topics += 1
+        
+        for q_data in topic_data.get("questions", []):
+            # Create question
+            question = Question(topic_id=topic.id, question_text=q_data["text"])
+            session.add(question)
+            await session.flush()
+            created_questions += 1
+            
+            for opt in q_data.get("options", []):
+                # Create option (value=True if fraction > 0)
+                option = QuestionOption(
+                    question_id=question.id,
+                    option_text=opt["text"],
+                    value=opt["fraction"] > 0
+                )
+                session.add(option)
+                created_options += 1
+    
+    await session.commit()
+    
+    return {
+        "topics_created": created_topics,
+        "questions_created": created_questions,
+        "options_created": created_options
+    }
 
 
 async def get_question_by_id(session: AsyncSession, question_id: int) -> Optional[QuestionPublic]:
@@ -41,6 +80,8 @@ async def get_question_by_id(session: AsyncSession, question_id: int) -> Optiona
     statement = select(Question).where(Question.id == question_id)
     result = await session.exec(statement)
     result = result.one_or_none()
+    if result is None:
+        return None
     return QuestionPublic.model_validate(result)
 
 

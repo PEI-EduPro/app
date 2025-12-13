@@ -21,7 +21,10 @@ export interface ExamConfigI {
   subject_id: number;
   fraction: number;
   num_variations: number;
-  topics: number[];
-  number_questions: Record<number, number>;
-  relative_quotations: Record<number, number>;
+  topic_configs: {
+    topic_id: number;
+    topic_name: string;
+    number_questions: number;
+    relative_weight: number;
+  }[];
 }
