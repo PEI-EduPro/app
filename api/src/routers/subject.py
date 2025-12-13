@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -37,7 +37,7 @@ async def get_subjects(session: AsyncSession = Depends(get_session)):
     return await subject_service.get_all_subjects(session)
 
 
-@router.get("/{subject_id}/topics", response_model=List[tuple[TopicPublic,int]])
+@router.get("/{subject_id}/topics", response_model=List[Tuple[TopicPublic, int]])
 async def get_all_topics_by_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
     """Get all subject topics by subject ID."""
     result = await subject_service.get_all_subject_topics(session, subject_id)
