@@ -11,9 +11,9 @@ export interface NewExamConfigI {
   subject_id: number;
   fraction: number;
   num_variations: number;
-  topics: number[];
-  number_questions: Record<number, number>;
-  relative_quotations: Record<number, number>;
+  topics: string[];
+  number_questions: Record<string, number>;
+  relative_quotations: Record<string, number>;
 }
 
 export interface ExamConfigI {
@@ -28,3 +28,11 @@ export interface ExamConfigI {
     relative_weight: number;
   }[];
 }
+
+export interface TopicI {
+  id: number;
+  name: string;
+  subject_id: number;
+}
+
+export type GetTopicI = [TopicI, number];

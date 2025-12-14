@@ -36,6 +36,7 @@ export default function QuestionModal({
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null);
   const [showError, setShowError] = useState(false);
   const [showQuestionError, setShowQuestionError] = useState(false);
+  const [showDuplicateError, setShowDuplicateError] = useState(false);
 
   useEffect(() => {
     if (editingQuestion?.question) {
@@ -49,7 +50,7 @@ export default function QuestionModal({
       }));
       setOptions(optionsArray);
       setCorrectAnswer(q.answer);
-    } else {
+    } else if (isOpen) {
       setQuestionText("");
       setOptions([
         { id: 1, value: "" },
@@ -61,7 +62,8 @@ export default function QuestionModal({
     }
     setShowError(false);
     setShowQuestionError(false);
-  }, [editingQuestion]);
+    setShowDuplicateError(false);
+  }, [editingQuestion, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,14 +75,17 @@ export default function QuestionModal({
     
     // Check for empty options
     const emptyOptions = options.filter(opt => !opt.value.trim());
-    // if (emptyOptions.length > 0) {
-    //   alert("Por favor, preencha todas as opções");
-
-    //   return;
-    // }
     
     if (correctAnswer === null || emptyOptions.length > 0) {
       setShowError(true);
+      return;
+    }
+
+    // Check for duplicate options
+    const optionValues = options.map(opt => opt.value.trim().toLowerCase());
+    const hasDuplicates = optionValues.length !== new Set(optionValues).size;
+    if (hasDuplicates) {
+      setShowDuplicateError(true);
       return;
     }
 
@@ -109,6 +114,7 @@ export default function QuestionModal({
     setOptions(options.map(opt => 
       opt.id === id ? { ...opt, value } : opt
     ));
+    setShowDuplicateError(false);
   };
 
   const addOption = () => {
@@ -244,7 +250,14 @@ export default function QuestionModal({
                   </p>
                 </div>
               )}
-              {!showError && (
+              {showDuplicateError && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
+                  <p className="text-sm text-red-700">
+                    Não é permitido ter <span className="font-medium">opções duplicadas</span>.
+                  </p>
+                </div>
+              )}
+              {!showError && !showDuplicateError && (
                 <p className="text-sm text-gray-500 mt-3">
                   Selecione a opção correta clicando no círculo ao lado
                 </p>

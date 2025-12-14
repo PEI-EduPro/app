@@ -17,6 +17,7 @@ import { CustomTable } from "./custom-table";
 import { ExamConfigCard } from "./exam-config-card";
 import { useAddExamConfig } from "@/hooks/use-exams";
 import type { NewExamConfigI } from "@/lib/types";
+import { useGetUCTopics } from "@/hooks/use-questions";
 
 type TopicSelection = {
   id: string;
@@ -43,14 +44,7 @@ export const NovoExameForm = (props: {
   const totalSteps = 5;
 
   const { mutate, isPending, isSuccess } = useAddExamConfig();
-
-  const data: Record<string, string>[] = [
-    { id: "1", nome: "Arquiteturas" },
-    { id: "2", nome: "Definição de requisitos avançada" },
-    { id: "3", nome: "Introdução à tomada de decisão" },
-    { id: "4", nome: "Engenharia de software" },
-    { id: "5", nome: "Banco de dados" },
-  ];
+  const { data: topics } = useGetUCTopics(ucID);
 
   const form = useForm<NovoExameFormT>({
     defaultValues: {
@@ -141,7 +135,7 @@ export const NovoExameForm = (props: {
 
     const novoExameData: NewExamConfigI = {
       subject_id: ucID,
-      topics: finalData.topics.map((topic) => parseInt(topic.id)),
+      topics: finalData.topics.map((topic) => topic.nome),
       fraction: finalData.fraction,
       num_variations: finalData.number_exams,
       number_questions: {},
@@ -149,15 +143,23 @@ export const NovoExameForm = (props: {
     };
 
     finalData.topics.forEach((topic) => {
-      const topicId = parseInt(topic.id);
-      if (!isNaN(topicId)) {
-        novoExameData.number_questions[topicId] =
+      const topicNome = topic.nome;
+      console.log("topicNome", topicNome);
+      if (topicNome) {
+        novoExameData.number_questions[topicNome] =
           finalData.number_questions[topic.id];
-        novoExameData.relative_quotations[topicId] =
+        novoExameData.relative_quotations[topicNome] =
           finalData.relative_quotations[topic.id];
+        console.log("number_questions", finalData.number_questions[topic.id]);
+        console.log(
+          "relative_quotations",
+          finalData.relative_quotations[topic.id]
+        );
       }
     });
 
+    console.log("SfinalData", finalData);
+    console.log("novoExameData", novoExameData);
     mutate(novoExameData);
 
     if (isSuccess && !isPending) {
@@ -223,12 +225,17 @@ export const NovoExameForm = (props: {
                       <FormLabel className="text-center block text-lg">
                         Tópicos
                       </FormLabel>
-                      <CustomTable
-                        isSelectable
-                        data={data}
-                        onChange={field.onChange}
-                        rowSelection={field.value}
-                      />
+                      {topics && (
+                        <CustomTable
+                          isSelectable
+                          data={topics.map((topic) => ({
+                            id: topic[0].id.toString(),
+                            nome: topic[0].name,
+                          }))}
+                          onChange={field.onChange}
+                          rowSelection={field.value}
+                        />
+                      )}
                     </FormItem>
                   )}
                 />
@@ -278,20 +285,25 @@ export const NovoExameForm = (props: {
                         <Input
                           type="number"
                           min="1"
+                          max={
+                            topics?.map((t) =>
+                              t[0].id.toString() === topic.id ? t[1] : 0
+                            )[0] || 1
+                          }
                           placeholder="1"
-                          value={watch(`number_questions.${topic.id}`) || ""}
+                          value={watch(`number_questions.${topic.nome}`) || ""}
                           onChange={(e) => {
                             const value = e.target.value;
 
                             // Allow empty value for backspacing
                             if (value === "") {
-                              setValue(`number_questions.${topic.id}`, NaN);
+                              setValue(`number_questions.${topic.nome}`, NaN);
                               return;
                             }
 
                             const numValue = parseInt(value);
                             setValue(
-                              `number_questions.${topic.id}`,
+                              `number_questions.${topic.nome}`,
                               isNaN(numValue) || numValue < 1 ? 1 : numValue
                             );
                           }}
@@ -300,13 +312,13 @@ export const NovoExameForm = (props: {
 
                             // Only validate and set to 1 on blur if empty
                             if (value === "") {
-                              setValue(`number_questions.${topic.id}`, 1);
+                              setValue(`number_questions.${topic.nome}`, 1);
                               return;
                             }
 
                             const numValue = parseInt(value);
                             if (isNaN(numValue) || numValue < 1) {
-                              setValue(`number_questions.${topic.id}`, 1);
+                              setValue(`number_questions.${topic.nome}`, 1);
                             }
                           }}
                           onKeyDown={(e) => {
@@ -380,19 +392,24 @@ export const NovoExameForm = (props: {
                           type="number"
                           min="1"
                           placeholder="1"
-                          value={watch(`relative_quotations.${topic.id}`) || ""}
+                          value={
+                            watch(`relative_quotations.${topic.nome}`) || ""
+                          }
                           onChange={(e) => {
                             const value = e.target.value;
 
                             // Allow empty value for backspacing
                             if (value === "") {
-                              setValue(`relative_quotations.${topic.id}`, NaN);
+                              setValue(
+                                `relative_quotations.${topic.nome}`,
+                                NaN
+                              );
                               return;
                             }
 
                             const numValue = parseInt(value);
                             setValue(
-                              `relative_quotations.${topic.id}`,
+                              `relative_quotations.${topic.nome}`,
                               isNaN(numValue) || numValue < 1 ? 1 : numValue
                             );
                           }}
@@ -401,13 +418,13 @@ export const NovoExameForm = (props: {
 
                             // Only validate and set to 1 on blur if empty
                             if (value === "") {
-                              setValue(`relative_quotations.${topic.id}`, 1);
+                              setValue(`relative_quotations.${topic.nome}`, 1);
                               return;
                             }
 
                             const numValue = parseInt(value);
                             if (isNaN(numValue) || numValue < 1) {
-                              setValue(`relative_quotations.${topic.id}`, 1);
+                              setValue(`relative_quotations.${topic.nome}`, 1);
                             }
                           }}
                           onKeyDown={(e) => {
