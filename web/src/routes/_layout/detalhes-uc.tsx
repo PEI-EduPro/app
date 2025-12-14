@@ -307,7 +307,10 @@ function RouteComponent() {
               </>
             ) : (
               <>
-                <Link to="/">
+                {/* Ligar este botão "Manuais" quando estiver funcional */}
+                <Link
+                  to="/detalhes-uc"
+                  search={{ ucId: ucId }}>
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#41B5C0] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
                       Manuais
@@ -332,7 +335,7 @@ function RouteComponent() {
                 >
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
-                      Gerar Exames
+                      Exames
                     </span>
                     <ClipboardList className="size-[50px]" />
                   </Button>

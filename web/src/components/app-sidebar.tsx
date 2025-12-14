@@ -24,44 +24,28 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "./ui/collapsible";
+import { useGetUc } from "@/hooks/use-ucs";
 
 export function AppSidebar() {
+  const { data: ucs } = useGetUc();
+
   const items = [
     {
       title: "Manuais",
       icon: BookOpen,
       subContent: [
-        {
-          title: "Manual 1",
-          url: "#",
-        },
-        {
-          title: "Manual 2",
-          url: "#",
-        },
-        {
-          title: "Manual 3",
-          url: "#",
-        },
+        { title: "Manual 1", url: "#" },
+        { title: "Manual 2", url: "#" },
+        { title: "Manual 3", url: "#" },
       ],
     },
     {
       title: "Unidades Curriculares",
       icon: GraduationCap,
-      subContent: [
-        {
-          title: "UC 1",
-          url: "#",
-        },
-        {
-          title: "UC 2",
-          url: "#",
-        },
-        {
-          title: "UC 3",
-          url: "#",
-        },
-      ],
+      subContent: ucs?.map((uc) => ({
+        title: uc.name,
+        url: `/detalhes-uc?ucId=${uc.id}`,
+      })) || [],
     },
   ];
 
