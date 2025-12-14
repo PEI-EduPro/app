@@ -245,22 +245,22 @@ create_topic_content() {
             curl -s -X POST "$API_BASE/question-options/" \
               -H "Authorization: Bearer $REGENT_TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_A\", \"value\": true }" > /dev/null
+              -d "[{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_A\", \"value\": true }]" > /dev/null
             
             curl -s -X POST "$API_BASE/question-options/" \
               -H "Authorization: Bearer $REGENT_TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_B\", \"value\": false }" > /dev/null
+              -d "[{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_B\", \"value\": false }]" > /dev/null
             
             curl -s -X POST "$API_BASE/question-options/" \
               -H "Authorization: Bearer $REGENT_TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_C\", \"value\": false }" > /dev/null
+              -d "[{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_C\", \"value\": false }]" > /dev/null
             
             curl -s -X POST "$API_BASE/question-options/" \
               -H "Authorization: Bearer $REGENT_TOKEN" \
               -H "Content-Type: application/json" \
-              -d "{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_D\", \"value\": false }" > /dev/null
+              -d "[{ \"question_id\": $Q_ID, \"option_text\": \"$OPT_D\", \"value\": false }]" > /dev/null
         fi
     done
 }
