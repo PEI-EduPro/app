@@ -8,7 +8,7 @@ class Topic(SQLModel, table=True):
     
     id: Optional[int] = Field(default=None, primary_key=True)
     subject_id: int = Field(foreign_key="subject.id")
-    name: str = Field(unique=True,index=True)
+    name: str = Field(index=True)
     
     # Relationships
     subject: "Subject" = Relationship(back_populates="topics")

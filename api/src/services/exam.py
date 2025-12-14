@@ -33,7 +33,7 @@ async def create_configs(
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
-        creator_keycloak_id=dummy_user_id
+        #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
     await session.commit()
@@ -49,7 +49,7 @@ async def create_configs(
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][topic_name],
                 relative_weight=exam_specs["relative_quotations"][topic_name],
-                creator_keycloak_id=dummy_user_id
+                #creator_keycloak_id=dummy_user_id
             )
             topic_configs.append(topic_config)
 
