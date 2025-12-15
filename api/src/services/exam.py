@@ -91,6 +91,7 @@ async def generate_exams_from_configs(
 
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
+    all_answers_maps = {}
     
     with tempfile.TemporaryDirectory() as tmpdir:
         exams_dir = os.path.join(tmpdir, "exams")
@@ -131,6 +132,7 @@ async def generate_exams_from_configs(
 
             # Generate T-variants.tex content and get answer positions
             questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
+            all_answers_maps[var_num] = answers_map
             num_questions = len(all_questions)
 
             # Write variant questions file
@@ -158,6 +160,13 @@ async def generate_exams_from_configs(
             new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
             session.add(new_exam)
             await session.commit()
+
+        # Generate single solutions PDF with all variations
+        _write_all_solutions(tmpdir, all_answers_maps, num_questions)
+        solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name)
+        if solutions_pdf:
+            with open(os.path.join(keys_dir, "all_solutions.pdf"), "wb") as f:
+                f.write(solutions_pdf)
 
         if not os.listdir(exams_dir):
              raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
@@ -298,6 +307,56 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
 \\vspace{{0.25cm}}
 """
     with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
+        f.write(content)
+
+
+def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], num_questions: int):
+    """Write solutions.tex with all variations in horizontal lines."""
+    content = """\\documentclass[a4paper,10pt]{exam}
+\\input{H}
+\\begin{document}
+
+\\begin{center}
+\\Large \\textbf{Answer Keys}
+\\end{center}
+
+\\vspace{1cm}
+
+"""
+    
+    for var_num in sorted(all_answers.keys()):
+        answers = all_answers[var_num]
+        cols = num_questions
+        header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
+        
+        rows = []
+        for letter in ['A', 'B', 'C', 'D']:
+            cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
+            rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
+        
+        content += f"""\\textbf{{Version {var_num}:}}
+
+\\renewcommand{{\\arraystretch}}{{1.5}}
+\\begin{{center}}
+\\begin{{minipage}}{{0.80\\textwidth}}
+\\scriptsize
+\\begin{{center}}
+\\begin{{tabular}}{{|l|{'l|' * cols}}}
+\\hline
+ &{header}\\\\ \\hline
+{chr(10).join(rows)}
+\\end{{tabular}}
+\\end{{center}}
+\\end{{minipage}}
+\\end{{center}}
+
+\\vspace{{0.5cm}}
+
+"""
+    
+    content += "\\end{document}"
+    
+    with open(os.path.join(workdir, "solutions.tex"), "w") as f:
         f.write(content)
 
 
