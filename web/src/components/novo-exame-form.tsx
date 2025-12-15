@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -46,15 +47,17 @@ export type NovoExameFormT = {
 export const NovoExameForm = (props: {
   examData?: NovoExameFormT;
   ucID: number;
+  ucName: string;
 }) => {
-  const { examData = null, ucID } = props;
+  const { examData = null, ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null
   );
   const totalSteps = 5;
+  const navigate = useNavigate();
 
-  const { mutate, isPending, isSuccess } = useAddExamConfig();
+  const { mutate, isPending } = useAddExamConfig();
   const { data: topics } = useGetUCTopics(ucID);
 
   const form = useForm<NovoExameFormT>({
@@ -171,14 +174,22 @@ export const NovoExameForm = (props: {
       }
     });
 
-    mutate(novoExameData);
+    const loadingToast = toast.loading("A gerar exames...");
 
-    if (isSuccess && !isPending) {
-      setFormStep(0);
-      setValidatedData(null);
-      reset();
-      toast.success("Exame criado com sucesso!");
-    }
+    mutate(novoExameData, {
+      onSuccess: () => {
+        toast.dismiss(loadingToast);
+        toast.success("Exame criado com sucesso!");
+        setFormStep(0);
+        setValidatedData(null);
+        reset();
+        navigate({ to: "/detalhes-uc", search: { ucId: ucID } });
+      },
+      onError: (error) => {
+        toast.dismiss(loadingToast);
+        toast.error(`Erro ao gerar exame: ${error.message}`);
+      },
+    });
   };
 
   const getDisplayData = () => {
@@ -517,7 +528,7 @@ export const NovoExameForm = (props: {
                         <FormControl>
                           <Input
                             type="text"
-                            placeholder="Exame Época Normal"
+                            placeholder="Ex: Teste Teórico 1"
                             {...field}
                           />
                         </FormControl>
@@ -792,11 +803,12 @@ export const NovoExameForm = (props: {
                     type="button"
                     size="sm"
                     className="font-medium"
+                    disabled={isPending}
                     onClick={() => {
                       handleSubmit(onSubmit)();
                     }}
                   >
-                    Gerar Exame
+                    {isPending ? "A gerar..." : "Gerar Exame"}
                   </Button>
                 </div>
               </form>

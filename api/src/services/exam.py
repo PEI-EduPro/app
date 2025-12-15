@@ -369,7 +369,7 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
 \\input{{date}}
 
 \\vspace{{0.5cm}}
-\\Large \\textbf{{Answer Keys}}
+\\Large \\textbf{{Soluções}}
 \\end{{center}}
 
 \\vspace{{0.5cm}}
@@ -447,11 +447,20 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
     if os.path.exists(h_path):
         with open(h_path, "r") as f:
             h_content = f.read()
-        # Add variation number after \input{UC}
-        h_content = h_content.replace(
-            "\\input{UC}",
-            f"\\input{{UC}}\n\t\\vspace{{0.2cm}}\n\t{{\\small \\textbf{{Versão {var_num}}}}}"
-        )
+        # Only add if not already present (check for Versão pattern)
+        if "Versão" not in h_content:
+            h_content = h_content.replace(
+                "\\input{UC}",
+                f"\\input{{UC}}\n\t\\vspace{{0.2cm}}\n\t{{\\small \\textbf{{Versão {var_num}}}}}"
+            )
+        else:
+            # Replace existing version number
+            import re
+            h_content = re.sub(
+                r"Versão \d+",
+                f"Versão {var_num}",
+                h_content
+            )
 
         with open(h_path, "w") as f:
             f.write(h_content)
