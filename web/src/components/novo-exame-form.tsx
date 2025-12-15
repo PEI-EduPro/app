@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -8,6 +9,13 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -30,20 +38,26 @@ export type NovoExameFormT = {
   relative_quotations: Record<string, number>;
   number_exams: number;
   fraction: number;
+  exam_title: string;
+  exam_date: string;
+  semester: string;
+  academic_year: string;
 };
 
 export const NovoExameForm = (props: {
   examData?: NovoExameFormT;
   ucID: number;
+  ucName: string;
 }) => {
-  const { examData = null, ucID } = props;
+  const { examData = null, ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null
   );
   const totalSteps = 5;
+  const navigate = useNavigate();
 
-  const { mutate, isPending, isSuccess } = useAddExamConfig();
+  const { mutate, isPending } = useAddExamConfig();
   const { data: topics } = useGetUCTopics(ucID);
 
   const form = useForm<NovoExameFormT>({
@@ -53,6 +67,10 @@ export const NovoExameForm = (props: {
       relative_quotations: examData?.relative_quotations || {},
       number_exams: examData?.number_exams || 1,
       fraction: examData?.fraction || 0,
+      exam_title: examData?.exam_title || "Exame Época Normal",
+      exam_date: examData?.exam_date || new Date().toISOString().split('T')[0],
+      semester: examData?.semester || "1",
+      academic_year: examData?.academic_year || "2025/26",
     },
   });
 
@@ -140,6 +158,10 @@ export const NovoExameForm = (props: {
       num_variations: finalData.number_exams,
       number_questions: {},
       relative_quotations: {},
+      exam_title: finalData.exam_title,
+      exam_date: finalData.exam_date,
+      semester: finalData.semester,
+      academic_year: finalData.academic_year,
     };
 
     finalData.topics.forEach((topic) => {
@@ -152,14 +174,22 @@ export const NovoExameForm = (props: {
       }
     });
 
-    mutate(novoExameData);
+    const loadingToast = toast.loading("A gerar exames...");
 
-    if (isSuccess && !isPending) {
-      setFormStep(0);
-      setValidatedData(null);
-      reset();
-      toast.success("Exame criado com sucesso!");
-    }
+    mutate(novoExameData, {
+      onSuccess: () => {
+        toast.dismiss(loadingToast);
+        toast.success("Exame criado com sucesso!");
+        setFormStep(0);
+        setValidatedData(null);
+        reset();
+        navigate({ to: "/detalhes-uc", search: { ucId: ucID } });
+      },
+      onError: (error) => {
+        toast.dismiss(loadingToast);
+        toast.error(`Erro ao gerar exame: ${error.message}`);
+      },
+    });
   };
 
   const getDisplayData = () => {
@@ -265,25 +295,26 @@ export const NovoExameForm = (props: {
                     Número de questões por tópico
                   </FormLabel>
 
-                  {watch("topics")?.map((topic) => (
+                  {watch("topics")?.map((topic) => {
+                    const maxQuestions = topics
+                      ?.map((t) =>
+                        t[0].id.toString() === topic.id ? t[1] : 0
+                      )
+                      .filter((n) => n !== 0)[0] || 1;
+                    
+                    return (
                     <FormItem
                       key={topic.id}
                       className="flex items-center gap-x-4"
                     >
                       <FormLabel className="flex-shrink-0 w-140">
-                        {topic.nome}
+                        {topic.nome} (max: {maxQuestions})
                       </FormLabel>
                       <FormControl className="flex-1">
                         <Input
                           type="number"
                           min="1"
-                          max={
-                            topics
-                              ?.map((t) =>
-                                t[0].id.toString() === topic.id ? t[1] : 0
-                              )
-                              .filter((n) => n !== 0)[0]
-                          }
+                          max={maxQuestions}
                           placeholder="1"
                           value={watch(`number_questions.${topic.id}`) || ""}
                           onChange={(e) => {
@@ -296,10 +327,8 @@ export const NovoExameForm = (props: {
                             }
 
                             const numValue = parseInt(value);
-                            setValue(
-                              `number_questions.${topic.id}`,
-                              isNaN(numValue) || numValue < 1 ? 1 : numValue
-                            );
+                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
+                            setValue(`number_questions.${topic.id}`, clampedValue);
                           }}
                           onBlur={(e) => {
                             const value = e.target.value;
@@ -311,9 +340,8 @@ export const NovoExameForm = (props: {
                             }
 
                             const numValue = parseInt(value);
-                            if (isNaN(numValue) || numValue < 1) {
-                              setValue(`number_questions.${topic.id}`, 1);
-                            }
+                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
+                            setValue(`number_questions.${topic.id}`, clampedValue);
                           }}
                           onKeyDown={(e) => {
                             if (
@@ -340,7 +368,7 @@ export const NovoExameForm = (props: {
                         />
                       </FormControl>
                     </FormItem>
-                  ))}
+                  )})}
                 </div>
                 <div className="flex justify-between">
                   <Button
@@ -487,6 +515,95 @@ export const NovoExameForm = (props: {
                   <FormLabel className="text-center block text-lg">
                     Configurações finais
                   </FormLabel>
+
+                  {/* Exam title field */}
+                  <FormField
+                    control={control}
+                    name="exam_title"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Título do exame
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="Ex: Teste Teórico 1"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Exam date field */}
+                  <FormField
+                    control={control}
+                    name="exam_date"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Data do exame
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Semester field */}
+                  <FormField
+                    control={control}
+                    name="semester"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Semestre
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o semestre" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="1">1º Semestre</SelectItem>
+                            <SelectItem value="2">2º Semestre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Academic year field */}
+                  <FormField
+                    control={control}
+                    name="academic_year"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Ano letivo
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o ano" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="2024/25">2024/25</SelectItem>
+                            <SelectItem value="2025/26">2025/26</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <hr />
 
                   {/* Number of exams field */}
                   <FormField
@@ -686,11 +803,12 @@ export const NovoExameForm = (props: {
                     type="button"
                     size="sm"
                     className="font-medium"
+                    disabled={isPending}
                     onClick={() => {
                       handleSubmit(onSubmit)();
                     }}
                   >
-                    Gerar Exame
+                    {isPending ? "A gerar..." : "Gerar Exame"}
                   </Button>
                 </div>
               </form>

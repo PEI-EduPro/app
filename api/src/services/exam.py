@@ -15,6 +15,7 @@ from src.models.topic import Topic
 from src.models.exam import Exam
 from src.models.question import Question
 from src.models.question_option import QuestionOption
+from src.models.subject import Subject
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +30,24 @@ async def create_configs(
     
     # Using a dummy user ID since authentication is disabled
     dummy_user_id = "default_user"
+
+    # Validate question counts before creating configs
+    for topic_name in exam_specs["topics"]:
+        result = await session.exec(select(Topic).where(Topic.name == topic_name))
+        topic = result.first()
+        if topic:
+            # Count available questions for this topic
+            count_result = await session.exec(
+                select(func.count(Question.id)).where(Question.topic_id == topic.id)
+            )
+            available_questions = count_result.one()
+            requested_questions = exam_specs["number_questions"].get(topic_name, 0)
+            
+            if requested_questions > available_questions:
+                raise ValueError(
+                    f"Topic '{topic_name}' has only {available_questions} questions, "
+                    f"but {requested_questions} were requested."
+                )
 
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
@@ -72,7 +91,11 @@ async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1
+    num_variations: int = 1,
+    exam_title: str = "Exame Época Normal",
+    exam_date: str = None,
+    semester: str = "1",
+    academic_year: str = "2025/26"
 ) -> bytes:
     """Generate LaTeX exams and answer keys, return ZIP with PDFs."""
     import zipfile
@@ -83,8 +106,14 @@ async def generate_exams_from_configs(
     if not topic_configs:
         raise ValueError("No topic configurations provided - cannot generate exams")
 
+    # Get subject name
+    subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
+    subject = subject_result.first()
+    subject_name = subject.name if subject else "Unknown Subject"
+
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
+    all_answers_maps = {}
     
     with tempfile.TemporaryDirectory() as tmpdir:
         exams_dir = os.path.join(tmpdir, "exams")
@@ -96,6 +125,23 @@ async def generate_exams_from_configs(
         for f in os.listdir(TEMPLATES_DIR):
             if f.endswith(".tex"):
                 shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+
+        # Write custom date.tex
+        if exam_date:
+            from datetime import datetime
+            date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
+            formatted_date = date_obj.strftime("%d de %B de %Y")
+            # Portuguese month names
+            pt_months = {
+                "January": "janeiro", "February": "fevereiro", "March": "março",
+                "April": "abril", "May": "maio", "June": "junho",
+                "July": "julho", "August": "agosto", "September": "setembro",
+                "October": "outubro", "November": "novembro", "December": "dezembro"
+            }
+            for en, pt in pt_months.items():
+                formatted_date = formatted_date.replace(en, pt)
+            with open(os.path.join(tmpdir, "date.tex"), "w") as f:
+                f.write(formatted_date)
 
         for var_num in range(1, num_variations + 1):
             # Gather questions for this variation
@@ -125,6 +171,7 @@ async def generate_exams_from_configs(
 
             # Generate T-variants.tex content and get answer positions
             questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
+            all_answers_maps[var_num] = answers_map
             num_questions = len(all_questions)
 
             # Write variant questions file
@@ -136,22 +183,31 @@ async def generate_exams_from_configs(
 
             # Generate exam PDF (blank answer grid)
             _write_blank_answers(tmpdir, num_questions)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num)
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year)
             if exam_pdf:
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
 
             # Generate answer key PDF (marked grid)
+            ''' Temporarily disable this because of the new all_solutions.pdf
             _write_answer_key(tmpdir, answers_map, num_questions)
-            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num)
+            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year)
             if key_pdf:
                 with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
                     f.write(key_pdf)
+            '''
 
             # Save exam to DB
             new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
             session.add(new_exam)
             await session.commit()
+
+        # Generate single solutions PDF with all variations
+        _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title)
+        solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
+        if solutions_pdf:
+            with open(os.path.join(keys_dir, "all_solutions.pdf"), "wb") as f:
+                f.write(solutions_pdf)
 
         if not os.listdir(exams_dir):
              raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
@@ -175,6 +231,7 @@ def _generate_questions_latex(questions: list, topic_weights: Dict[int, float], 
         weight = topic_weights.get(q.topic_id, 1.0)
         lines.append(f"\\question")
         lines.append(f"({weight:.2f} pts) {q.question_text}")
+        lines.append("\\nopagebreak")
         lines.append("")
         
         all_opts = opts_by_q.get(q.id, [])
@@ -295,15 +352,118 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
         f.write(content)
 
 
-def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
+def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], num_questions: int, exam_title: str = "Exame Época Normal"):
+    """Write solutions.tex with all variations in horizontal lines."""
+    content = f"""\\documentclass[a4paper,10pt]{{exam}}
+\\input{{H}}
+\\begin{{document}}
+
+\\begin{{center}}
+\\huge
+\\input{{UC}}
+
+\\vspace{{0.3cm}}
+\\normalsize
+{exam_title}
+\\\\
+\\input{{date}}
+
+\\vspace{{0.5cm}}
+\\Large \\textbf{{Soluções}}
+\\end{{center}}
+
+\\vspace{{0.5cm}}
+
+"""
+    
+    for var_num in sorted(all_answers.keys()):
+        answers = all_answers[var_num]
+        cols = num_questions
+        header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
+        
+        rows = []
+        for letter in ['A', 'B', 'C', 'D']:
+            cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
+            rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
+        
+        content += f"""\\noindent\\rule{{\\textwidth}}{{0.4pt}}
+
+\\vspace{{0.3cm}}
+
+\\begin{{center}}
+\\begin{{tabular}}{{c c}}
+\\textbf{{Version {var_num}}} &
+\\renewcommand{{\\arraystretch}}{{1.5}}
+\\begin{{minipage}}{{0.75\\textwidth}}
+\\scriptsize
+\\begin{{center}}
+\\begin{{tabular}}{{|l|{'l|' * cols}}}
+\\hline
+ &{header}\\\\ \\hline
+{chr(10).join(rows)}
+\\end{{tabular}}
+\\end{{center}}
+\\end{{minipage}}
+\\end{{tabular}}
+\\end{{center}}
+
+\\vspace{{0.3cm}}
+
+"""
+    
+    content += "\\end{document}"
+    
+    with open(os.path.join(workdir, "solutions.tex"), "w") as f:
+        f.write(content)
+
+
+def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26") -> bytes | None:
     """Compile LaTeX to PDF, return PDF bytes or None on failure."""
     main_path = os.path.join(workdir, main_file)
     with open(main_path, "r") as f:
         content = f.read()
     content = content.replace("\\newcommand\\tttnumber{0}", f"\\newcommand\\tttnumber{{{var_num}}}")
     content = content.replace("#FOOTER", "")
+    content = content.replace("Exame Época Normal", exam_title)
     with open(main_path, "w") as f:
         f.write(content)
+
+    # Create subject-specific UC.tex if subject_name is provided
+    if subject_name:
+        semester_text_en = f"{semester}st Semester" if semester == "1" else f"{semester}nd Semester"
+        semester_text_pt = f"{semester}º Semestre"
+        uc_content = f"""\\iftoggle{{english}}{{
+{subject_name}\\\\
+{semester_text_en}, {academic_year}\\\\
+}}{{
+{subject_name}\\\\
+{semester_text_pt}, {academic_year}\\\\
+}}"""
+        with open(os.path.join(workdir, "UC.tex"), "w") as f:
+            f.write(uc_content)
+    
+    # Modify H.tex to include variation number after UC.tex
+    h_path = os.path.join(workdir, "H.tex")
+    if os.path.exists(h_path):
+        with open(h_path, "r") as f:
+            h_content = f.read()
+        # Only add if not already present (check for Versão pattern)
+        if "Versão" not in h_content:
+            h_content = h_content.replace(
+                "\\input{UC}",
+                f"\\input{{UC}}\n\t\\vspace{{0.2cm}}\n\t{{\\small \\textbf{{Versão {var_num}}}}}"
+            )
+        else:
+            # Replace existing version number
+            import re
+            h_content = re.sub(
+                r"Versão \d+",
+                f"Versão {var_num}",
+                h_content
+            )
+
+        with open(h_path, "w") as f:
+            f.write(h_content)
 
     try:
         subprocess.run(
@@ -326,7 +486,11 @@ async def create_configs_and_exams(
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
     exam_config, topic_configs = await create_configs(session, exam_specs)
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations)
+    exam_title = exam_specs.get("exam_title", "Exame Época Normal")
+    exam_date = exam_specs.get("exam_date")
+    semester = exam_specs.get("semester", "1")
+    academic_year = exam_specs.get("academic_year", "2025/26")
+    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year)
 
 
 async def get_exam_configs_by_subject(

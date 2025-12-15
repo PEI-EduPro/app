@@ -14,6 +14,10 @@ export interface NewExamConfigI {
   topics: string[];
   number_questions: Record<string, number>;
   relative_quotations: Record<string, number>;
+  exam_title: string;
+  exam_date: string;
+  semester: string;
+  academic_year: string;
 }
 
 export interface ExamConfigI {

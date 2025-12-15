@@ -70,6 +70,7 @@ function NovoExame() {
           <NovoExameForm
             examData={examId ? examConfgExample : undefined}
             ucID={ucId}
+            ucName={ucName}
           />
         </div>
       </div>

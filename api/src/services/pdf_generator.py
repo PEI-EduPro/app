@@ -4,11 +4,11 @@ from pathlib import Path
 from latex import build_pdf
 
 
-def xml_to_pdf(xml_content: str, exam_id: int) -> bytes:
+def xml_to_pdf(xml_content: str, exam_id: int, subject_name: str = None) -> bytes:
     """Converts Exam XML to PDF bytes."""
     root = ET.fromstring(xml_content)
     latex_content, t_variants_content = xml_to_latex(root, exam_id)
-    return compile_latex_to_pdf(latex_content, t_variants_content)
+    return compile_latex_to_pdf(latex_content, t_variants_content, subject_name)
 
 
 def xml_to_latex(root: ET.Element, exam_id: int) -> tuple[str, str]:
@@ -54,7 +54,7 @@ MAIN_TEMPLATE = r"""\documentclass[a4paper,addpoints,10pt]{exam}
 """
 
 
-def compile_latex_to_pdf(latex_content: str, t_variants_content: str) -> bytes:
+def compile_latex_to_pdf(latex_content: str, t_variants_content: str, subject_name: str = None) -> bytes:
     """Compile LaTeX string to PDF and return bytes."""
     templates_dir = Path(__file__).parent.parent / "latex_templates"
     
@@ -64,6 +64,17 @@ def compile_latex_to_pdf(latex_content: str, t_variants_content: str) -> bytes:
         # Copy template files
         for template_file in templates_dir.glob("*.tex"):
             (tmpdir_path / template_file.name).write_text(template_file.read_text())
+        
+        # Create subject-specific UC file if subject_name is provided
+        if subject_name:
+            uc_content = f"""\\iftoggle{{english}}{{
+{subject_name}\\\\
+1st Semester, 2025/26\\\\
+}}{{
+{subject_name}\\\\
+1º Semestre, 2025/26\\\\
+}}"""
+            (tmpdir_path / "UC.tex").write_text(uc_content)
         
         # Write generated T-variants.tex
         (tmpdir_path / "T-variants.tex").write_text(t_variants_content)
