@@ -15,18 +15,9 @@ import { Input } from "@/components/ui/input";
 import "@/components/ui/table";
 import { CustomTable } from "./custom-table";
 import { ExamConfigCard } from "./exam-config-card";
-
-interface NovoExameI {
-  topics: Record<
-    number,
-    {
-      number_questions: number;
-      relative_quotation: number;
-    }
-  >;
-  fraction: number;
-  number_exams: number;
-}
+import { useAddExamConfig } from "@/hooks/use-exams";
+import type { NewExamConfigI } from "@/lib/types";
+import { useGetUCTopics } from "@/hooks/use-questions";
 
 type TopicSelection = {
   id: string;
@@ -41,21 +32,19 @@ export type NovoExameFormT = {
   fraction: number;
 };
 
-export const NovoExameForm = (props: { examData?: NovoExameFormT }) => {
-  const { examData = null } = props;
+export const NovoExameForm = (props: {
+  examData?: NovoExameFormT;
+  ucID: number;
+}) => {
+  const { examData = null, ucID } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null
   );
   const totalSteps = 5;
 
-  const data: Record<string, string>[] = [
-    { id: "1", nome: "Arquiteturas" },
-    { id: "2", nome: "Definição de requisitos avançada" },
-    { id: "3", nome: "Introdução à tomada de decisão" },
-    { id: "4", nome: "Engenharia de software" },
-    { id: "5", nome: "Banco de dados" },
-  ];
+  const { mutate, isPending, isSuccess } = useAddExamConfig();
+  const { data: topics } = useGetUCTopics(ucID);
 
   const form = useForm<NovoExameFormT>({
     defaultValues: {
@@ -144,34 +133,51 @@ export const NovoExameForm = (props: { examData?: NovoExameFormT }) => {
   const onSubmit = async (formData: NovoExameFormT) => {
     const finalData = validatedData || validateAndNormalizeData(formData);
 
-    const novoExameData: NovoExameI = {
-      topics: {},
+    const novoExameData: NewExamConfigI = {
+      subject_id: ucID,
+      topics: finalData.topics.map((topic) => topic.nome),
       fraction: finalData.fraction,
-      number_exams: finalData.number_exams,
+      num_variations: finalData.number_exams,
+      number_questions: {},
+      relative_quotations: {},
     };
 
     finalData.topics.forEach((topic) => {
-      const topicId = parseInt(topic.id);
-      if (!isNaN(topicId)) {
-        novoExameData.topics[topicId] = {
-          number_questions: finalData.number_questions[topic.id] || 1,
-          relative_quotation: finalData.relative_quotations[topic.id] || 1,
-        };
+      const topicNome = topic.nome;
+      if (topicNome) {
+        novoExameData.number_questions[topicNome] =
+          finalData.number_questions[topic.id];
+        novoExameData.relative_quotations[topicNome] =
+          finalData.relative_quotations[topic.id];
       }
     });
 
-    console.log("Form submitted (transformed):", novoExameData);
-    setFormStep(0);
-    setValidatedData(null);
-    reset();
-    toast.success("Exame criado com sucesso!");
+    mutate(novoExameData);
+
+    if (isSuccess && !isPending) {
+      setFormStep(0);
+      setValidatedData(null);
+      reset();
+      toast.success("Exame criado com sucesso!");
+    }
   };
 
   const getDisplayData = () => {
-    if (formStep === 4 && validatedData) {
-      return validatedData;
-    }
-    return getValues();
+    const formData =
+      formStep === 4 && validatedData ? validatedData : getValues();
+
+    return {
+      id: 0, // dummy id for display purposes
+      subject_id: ucID,
+      fraction: formData.fraction,
+      num_variations: formData.number_exams,
+      topic_configs: formData.topics.map((topic) => ({
+        topic_id: parseInt(topic.id),
+        topic_name: topic.nome,
+        number_questions: formData.number_questions[topic.id] || 1,
+        relative_weight: formData.relative_quotations[topic.id] || 1,
+      })),
+    };
   };
 
   return (
@@ -211,12 +217,17 @@ export const NovoExameForm = (props: { examData?: NovoExameFormT }) => {
                       <FormLabel className="text-center block text-lg">
                         Tópicos
                       </FormLabel>
-                      <CustomTable
-                        isSelectable
-                        data={data}
-                        onChange={field.onChange}
-                        rowSelection={field.value}
-                      />
+                      {topics && (
+                        <CustomTable
+                          isSelectable
+                          data={topics.map((topic) => ({
+                            id: topic[0].id.toString(),
+                            nome: topic[0].name,
+                          }))}
+                          onChange={field.onChange}
+                          rowSelection={field.value}
+                        />
+                      )}
                     </FormItem>
                   )}
                 />
@@ -266,6 +277,13 @@ export const NovoExameForm = (props: { examData?: NovoExameFormT }) => {
                         <Input
                           type="number"
                           min="1"
+                          max={
+                            topics
+                              ?.map((t) =>
+                                t[0].id.toString() === topic.id ? t[1] : 0
+                              )
+                              .filter((n) => n !== 0)[0]
+                          }
                           placeholder="1"
                           value={watch(`number_questions.${topic.id}`) || ""}
                           onChange={(e) => {

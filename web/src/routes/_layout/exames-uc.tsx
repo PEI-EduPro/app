@@ -1,32 +1,13 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { ExamConfigCard } from "@/components/exam-config-card";
-import type { NovoExameFormT } from "@/components/novo-exame-form";
 import { Card } from "@/components/ui/card";
+import { useGetExamConfig } from "@/hooks/use-exams";
 import { useGetUcById } from "@/hooks/use-ucs";
+import type { ExamConfigI } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Pencil, Plus, Trash2, Download, type LucideIcon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { z } from "zod";
-
-const examConfgExample: NovoExameFormT = {
-  topics: [
-    { id: "1", nome: "Arquiteturas" },
-    { id: "2", nome: "Definição de requisitos avançada" },
-    { id: "3", nome: "Introdução à tomada de decisão" },
-  ],
-  number_questions: {
-    "1": 5,
-    "2": 3,
-    "3": 2,
-  },
-  relative_quotations: {
-    "1": 50,
-    "2": 30,
-    "3": 20,
-  },
-  number_exams: 1,
-  fraction: 0,
-};
 
 const examesUCSearchSchema = z.object({
   ucId: z.number(),
@@ -64,11 +45,13 @@ const ContentActionCard = ({
   name,
   ucId,
   ucName,
+  examConfig,
 }: {
   id: number;
   name: string;
   ucId: number;
   ucName: string;
+  examConfig: ExamConfigI;
 }) => {
   const navigate = Route.useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -124,7 +107,7 @@ const ContentActionCard = ({
             className="bg-white rounded-xl shadow-2xl max-w-lg w-full m-4 max-h-[90vh] overflow-y-auto transform transition-all"
             onClick={(e) => e.stopPropagation()}
           >
-            <ExamConfigCard examConfigData={examConfgExample} />
+            <ExamConfigCard examConfigData={examConfig} />
           </div>
         </div>
       )}
@@ -135,39 +118,7 @@ const ContentActionCard = ({
 function RouteComponent() {
   const { ucId, ucName } = Route.useSearch();
   const { data: ucData } = useGetUcById(ucId);
-
-  const exames = [
-    {
-      date: "2024-07-15",
-      nome: "Exame Normal",
-      id: 1,
-    },
-    {
-      date: "2024-07-15",
-      nome: "Exame Normal",
-      id: 2,
-    },
-    {
-      date: "2024-07-15",
-      nome: "Exame Normal",
-      id: 3,
-    },
-    {
-      date: "2024-07-15",
-      nome: "Exame Normal",
-      id: 4,
-    },
-    {
-      date: "2024-07-15",
-      nome: "Exame Normal",
-      id: 5,
-    },
-    {
-      date: "2024-07-15",
-      nome: "Exame Normal",
-      id: 6,
-    },
-  ];
+  const { data: examConfigs } = useGetExamConfig(ucId);
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -189,13 +140,14 @@ function RouteComponent() {
         <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
       </div>
       <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-[70px] gap-y-[50px]">
-        {exames.map((el, index) => (
+        {examConfigs?.map((el, index) => (
           <ContentActionCard
             id={el.id}
-            name={el.nome}
+            name={`Exame ${index + 1}`}
             ucId={ucId}
             ucName={ucName}
             key={index}
+            examConfig={el}
           />
         ))}
         <Link to="/novo-exame" search={{ ucId: ucId, ucName: ucName }}>

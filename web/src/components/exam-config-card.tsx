@@ -1,18 +1,12 @@
-import type { NovoExameFormT } from "./novo-exame-form";
+import type { ExamConfigI } from "@/lib/types";
 import { Card, CardContent } from "./ui/card";
 
 export function ExamConfigCard({
   examConfigData,
 }: {
-  examConfigData: NovoExameFormT;
+  examConfigData: ExamConfigI;
 }) {
-  const {
-    fraction,
-    number_exams,
-    number_questions,
-    relative_quotations,
-    topics,
-  } = examConfigData;
+  const { fraction, num_variations, topic_configs } = examConfigData;
   return (
     <Card className="border-2 border-primary/20 bg-primary/5">
       <CardContent className="px-6">
@@ -24,7 +18,7 @@ export function ExamConfigCard({
             <div className="p-3 bg-white rounded-lg shadow-sm">
               <p className="text-sm text-muted-foreground">Exames a gerar</p>
               <p className="text-2xl font-bold text-primary">
-                {number_exams || 1}
+                {num_variations || 1}
               </p>
             </div>
             <div className="p-3 bg-white rounded-lg shadow-sm">
@@ -38,17 +32,17 @@ export function ExamConfigCard({
         <div className="mb-6">
           <h3 className="text-lg font-semibold mb-3">Tópicos Selecionados</h3>
           <div className="space-y-2">
-            {topics?.map((topic) => {
-              const numQuestions = number_questions[topic.id] || 1;
-              const relativeQuotation = relative_quotations[topic.id] || 1;
+            {topic_configs?.map((topic) => {
+              const numQuestions = topic.number_questions || 1;
+              const relativeQuotation = topic.relative_weight || 1;
 
               return (
                 <div
-                  key={topic.id}
+                  key={topic.topic_id}
                   className="flex justify-between items-center p-3 bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow"
                 >
                   <div>
-                    <p className="font-medium">{topic.nome}</p>
+                    <p className="font-medium">{topic.topic_name}</p>
                     <p className="text-sm text-muted-foreground">
                       {numQuestions} pergunta
                       {numQuestions !== 1 ? "s" : ""}
@@ -69,10 +63,12 @@ export function ExamConfigCard({
             <div>
               <p className="text-sm text-muted-foreground">Total de questões</p>
               <p className="text-xl font-bold">
-                {Object.values(number_questions || {}).reduce(
-                  (sum, num) => sum + (num || 1),
-                  0
-                )}
+                {topic_configs
+                  ?.reduce(
+                    (total, topic) => total + (topic.number_questions || 1),
+                    0
+                  )
+                  .toString() || "0"}
               </p>
             </div>
           </div>

@@ -10,8 +10,9 @@ from src.models.subject import (
     SubjectRead,
     SubjectUpdate,
 )
-import src.services.subject as subject_service
+from src.models.topic import TopicPublic
 
+import src.services.subject as subject_service
 import logging
 
 logger = logging.getLogger(__name__)
@@ -84,3 +85,8 @@ async def delete_subject(subject_id: int, session: AsyncSession = Depends(get_se
     if not success:
         raise HTTPException(status_code=404, detail="Subject not found")
     
+
+@router.get("/{subject_id}/topics", response_model=List[TopicPublic])
+async def get_subject_topics(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Get all topics from a given subject_id"""
+    return await subject_service.get_topics_from_subject(session, subject_id)
