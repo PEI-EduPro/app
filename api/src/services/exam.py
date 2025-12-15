@@ -15,6 +15,7 @@ from src.models.topic import Topic
 from src.models.exam import Exam
 from src.models.question import Question
 from src.models.question_option import QuestionOption
+from src.models.subject import Subject
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,11 @@ async def generate_exams_from_configs(
     if not topic_configs:
         raise ValueError("No topic configurations provided - cannot generate exams")
 
+    # Get subject name
+    subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
+    subject = subject_result.first()
+    subject_name = subject.name if subject else "Unknown Subject"
+
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
     
@@ -136,14 +142,14 @@ async def generate_exams_from_configs(
 
             # Generate exam PDF (blank answer grid)
             _write_blank_answers(tmpdir, num_questions)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num)
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name)
             if exam_pdf:
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
 
             # Generate answer key PDF (marked grid)
             _write_answer_key(tmpdir, answers_map, num_questions)
-            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num)
+            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name)
             if key_pdf:
                 with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
                     f.write(key_pdf)
@@ -295,7 +301,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
         f.write(content)
 
 
-def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
+def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None) -> bytes | None:
     """Compile LaTeX to PDF, return PDF bytes or None on failure."""
     main_path = os.path.join(workdir, main_file)
     with open(main_path, "r") as f:
@@ -304,6 +310,18 @@ def _compile_latex(workdir: str, main_file: str, var_num: int) -> bytes | None:
     content = content.replace("#FOOTER", "")
     with open(main_path, "w") as f:
         f.write(content)
+
+    # Create subject-specific UC.tex if subject_name is provided
+    if subject_name:
+        uc_content = f"""\\iftoggle{{english}}{{
+{subject_name}\\\\
+1st Semester, 2025/26\\\\
+}}{{
+{subject_name}\\\\
+1º Semestre, 2025/26\\\\
+}}"""
+        with open(os.path.join(workdir, "UC.tex"), "w") as f:
+            f.write(uc_content)
 
     try:
         subprocess.run(
