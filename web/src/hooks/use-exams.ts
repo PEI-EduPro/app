@@ -22,7 +22,7 @@ const useAddExamConfig = () => {
   return useMutation({
     mutationKey: ["createExam", "download"],
     mutationFn: (props: NewExamConfigI) =>
-      apiClient.download("/exams/generate/", props),
+      apiClient.download("/exams/generate", props),
 
     onSuccess: (zipBlob: Blob) => {
       saveFile(zipBlob, "generated_exam.zip");
