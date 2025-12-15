@@ -31,6 +31,24 @@ async def create_configs(
     # Using a dummy user ID since authentication is disabled
     dummy_user_id = "default_user"
 
+    # Validate question counts before creating configs
+    for topic_name in exam_specs["topics"]:
+        result = await session.exec(select(Topic).where(Topic.name == topic_name))
+        topic = result.first()
+        if topic:
+            # Count available questions for this topic
+            count_result = await session.exec(
+                select(func.count(Question.id)).where(Question.topic_id == topic.id)
+            )
+            available_questions = count_result.one()
+            requested_questions = exam_specs["number_questions"].get(topic_name, 0)
+            
+            if requested_questions > available_questions:
+                raise ValueError(
+                    f"Topic '{topic_name}' has only {available_questions} questions, "
+                    f"but {requested_questions} were requested."
+                )
+
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],

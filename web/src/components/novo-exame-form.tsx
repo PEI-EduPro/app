@@ -265,25 +265,26 @@ export const NovoExameForm = (props: {
                     Número de questões por tópico
                   </FormLabel>
 
-                  {watch("topics")?.map((topic) => (
+                  {watch("topics")?.map((topic) => {
+                    const maxQuestions = topics
+                      ?.map((t) =>
+                        t[0].id.toString() === topic.id ? t[1] : 0
+                      )
+                      .filter((n) => n !== 0)[0] || 1;
+                    
+                    return (
                     <FormItem
                       key={topic.id}
                       className="flex items-center gap-x-4"
                     >
                       <FormLabel className="flex-shrink-0 w-140">
-                        {topic.nome}
+                        {topic.nome} (max: {maxQuestions})
                       </FormLabel>
                       <FormControl className="flex-1">
                         <Input
                           type="number"
                           min="1"
-                          max={
-                            topics
-                              ?.map((t) =>
-                                t[0].id.toString() === topic.id ? t[1] : 0
-                              )
-                              .filter((n) => n !== 0)[0]
-                          }
+                          max={maxQuestions}
                           placeholder="1"
                           value={watch(`number_questions.${topic.id}`) || ""}
                           onChange={(e) => {
@@ -296,10 +297,8 @@ export const NovoExameForm = (props: {
                             }
 
                             const numValue = parseInt(value);
-                            setValue(
-                              `number_questions.${topic.id}`,
-                              isNaN(numValue) || numValue < 1 ? 1 : numValue
-                            );
+                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
+                            setValue(`number_questions.${topic.id}`, clampedValue);
                           }}
                           onBlur={(e) => {
                             const value = e.target.value;
@@ -311,9 +310,8 @@ export const NovoExameForm = (props: {
                             }
 
                             const numValue = parseInt(value);
-                            if (isNaN(numValue) || numValue < 1) {
-                              setValue(`number_questions.${topic.id}`, 1);
-                            }
+                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
+                            setValue(`number_questions.${topic.id}`, clampedValue);
                           }}
                           onKeyDown={(e) => {
                             if (
@@ -340,7 +338,7 @@ export const NovoExameForm = (props: {
                         />
                       </FormControl>
                     </FormItem>
-                  ))}
+                  )})}
                 </div>
                 <div className="flex justify-between">
                   <Button
