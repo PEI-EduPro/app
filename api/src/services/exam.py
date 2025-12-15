@@ -322,6 +322,20 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
 }}"""
         with open(os.path.join(workdir, "UC.tex"), "w") as f:
             f.write(uc_content)
+    
+    # Modify H.tex to include variation number after UC.tex
+    h_path = os.path.join(workdir, "H.tex")
+    if os.path.exists(h_path):
+        with open(h_path, "r") as f:
+            h_content = f.read()
+        # Add variation number after \input{UC}
+        h_content = h_content.replace(
+            "\\input{UC}",
+            f"\\input{{UC}}\n\t\\vspace{{0.2cm}}\n\t{{\\small \\textbf{{Versão {var_num}}}}}"
+        )
+
+        with open(h_path, "w") as f:
+            f.write(h_content)
 
     try:
         subprocess.run(
