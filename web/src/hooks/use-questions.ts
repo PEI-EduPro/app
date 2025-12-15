@@ -6,7 +6,7 @@ export function useSubject(subjectId: number) {
   return useQuery({
     queryKey: ["subject", subjectId],
     queryFn: async () => {
-      const data = await apiClient.get(`/subjects/${subjectId}/all-questions`);
+      const data = await apiClient.get<{ subject_name: string }>(`/subjects/${subjectId}/all-questions`);
       return { name: data.subject_name };
     },
     enabled: !!subjectId,

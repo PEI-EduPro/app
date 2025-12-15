@@ -41,6 +41,10 @@ function NovoExame() {
     },
     number_exams: 1,
     fraction: 0,
+    exam_title: "",
+    exam_date: "",
+    semester: "",
+    academic_year: "",
   };
 
   return (
