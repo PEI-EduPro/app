@@ -8,6 +8,13 @@ import {
   FormItem,
   FormLabel,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -30,6 +37,10 @@ export type NovoExameFormT = {
   relative_quotations: Record<string, number>;
   number_exams: number;
   fraction: number;
+  exam_title: string;
+  exam_date: string;
+  semester: string;
+  academic_year: string;
 };
 
 export const NovoExameForm = (props: {
@@ -53,6 +64,10 @@ export const NovoExameForm = (props: {
       relative_quotations: examData?.relative_quotations || {},
       number_exams: examData?.number_exams || 1,
       fraction: examData?.fraction || 0,
+      exam_title: examData?.exam_title || "Exame Época Normal",
+      exam_date: examData?.exam_date || new Date().toISOString().split('T')[0],
+      semester: examData?.semester || "1",
+      academic_year: examData?.academic_year || "2025/26",
     },
   });
 
@@ -140,6 +155,10 @@ export const NovoExameForm = (props: {
       num_variations: finalData.number_exams,
       number_questions: {},
       relative_quotations: {},
+      exam_title: finalData.exam_title,
+      exam_date: finalData.exam_date,
+      semester: finalData.semester,
+      academic_year: finalData.academic_year,
     };
 
     finalData.topics.forEach((topic) => {
@@ -485,6 +504,95 @@ export const NovoExameForm = (props: {
                   <FormLabel className="text-center block text-lg">
                     Configurações finais
                   </FormLabel>
+
+                  {/* Exam title field */}
+                  <FormField
+                    control={control}
+                    name="exam_title"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Título do exame
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="text"
+                            placeholder="Exame Época Normal"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Exam date field */}
+                  <FormField
+                    control={control}
+                    name="exam_date"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Data do exame
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Semester field */}
+                  <FormField
+                    control={control}
+                    name="semester"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Semestre
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o semestre" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="1">1º Semestre</SelectItem>
+                            <SelectItem value="2">2º Semestre</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Academic year field */}
+                  <FormField
+                    control={control}
+                    name="academic_year"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-x-4">
+                        <FormLabel className="flex-shrink-0 w-140">
+                          Ano letivo
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Selecione o ano" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="2024/25">2024/25</SelectItem>
+                            <SelectItem value="2025/26">2025/26</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </FormItem>
+                    )}
+                  />
+
+                  <hr />
 
                   {/* Number of exams field */}
                   <FormField
