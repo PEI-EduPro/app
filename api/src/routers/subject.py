@@ -1,80 +1,92 @@
-# src/routers/subject.py
+from typing import List, Tuple
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.models.topic import TopicPublic
 from src.core.db import get_session
-from src.core.deps import require_manager, verify_regent_exists # Import the new dependency
-from src.models.subject import Subject, SubjectCreate
-from src.schemas.subject import SubjectCreateRequest, SubjectCreateResponse
-from src.core.keycloak import keycloak_client
+from src.models.subject import (
+    SubjectCreateRequest, 
+    SubjectCreateResponse, 
+    SubjectRead,
+    SubjectUpdate,
+)
+from src.models.topic import TopicPublic
+
+import src.services.subject as subject_service
 import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/", response_model=SubjectCreateResponse, dependencies=[Depends(require_manager)])
-async def create_subject_endpoint(
-    subject_data: SubjectCreateRequest, # Receive the request body data
+@router.post("/", response_model=SubjectCreateResponse)
+async def create_subject(
+    subject_data: SubjectCreateRequest,
     session: AsyncSession = Depends(get_session)
 ):
-    """
-    Create a new subject in the database and its corresponding Keycloak groups.
-    Assigns the specified user as the regent.
-    Requires the 'manager' role.
-    """
-    logger.info(f"Manager is attempting to create a new subject: '{subject_data.name}', assigning regent ID: {subject_data.regent_keycloak_id}")
-
+    """Create a new subject."""
     try:
-        # 1. Verify regent exists BEFORE creating anything in the database
-        # Call the verification function explicitly here, now that we have subject_data
-        regent_info = await verify_regent_exists(subject_data.regent_keycloak_id)
-
-        # 2. Create the Subject in the local database
-        db_subject = Subject(name=subject_data.name)
-        session.add(db_subject)
-        await session.commit()
-        await session.refresh(db_subject) # Get the auto-generated ID
-
-        logger.info(f"Subject '{db_subject.name}' created in database with ID: {db_subject.id}")
-
-        # 3. Create Keycloak groups and assign regent using the ID from the database
-        success = await keycloak_client.create_subject_groups_and_assign_regent(
-            subject_id=str(db_subject.id), # Use the DB ID to name the groups
-            regent_keycloak_id=subject_data.regent_keycloak_id
-        )
-
-        if not success:
-            # If group creation/assignment failed, consider rolling back the DB creation
-            # For now, just log and raise an error
-            logger.error(f"Failed to create Keycloak groups for subject {db_subject.id}. DB entry may need cleanup.")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Subject created in database, but failed to create Keycloak groups."
-            )
-
-        logger.info(f"Subject '{db_subject.name}' (ID: {db_subject.id}) and Keycloak groups created successfully. Regent assigned.")
-
-        # Return success response
-        return SubjectCreateResponse(
-            id=db_subject.id,
-            name=db_subject.name,
-            message="Subject and Keycloak groups created successfully. Regent assigned.",
-            regent_username=regent_info.get('username') # Return the verified regent's username
-        )
-
-    except ValueError as ve:
-        # Handle specific validation errors like regent not found (caught by verify_regent_exists)
-        logger.warning(f"Validation error during subject creation: {ve}")
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(ve)
-        )
+        subject = await subject_service.create_subject(session, subject_data.name)
+        return SubjectCreateResponse(id=subject.id, name=subject.name)
     except Exception as e:
-        # Handle other errors during creation (e.g., DB error, Keycloak error)
-        logger.error(f"Failed to create subject '{subject_data.name}': {e}")
-        logger.exception(e) # Log the full traceback
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An error occurred while creating the subject in the database or Keycloak."
-        )
+        logger.error(f"Error creating subject: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create subject")
 
-# ... (keep existing endpoints like GET, PUT, etc.) ...
+
+@router.get("/", response_model=List[SubjectRead])
+async def get_subjects(session: AsyncSession = Depends(get_session)):
+    """Get all subjects."""
+    return await subject_service.get_all_subjects(session)
+
+
+@router.get("/{subject_id}/topics", response_model=List[Tuple[TopicPublic, int]])
+async def get_all_topics_by_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Get all subject topics by subject ID."""
+    result = await subject_service.get_all_subject_topics(session, subject_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Topics not found")
+    return result
+
+
+@router.get("/{subject_id}/all-questions", response_model=dict)
+async def get_all_by_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Get subject by ID."""
+    result = await subject_service.get_topics_questions_and_options_by_subject_id(session, subject_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    return result
+
+
+@router.get("/{subject_id}", response_model=SubjectRead)
+async def get_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Get subject by ID"""
+    subject = await subject_service.get_subject_by_id(session, subject_id)
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    return subject
+
+
+@router.put("/{subject_id}", response_model=SubjectRead)
+async def update_subject(
+    subject_id: int,
+    subject_update: SubjectUpdate,
+    session: AsyncSession = Depends(get_session)
+):
+    """Update subject."""
+    subject = await subject_service.update_subject(session, subject_id, subject_update.name)
+    if not subject:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    return subject
+
+
+@router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Delete subject."""
+    success = await subject_service.delete_subject(session, subject_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Subject not found")
+    
+
+@router.get("/{subject_id}/topics", response_model=List[TopicPublic])
+async def get_subject_topics(subject_id: int, session: AsyncSession = Depends(get_session)):
+    """Get all topics from a given subject_id"""
+    return await subject_service.get_topics_from_subject(session, subject_id)

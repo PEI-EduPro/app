@@ -1,0 +1,30 @@
+% Question template for `exam` documentclass
+% Put this inside a `questions` environment (as in `main.tex`).
+
+% -----------------------------
+% Multiple-choice question example
+% -----------------------------
+\question[1]
+Questão: Coloque aqui o enunciado da pergunta.\\
+	extit{Question statement placeholder.}
+
+% Student-facing choices: use only `\choice` so students see neutral option labels.
+\begin{choices}
+  \choice Option A (placeholder)
+  \choice Option B (placeholder)
+  \CorrectChoice Option C (placeholder)
+  \choice Option D (placeholder)
+\end{choices}
+
+
+% Notes:
+% - Use `\CorrectChoice` to tag the correct choice when preparing answer keys.
+% - The `exam` class will render this as a normal question and the grid in `T-answers.tex` is used for student marking.
+
+
+% -----------------------------
+% Usage
+% -----------------------------
+% - Place `\input{question_template}` inside a `questions` environment in `main.tex` or in your variant files.
+% - For multiple-choice questions, prefer 4 options (A..D) so the answer grid aligns with your `T-answers.tex` layout.
+% - For the instructor answer key, use the same `questions` order and mark correct entries with `\CorrectChoice` or maintain a separate key file.

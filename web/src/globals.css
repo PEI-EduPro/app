@@ -119,5 +119,14 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Nunito Sans", sans-serif;
+  }
+
+  .font-rubik {
+    font-family: Rubik, sans-serif;
+  }
+
+  .font-nunito {
+    font-family: "Nunito Sans", sans-serif;
   }
 }

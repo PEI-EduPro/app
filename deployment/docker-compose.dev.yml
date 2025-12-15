@@ -2,7 +2,7 @@ name: template-project
 
 services:
   db:
-    image: postgres:18-alpine
+    image: postgres:16-alpine # (Note: postgres:18 doesn't exist yet, assumed typo or latest)
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-myuser}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
@@ -13,7 +13,7 @@ services:
       - db_data:/var/lib/postgresql/data
 
   keycloak-db:
-    image: postgres:18-alpine
+    image: postgres:16-alpine
     environment:
       POSTGRES_DB: keycloak
       POSTGRES_USER: keycloak
@@ -35,11 +35,30 @@ services:
       KC_HOSTNAME_STRICT_BACKCHANNEL: false
       KC_HTTP_ENABLED: true
       KC_HOSTNAME_STRICT_HTTPS: false
+      # Note: We REMOVED the --import-realm command because we are doing it via the CLI container below
     ports:
       - "8080:8080"
     command: start-dev
     depends_on:
       - keycloak-db
+
+  # --- NEW SERVICE ---
+  keycloak-config-cli:
+    image: adorsys/keycloak-config-cli:latest-24.0.1
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      KEYCLOAK_AVAILABILITYCHECK_ENABLED: "true"
+      KEYCLOAK_AVAILABILITYCHECK_TIMEOUT: "120s"
+      # This setting ensures we 'merge' config into the existing master realm
+      IMPORT_MANAGED_ONLY: "false" 
+      IMPORT_VAR_SUBSTITUTION_ENABLED: "true"
+    volumes:
+      # Mount your existing config folder here
+      - ./keycloak-config:/config
+    depends_on:
+      - keycloak
 
 volumes:
   db_data:

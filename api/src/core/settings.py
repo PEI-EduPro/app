@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     KEYCLOAK_SERVER_URL: str = Field(default="http://localhost:8080")
     KEYCLOAK_REALM: str = Field(default="master")
     KEYCLOAK_CLIENT_ID: str = Field(default="api-backend")
-    KEYCLOAK_CLIENT_SECRET: str = Field(default="ofvdbxJRWua5qTjuo8D6mnk3I45SB9kT") # Make sure this is the secret for 'api-backend' in 'master' realm
+    KEYCLOAK_CLIENT_SECRET: str = Field(default="**********") # Make sure this is the secret for 'api-backend' in 'master' realm
     KEYCLOAK_PUBLIC_KEY: str = Field(default="")
     # Note: These are for the initial admin-cli authentication method.
     # The preferred method is service account as described below.

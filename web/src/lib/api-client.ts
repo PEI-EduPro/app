@@ -1,5 +1,3 @@
-
-
 class ApiClient {
   private baseUrl: string;
   constructor(baseUrl: string) {
@@ -13,14 +11,25 @@ class ApiClient {
     }
     return response.json();
   }
-  
-  async post<T>(endpoint: string, data: unknown): Promise<T> {
+
+  async post<T>(
+    endpoint: string,
+    data: unknown,
+    options?: { headers?: Record<string, string> }
+  ): Promise<T> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...options?.headers,
+    };
+
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(data),
+      method: "POST",
+      headers,
+      body:
+        typeof data === "string" &&
+        headers["Content-Type"] === "application/xml"
+          ? data
+          : JSON.stringify(data),
     });
 
     if (!response.ok) {
@@ -29,11 +38,26 @@ class ApiClient {
     return response.json();
   }
 
+  async put<T>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error updating ${endpoint}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   async delete<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: 'DELETE',
+      method: "DELETE",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
     });
 
@@ -41,6 +65,25 @@ class ApiClient {
       throw new Error(`Error deleting ${endpoint}: ${response.statusText}`);
     }
     return response.json();
+  }
+
+  async download(endpoint: string, data: unknown): Promise<Blob> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `Error downloading ${endpoint}: ${response.statusText}. Details: ${errorText.substring(0, 100)}...`
+      );
+    }
+
+    return response.blob();
   }
 }
 
