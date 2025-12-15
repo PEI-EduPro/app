@@ -49,6 +49,20 @@ async def get_subject_exam_configs(
         
     return response
 
+@router.options("/generate")
+async def generate_exams_options():
+    """
+    Handle CORS preflight request for the generate endpoint.
+    """
+    return Response(
+        status_code=200,
+        headers={
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
+
 @router.post("/generate")
 async def generate_exams(
     exam_specs: dict,
@@ -72,9 +86,14 @@ async def generate_exams(
         logger.info(f"Successfully generated {num_variations} exam variations.")
 
         return Response(
-            content=zip_bytes, 
+            content=zip_bytes,
             media_type="application/zip",
-            headers={"Content-Disposition": "attachment; filename=exams.zip"}
+            headers={
+                "Content-Disposition": "attachment; filename=exams.zip",
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Methods": "POST, OPTIONS",
+                "Access-Control-Allow-Headers": "*"
+            }
         )
 
     except ValueError as ve:
