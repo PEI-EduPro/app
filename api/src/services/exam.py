@@ -150,11 +150,13 @@ async def generate_exams_from_configs(
                     f.write(exam_pdf)
 
             # Generate answer key PDF (marked grid)
+            ''' Temporarily disable this because of the new all_solutions.pdf
             _write_answer_key(tmpdir, answers_map, num_questions)
             key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name)
             if key_pdf:
                 with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
                     f.write(key_pdf)
+            '''
 
             # Save exam to DB
             new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
@@ -317,10 +319,20 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
 \\begin{document}
 
 \\begin{center}
+\\huge
+\\input{UC}
+
+\\vspace{0.3cm}
+\\normalsize
+Exame Época Normal
+\\\\
+\\input{date}
+
+\\vspace{0.5cm}
 \\Large \\textbf{Answer Keys}
 \\end{center}
 
-\\vspace{1cm}
+\\vspace{0.5cm}
 
 """
     
@@ -334,11 +346,15 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
             cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
             rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
         
-        content += f"""\\textbf{{Version {var_num}:}}
+        content += f"""\\noindent\\rule{{\\textwidth}}{{0.4pt}}
 
-\\renewcommand{{\\arraystretch}}{{1.5}}
+\\vspace{{0.3cm}}
+
 \\begin{{center}}
-\\begin{{minipage}}{{0.80\\textwidth}}
+\\begin{{tabular}}{{c c}}
+\\textbf{{Version {var_num}}} &
+\\renewcommand{{\\arraystretch}}{{1.5}}
+\\begin{{minipage}}{{0.75\\textwidth}}
 \\scriptsize
 \\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
@@ -348,9 +364,10 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
 \\end{{tabular}}
 \\end{{center}}
 \\end{{minipage}}
+\\end{{tabular}}
 \\end{{center}}
 
-\\vspace{{0.5cm}}
+\\vspace{{0.3cm}}
 
 """
     
