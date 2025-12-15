@@ -1,3 +1,24 @@
+## Running the Project Locally
+
+From the **repository root (`/app`)** run:
+
+### Start Everything
+```bash
+sudo docker compose up --build
+```
+
+### Stop Everything
+```bash
+sudo docker compose down
+```
+
+### Clean Reset (removes all data)
+```bash
+sudo docker compose down -v
+```
+
+---
+
 ```
 git checkout dev
 git pull
