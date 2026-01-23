@@ -15,16 +15,35 @@ async def create_question(
     session: AsyncSession,
     question_data: List[QuestionCreate]
 ) -> List[QuestionPublic]:
-    """Create a new question"""
-    questions = [Question.model_validate(x) for x in question_data]
+    """Create a new question with options"""
+    created_questions = []
     
-    session.add_all(questions)  # More efficient than individual adds
+    for q_data in question_data:
+        # Create Question
+        db_question = Question(
+            topic_id=q_data.topic_id,
+            question_text=q_data.question_text
+        )
+        session.add(db_question)
+        await session.flush() # Get ID
+        
+        # Create Options
+        for opt_data in q_data.question_options:
+            db_option = QuestionOption(
+                question_id=db_question.id,
+                option_text=opt_data.option_text,
+                value=opt_data.value
+            )
+            session.add(db_option)
+            
+        created_questions.append(db_question)
+    
     await session.commit()
     
-    for question in questions:
-        await session.refresh(question)
+    for q in created_questions:
+        await session.refresh(q)
     
-    return [QuestionPublic.model_validate(q) for q in questions]
+    return [QuestionPublic.model_validate(q) for q in created_questions]
 
 async def create_question_XML(
     session: AsyncSession,

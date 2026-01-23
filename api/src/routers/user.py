@@ -43,7 +43,12 @@ async def create_user_endpoint(
             nmec=user_data.nmec
         )
         logger.info(f"User {user_data.username} created successfully by manager {current_user_info.username}.")
-        return UserPublic.model_validate(user_data)
+        
+        # Create a dict from user_data and add the user_id from Keycloak result
+        response_data = user_data.model_dump()
+        response_data["user_id"] = result["user_id"]
+        
+        return UserPublic.model_validate(response_data)
     except ValueError as ve:
         # Handle specific validation errors like user exists
         logger.warning(f"Failed to create user {user_data.username}: {ve}")

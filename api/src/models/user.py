@@ -28,8 +28,8 @@ class UserCreate(SQLModel):
     first_name: str
     last_name: str
     password: str
-    # temporary_password: Optional[str] = None
-    realm_roles: Optional[str] = None # Assuming this comes as a string from frontend forms
+    temporary_password: bool = False
+    realm_role: Optional[str] = None 
     nmec: Optional[str] = None
 
 class UserPublic(SQLModel):
