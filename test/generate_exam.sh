@@ -285,7 +285,7 @@ echo -e "\n--- 3. TEST EXAM GENERATION ---"
 echo "Generating 3 exam variations (requesting ZIP)..."
 
 HTTP_CODE=$(curl -w "%{http_code}" -X POST "$API_BASE/exams/generate" \
-  -H "Authorization: Bearer $REGENT_TOKEN" \
+  -H "Authorization: Bearer" \
   -H "Content-Type: application/json" \
   -d "{
     \"subject_id\": $SUBJECT_ID,

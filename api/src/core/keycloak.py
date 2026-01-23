@@ -21,12 +21,11 @@ class KeycloakClient:
         try:
             self.admin_client = KeycloakAdmin(
                 server_url=settings.KEYCLOAK_SERVER_URL,
-                username=None, # Do not use username/password for service accounts
-                password=None, # Do not use username/password for service accounts
-                realm_name=settings.KEYCLOAK_REALM, # 'master'
-                client_id=settings.KEYCLOAK_CLIENT_ID, # 'api-backend'
-                client_secret_key=settings.KEYCLOAK_CLIENT_SECRET, # Secret for 'api-backend'
-                verify=True # Set to False if using self-signed certificates in dev
+                username=settings.KEYCLOAK_ADMIN_USERNAME,
+                password=settings.KEYCLOAK_ADMIN_PASSWORD,
+                realm_name=settings.KEYCLOAK_REALM,
+                user_realm_name="master",
+                verify=True
             )
             
             logger.info("Keycloak Admin client (via Service Account) initialized successfully.")
