@@ -70,3 +70,23 @@ async def test_get_topic_by_id(client, session):
     data = response.json()
     assert data["name"] == "Kinematics"
     assert data["id"] == t.id
+
+@pytest.mark.asyncio
+async def test_create_topic_invalid_subject(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    
+    # Trying to create a topic for a subject that doesn't exist
+    response = await client.post(
+        "/api/topics/",
+        json={"name": "Orphan Topic", "subject_id": 99999}
+    )
+    # The DB constraint should fail (Foreign Key) -> 500 or 400 depending on handling
+    # If not handled explicitly, it's usually 500. 
+    # Let's see if we can catch integrity errors. 
+    # Current implementation might just let it fail.
+    assert response.status_code in [400, 500] 
+
+@pytest.mark.asyncio
+async def test_get_topic_not_found(client, session):
+    response = await client.get("/api/topics/99999")
+    assert response.status_code == 404

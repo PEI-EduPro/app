@@ -66,6 +66,8 @@ async def create_subject_endpoint(
         )
     except ValueError as ve:
         raise HTTPException(status_code=400, detail=str(ve))
+    except HTTPException as he:
+        raise he
     except Exception as e:
         logger.error(f"Error creating subject: {e}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

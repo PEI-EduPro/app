@@ -11,6 +11,7 @@ from src.main import app
 from src.core.db import get_session
 from src.core.deps import get_current_user_info
 from src.models.user import User
+from sqlalchemy import event
 
 # Use in-memory SQLite for tests
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -23,6 +24,14 @@ async def engine():
         future=True,
         connect_args={"check_same_thread": False},
     )
+    
+    # Enable foreign keys for SQLite
+    @event.listens_for(engine.sync_engine, "connect")
+    def set_sqlite_pragma(dbapi_connection, connection_record):
+        cursor = dbapi_connection.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
+
     yield engine
     await engine.dispose()
 

@@ -73,3 +73,24 @@ async def test_get_question_and_options(client, session, setup_topic):
     texts = [o["option_text"] for o in opts]
     assert "Yes" in texts
     assert "No" in texts
+
+@pytest.mark.asyncio
+async def test_create_question_invalid_topic(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    
+    payload = [
+        {
+            "topic_id": 99999,
+            "question_text": "Impossible Question",
+            "question_options": []
+        }
+    ]
+    
+    response = await client.post("/api/questions/", json=payload)
+    # Should fail due to FK constraint
+    assert response.status_code in [400, 500]
+
+@pytest.mark.asyncio
+async def test_get_question_not_found(client):
+    response = await client.get("/api/questions/99999")
+    assert response.status_code == 404

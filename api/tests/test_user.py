@@ -41,3 +41,51 @@ async def test_create_user(client, mock_auth):
         data = response.json()
         assert data["username"] == "newstudent"
         async_mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_create_user_unauthorized(client):
+    # Mock a non-manager user
+    from src.models.user import User
+    student_user = User(user_id="s1", username="stu", email="s@t.com", realm_roles=["student"], groups=[])
+    
+    async def mock_student():
+        return student_user
+        
+    app.dependency_overrides[get_current_user_info] = mock_student
+    
+    response = await client.post(
+        "/api/users/create",
+        json={
+            "username": "hacker",
+            "email": "h@h.com",
+            "password": "p",
+            "first_name": "H",
+            "last_name": "R"
+        }
+    )
+    assert response.status_code == 403
+
+@pytest.mark.asyncio
+async def test_create_user_duplicate(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    
+    from src.core.keycloak import keycloak_client
+    from unittest.mock import AsyncMock
+    
+    # Mock Keycloak to raise ValueError (simulating duplicate)
+    with pytest.MonkeyPatch.context() as mp:
+        async_mock = AsyncMock(side_effect=ValueError("User already exists"))
+        mp.setattr(keycloak_client, "create_user_in_keycloak", async_mock)
+
+        response = await client.post(
+            "/api/users/create",
+            json={
+                "username": "existing",
+                "email": "e@e.com",
+                "password": "p",
+                "first_name": "E",
+                "last_name": "E"
+            }
+        )
+        assert response.status_code == 400
+        assert "User already exists" in response.json()["detail"]
