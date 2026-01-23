@@ -19,11 +19,14 @@ class Subject(SQLModel, table=True):
 # Used for POST /subject input
 class SubjectCreateRequest(BaseModel):
     name: str
+    regent_keycloak_id: str
 
 # Used for POST /subject output
 class SubjectCreateResponse(BaseModel):
     id: int
     name: str
+    message: str
+    regent_username: str | None = None
 
 # Used for GET /subject output
 class SubjectRead(BaseModel):
