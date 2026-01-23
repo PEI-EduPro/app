@@ -16,7 +16,7 @@ from sqlalchemy import event
 # Use in-memory SQLite for tests
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
-@pytest_asyncio.fixture(scope="session")
+@pytest_asyncio.fixture(scope="function")
 async def engine():
     engine = create_async_engine(
         SQLALCHEMY_DATABASE_URL,
