@@ -17,13 +17,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
-keycloak.init({ onLoad: 'login-required',
- redirectUri: 'http://localhost:5173/', //TODO seria boa ideia por isto dinâmico
- }).then((authenticated) => {
+keycloak.init({
+  onLoad: 'login-required',
+  redirectUri: 'http://localhost:5173/', //TODO seria boa ideia por isto dinâmico
+  checkLoginIframe: false
+}).then((authenticated) => {
   if (!authenticated) {
     console.error('User is not authenticated');
     return;
   }
+
+  console.log('Keycloak initialized successfully');
 
   setInterval(() => {
     keycloak.updateToken(70).catch(() => {
@@ -43,6 +47,6 @@ keycloak.init({ onLoad: 'login-required',
       </StrictMode>,
     )
   }
-}).catch(() => {
-  console.error('Failed to initialize Keycloak');
+}).catch((error) => {
+  console.error('Failed to initialize Keycloak:', error);
 });

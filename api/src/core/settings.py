@@ -11,7 +11,9 @@ class Settings(BaseSettings):
     POSTGRES_DB: str = Field(default="mydatabase")
     
     # Keycloak
-    KEYCLOAK_SERVER_URL: str = Field(default="http://localhost:8080")
+    KEYCLOAK_SERVER_URL: str = Field(default="http://keycloak:8080")
+    KEYCLOAK_ISSUER_URL: str = Field(default="http://localhost:8080")
+
     KEYCLOAK_REALM: str = Field(default="edupro")
     KEYCLOAK_CLIENT_ID: str = Field(default="api-backend") # this is not used
     KEYCLOAK_CLIENT_SECRET: str = Field(default="**********") # this is not used
