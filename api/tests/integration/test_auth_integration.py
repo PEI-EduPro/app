@@ -10,9 +10,9 @@ async def test_health_check(integration_client):
 
 @pytest.mark.asyncio
 async def test_get_me_unauthorized(integration_client):
-    # No header -> HTTPBearer raises 403 (default auto_error=True)
+    # No header -> HTTPBearer raises 401 (Not Authenticated)
     response = await integration_client.get("/api/users/me")
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 @pytest.mark.asyncio
 async def test_get_me_authorized(integration_client):
