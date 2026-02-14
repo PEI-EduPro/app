@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createRouter } from '@tanstack/react-router'
+import keycloak from './lib/keycloak'
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen'
@@ -16,15 +17,32 @@ declare module '@tanstack/react-router' {
   }
 }
 
-// Render the app
-const rootElement = document.getElementById('root')!
-if (!rootElement.innerHTML) {
-  const root = ReactDOM.createRoot(rootElement)
-  root.render(
-    <StrictMode>
-      <Providers>
-        <RouterProvider router={router} />
-      </Providers>
-    </StrictMode>,
-  )
-}
+keycloak.init({ onLoad: 'login-required',
+ redirectUri: 'http://localhost:5173/', //TODO seria boa ideia por isto dinâmico
+ }).then((authenticated) => {
+  if (!authenticated) {
+    console.error('User is not authenticated');
+    return;
+  }
+
+  setInterval(() => {
+    keycloak.updateToken(70).catch(() => {
+      console.error('Failed to refresh token');
+    });
+  }, 300000);
+
+  // Render the app
+  const rootElement = document.getElementById('root')!
+  if (!rootElement.innerHTML) {
+    const root = ReactDOM.createRoot(rootElement)
+    root.render(
+      <StrictMode>
+        <Providers>
+          <RouterProvider router={router} />
+        </Providers>
+      </StrictMode>,
+    )
+  }
+}).catch(() => {
+  console.error('Failed to initialize Keycloak');
+});
