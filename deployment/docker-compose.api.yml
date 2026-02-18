@@ -1,0 +1,19 @@
+services:
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    environment:
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
+      POSTGRES_SERVER: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: mydatabase
+      KEYCLOAK_URL: http://keycloak:8080
+    ports:
+      - "8000:80"
+    depends_on:
+      db:
+        condition: service_healthy
+      keycloak-config-cli:
+        condition: service_completed_successfully
