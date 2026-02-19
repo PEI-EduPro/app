@@ -53,7 +53,6 @@ export function NovaUCForm() {
   const { handleSubmit, control, reset, watch, formState } = form;
 
   const onSubmit = async (formData: NovaUCFormT) => {
-    console.log(formData);
     mutate({ name: formData.nome });
     if (isError) toast.error("An error occoured, please try again later");
     setFormStep(0);

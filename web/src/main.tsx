@@ -1,8 +1,6 @@
 import { StrictMode } from "react";
 import ReactDOM from "react-dom/client";
 import { RouterProvider, createRouter } from "@tanstack/react-router";
-import { keycloak, keycloakInitOptions } from "./lib/keycloak.ts";
-import { KeycloakProvider } from "./lib/keycloak-provider.tsx";
 
 // Import the generated route tree
 import { routeTree } from "./routeTree.gen";
@@ -24,11 +22,9 @@ if (!rootElement.innerHTML) {
   const root = ReactDOM.createRoot(rootElement);
   root.render(
     <StrictMode>
-      <KeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>
-        <Providers>
-          <RouterProvider router={router} />
-        </Providers>
-      </KeycloakProvider>
+      <Providers>
+        <RouterProvider router={router} />
+      </Providers>
     </StrictMode>,
   );
 }

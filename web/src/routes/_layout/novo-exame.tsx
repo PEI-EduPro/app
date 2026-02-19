@@ -44,7 +44,7 @@ function NovoExame() {
     exam_title: "",
     exam_date: "",
     semester: "",
-    academic_year: ""
+    academic_year: "",
   };
 
   return (
