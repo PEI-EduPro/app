@@ -31,7 +31,6 @@ interface Topic {
   questions: Record<number, Question>;
   isOpen: boolean;
 }
-
 function BancoQuestões() {
   const { ucId } = Route.useSearch();
   const { data: subjectData } = useSubject(ucId);
@@ -416,4 +415,3 @@ function QuestionItem({ question, questionNumber, onEdit, onDelete }: QuestionIt
   );
 }
 
-export default BancoQuestões;

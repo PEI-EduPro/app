@@ -25,6 +25,7 @@ import {
   CollapsibleContent,
 } from "./ui/collapsible";
 import { useGetUc } from "@/hooks/use-ucs";
+import { keycloak } from "../lib/keycloak";
 
 export function AppSidebar() {
   const { data: ucs } = useGetUc();
@@ -42,10 +43,11 @@ export function AppSidebar() {
     {
       title: "Unidades Curriculares",
       icon: GraduationCap,
-      subContent: ucs?.map((uc) => ({
-        title: uc.name,
-        url: `/detalhes-uc?ucId=${uc.id}`,
-      })) || [],
+      subContent:
+        ucs?.map((uc) => ({
+          title: uc.name,
+          url: `/detalhes-uc?ucId=${uc.id}`,
+        })) || [],
     },
   ];
 
@@ -60,9 +62,11 @@ export function AppSidebar() {
                   <SquareUserRound className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Joao Rafael</span>
+                  <span className="font-semibold">
+                    {keycloak.tokenParsed?.name || "Utilizador"}
+                  </span>
                   <span className="text-xs text-muted-foreground">
-                    jra@ua.pt
+                    {keycloak.tokenParsed?.email || "email não disponível"}
                   </span>
                 </div>
               </a>

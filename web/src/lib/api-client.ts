@@ -1,4 +1,4 @@
-import keycloak from "./keycloak";
+import { keycloak } from "./keycloak";
 
 class ApiClient {
   private baseUrl: string;
@@ -6,20 +6,25 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private getHeaders(additionalHeaders?: Record<string, string>): Record<string,string>{
-    const headers: Record<string, string> = {'Content-Type': 'application/json',
+  private getHeaders(
+    additionalHeaders?: Record<string, string>,
+  ): Record<string, string> {
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
       ...additionalHeaders,
     };
-    
+
     if (keycloak.token) {
-      headers['Authorization'] = `Bearer ${keycloak.token}`;
+      headers["Authorization"] = `Bearer ${keycloak.token}`;
     }
-    
+
     return headers;
   }
 
   async get<T>(endpoint: string): Promise<T> {
-    const response = await fetch(`${this.baseUrl}${endpoint}`, {headers: this.getHeaders(),});
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      headers: this.getHeaders(),
+    });
     if (!response.ok) {
       throw new Error(`Error fetching ${endpoint}: ${response.statusText}`);
     }
@@ -29,7 +34,7 @@ class ApiClient {
   async post<T>(
     endpoint: string,
     data: unknown,
-    options?: { headers?: Record<string, string> }
+    options?: { headers?: Record<string, string> },
   ): Promise<T> {
     const headers = this.getHeaders(options?.headers);
 
@@ -84,7 +89,7 @@ class ApiClient {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `Error downloading ${endpoint}: ${response.statusText}. Details: ${errorText.substring(0, 100)}...`
+        `Error downloading ${endpoint}: ${response.statusText}. Details: ${errorText.substring(0, 100)}...`,
       );
     }
 

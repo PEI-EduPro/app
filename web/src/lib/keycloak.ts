@@ -1,9 +1,13 @@
 import Keycloak from "keycloak-js";
 
-const keycloak = new Keycloak({
+export const keycloak = new Keycloak({
     url: 'http://localhost:8080',
     realm: 'edupro',
     clientId: 'frontend'
 });
 
-export default keycloak;
+export const keycloakInitOptions = {
+  onLoad: 'check-sso' as const,
+  redirectUri: `${window.location.origin}`,
+  checkLoginIframe: false,
+}

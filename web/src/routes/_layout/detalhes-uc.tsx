@@ -225,7 +225,7 @@ function RouteComponent() {
                     <span className="text-[26px] font-medium">Regente</span>
                     <Select
                       value={regente?.value}
-                      onValueChange={(e) =>
+                      onValueChange={(e: string) =>
                         setRegente(
                           options.find((el) => el.value === e) || undefined
                         )
