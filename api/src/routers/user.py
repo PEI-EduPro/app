@@ -64,6 +64,25 @@ async def create_user_endpoint(
             detail="An error occurred while creating the user in Keycloak."
         )
 
+@router.get("/professors")
+async def get_professors(user_info: User = Depends(get_current_user_info)):
+    """Get all users with professor role"""
+    try:
+        users = await keycloak_client.get_users_by_role("professor")
+        return [
+            {
+                "id": user["id"],
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "firstName": user.get("firstName"),
+                "lastName": user.get("lastName")
+            }
+            for user in users
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching professors: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch professors")
+
 @router.get("/debug/token-info")
 async def debug_token_info(
     user_info: User = Depends(get_current_user_info),

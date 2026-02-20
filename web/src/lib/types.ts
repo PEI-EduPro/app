@@ -5,6 +5,15 @@ export interface UcI {
 
 export interface NewUcI {
   name: string;
+  regent_keycloak_id: string;
+}
+
+export interface UserI {
+  id: string;
+  username?: string;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
 }
 
 export interface NewExamConfigI {

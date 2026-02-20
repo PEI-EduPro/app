@@ -340,6 +340,21 @@ class KeycloakClient:
             logger.exception(e)
             return False
 
+    async def get_users_by_role(self, role_name: str) -> list[dict]:
+        """
+        Get all users with a specific realm role.
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            users = await loop.run_in_executor(
+                None,
+                lambda: self.admin_client.get_realm_role_members(role_name)
+            )
+            return users
+        except Exception as e:
+            logger.error(f"Failed to get users with role {role_name}: {e}")
+            return []
+
     async def delete_subject_groups(self, subject_id: str) -> bool:
         """
         Deletes all Keycloak groups associated with a subject.
