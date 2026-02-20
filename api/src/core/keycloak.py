@@ -55,7 +55,7 @@ class KeycloakClient:
             )
             
             # Manual issuer verification
-            expected_issuer = f"{settings.KEYCLOAK_SERVER_URL}/realms/{settings.KEYCLOAK_REALM}"
+            expected_issuer = f"{settings.KEYCLOAK_ISSUER_URL}/realms/{settings.KEYCLOAK_REALM}"
             actual_issuer = token_info.get('iss', '')
             
             if actual_issuer != expected_issuer:
@@ -559,6 +559,25 @@ class KeycloakClient:
             logger.error(f"Error removing professor: {e}")
             return False
 
+    async def get_user_group_paths(self, user_id: str) -> list[str]:
+        """
+        Fetch the current, real-time list of group paths for a user from the Admin API.
+        Used to overcome stale claims in the JWT.
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            user_groups = await loop.run_in_executor(
+                None,
+                lambda: self.admin_client.get_user_groups(user_id=user_id)
+            )
+            # Extract the 'path' attribute from each group object
+            # Keycloak returns structure like: [{'id': '...', 'name': 'regent', 'path': '/s1/regent'}]
+            return [g.get('path') for g in user_groups if g.get('path')]
+        except Exception as e:
+            logger.error(f"Failed to fetch fresh groups for user {user_id}: {e}")
+            # Fallback: Return empty list or raise depending on strictness. 
+            # Returning empty list is safer than crashing, but denies access.
+            return []
 
 keycloak_client = KeycloakClient()
 

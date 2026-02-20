@@ -178,7 +178,7 @@ function RouteComponent() {
   const { ucId } = Route.useSearch();
 
   const { data: ucData } = useGetUcById(ucId);
-  
+
   const { mutate } = useDeleteUcById(ucId);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
@@ -196,12 +196,12 @@ function RouteComponent() {
 
   return (
     <div className="py-3.5 px-6 w-full">
-        <AppBreadcrumb
-          page={ucData?.name || "Detalhes"}
-          crumbs={[
-            { name: "Unidades Curriculares", link: "/unidades-curriculares" }
-          ]}
-        />
+      <AppBreadcrumb
+        page={ucData?.name || "Detalhes"}
+        crumbs={[
+          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+        ]}
+      />
       <div className="flex flex-row gap-[20px] items-center justify-center text-5xl mb-35">
         <span className="font-rubik">{ucData?.name || "Carregando..."}</span>
         <Pencil
@@ -225,9 +225,9 @@ function RouteComponent() {
                     <span className="text-[26px] font-medium">Regente</span>
                     <Select
                       value={regente?.value}
-                      onValueChange={(e) =>
+                      onValueChange={(e: string) =>
                         setRegente(
-                          options.find((el) => el.value === e) || undefined
+                          options.find((el) => el.value === e) || undefined,
                         )
                       }
                     >
@@ -308,9 +308,7 @@ function RouteComponent() {
             ) : (
               <>
                 {/* Ligar este botão "Manuais" quando estiver funcional */}
-                <Link
-                  to="/detalhes-uc"
-                  search={{ ucId: ucId }}>
+                <Link to="/detalhes-uc" search={{ ucId: ucId }}>
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#41B5C0] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
                       Manuais
@@ -318,10 +316,7 @@ function RouteComponent() {
                     <BookOpen className="size-[50px]" />
                   </Button>
                 </Link>
-                <Link
-                  to="/banco-questoes"
-                  search={{ ucId: ucId }}
-                >
+                <Link to="/banco-questoes" search={{ ucId: ucId }}>
                   <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
                       Banco de Perguntas

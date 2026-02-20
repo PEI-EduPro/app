@@ -1,12 +1,27 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
 import { createFileRoute } from "@tanstack/react-router";
-import { Plus, ChevronDown, ChevronRight, SquarePen, Trash2 } from "lucide-react";
+import {
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  SquarePen,
+  Trash2,
+} from "lucide-react";
 import { useState, useEffect } from "react";
-import TopicModal from "@/components/TopicModal";
-import QuestionModal from "@/components/QuestionModal";
-import XmlUploadButton from "@/components/XmlUploadButton";
-import { useQuestions, useSubject, useCreateTopic, useUpdateTopic, useDeleteTopic, useCreateQuestion, useUpdateQuestion, useDeleteQuestion } from "@/hooks/use-questions";
+import TopicModal from "@/components/topic-modal";
+import QuestionModal from "@/components/question-modal";
+import XmlUploadButton from "@/components/xml-upload-button";
+import {
+  useQuestions,
+  useSubject,
+  useCreateTopic,
+  useUpdateTopic,
+  useDeleteTopic,
+  useCreateQuestion,
+  useUpdateQuestion,
+  useDeleteQuestion,
+} from "@/hooks/use-questions";
 import { z } from "zod";
 
 const bancoQuestoesSearchSchema = z.object({
@@ -31,12 +46,11 @@ interface Topic {
   questions: Record<number, Question>;
   isOpen: boolean;
 }
-
 function BancoQuestões() {
   const { ucId } = Route.useSearch();
   const { data: subjectData } = useSubject(ucId);
   const { data: apiData, isLoading, error } = useQuestions(ucId);
-  
+
   const createTopicMutation = useCreateTopic(ucId);
   const updateTopicMutation = useUpdateTopic(ucId);
   const deleteTopicMutation = useDeleteTopic(ucId);
@@ -56,22 +70,27 @@ function BancoQuestões() {
 
   // Transform API data to local state format
   useEffect(() => {
-    if (apiData && typeof apiData === 'object' && 'subject_topics' in apiData) {
+    if (apiData && typeof apiData === "object" && "subject_topics" in apiData) {
       const topicsObj = apiData.subject_topics as Record<string, any>;
-      const transformedTopics: Topic[] = Object.values(topicsObj).map((topic: any) => ({
-        id: topic.topic_id,
-        name: topic.topic_name,
-        questions: Object.values(topic.topic_questions || {}).reduce((acc: Record<number, Question>, q: any) => {
-          acc[q.question_id] = {
-            id: q.question_id,
-            text: q.question_text,
-            options: q.question_options || {},
-            answer: q.answer || 0,
-          };
-          return acc;
-        }, {}),
-        isOpen: false,
-      }));
+      const transformedTopics: Topic[] = Object.values(topicsObj).map(
+        (topic: any) => ({
+          id: topic.topic_id,
+          name: topic.topic_name,
+          questions: Object.values(topic.topic_questions || {}).reduce(
+            (acc: Record<number, Question>, q: any) => {
+              acc[q.question_id] = {
+                id: q.question_id,
+                text: q.question_text,
+                options: q.question_options || {},
+                answer: q.answer || 0,
+              };
+              return acc;
+            },
+            {},
+          ),
+          isOpen: false,
+        }),
+      );
       setTopics(transformedTopics);
     }
   }, [apiData]);
@@ -92,41 +111,61 @@ function BancoQuestões() {
   };
 
   // Question CRUD operations
-  const handleCreateQuestion = (topicId: number, question: Omit<Question, "id">) => {
-    const questions = [{
-      topic_id: topicId,
-      question_text: question.text,
-    }];
-    
+  const handleCreateQuestion = (
+    topicId: number,
+    question: Omit<Question, "id">,
+  ) => {
+    const questions = [
+      {
+        topic_id: topicId,
+        question_text: question.text,
+      },
+    ];
+
     const options = Object.entries(question.options).map(([key, value]) => ({
       question_id: 0,
       option_text: value,
       value: parseInt(key) === question.answer,
     }));
-    
+
     createQuestionMutation.mutate({ questions, options });
   };
 
-  const handleUpdateQuestion = (topicId: number, questionId: number, question: Omit<Question, "id">, oldOptions: Record<number, string>) => {
-    const oldIds = new Set(Object.keys(oldOptions).map(id => parseInt(id)));
-    const newIds = new Set(Object.keys(question.options).map(id => parseInt(id)));
-    
+  const handleUpdateQuestion = (
+    topicId: number,
+    questionId: number,
+    question: Omit<Question, "id">,
+    oldOptions: Record<number, string>,
+  ) => {
+    const oldIds = new Set(Object.keys(oldOptions).map((id) => parseInt(id)));
+    const newIds = new Set(
+      Object.keys(question.options).map((id) => parseInt(id)),
+    );
+
     const toUpdate = Object.entries(question.options)
       .filter(([id]) => oldIds.has(parseInt(id)))
-      .map(([id, text]) => ({ id: parseInt(id), option_text: text, value: parseInt(id) === question.answer }));
-    
+      .map(([id, text]) => ({
+        id: parseInt(id),
+        option_text: text,
+        value: parseInt(id) === question.answer,
+      }));
+
     const toCreate = Object.entries(question.options)
       .filter(([id]) => !oldIds.has(parseInt(id)))
-      .map(([id, text]) => ({ question_id: questionId, option_text: text, value: parseInt(id) === question.answer }));
-    
-    const toDelete = [...oldIds].filter(id => !newIds.has(id));
-    
+      .map(([id, text]) => ({
+        question_id: questionId,
+        option_text: text,
+        value: parseInt(id) === question.answer,
+      }));
+
+    const toDelete = [...oldIds].filter((id) => !newIds.has(id));
+
     updateQuestionMutation.mutate({
       id: questionId,
       data: { id: questionId, topic_id: topicId, question_text: question.text },
       toUpdate,
       toCreate,
-      toDelete
+      toDelete,
     });
   };
 
@@ -137,13 +176,15 @@ function BancoQuestões() {
   };
 
   const toggleTopic = (topicId: number) => {
-    setTopics(topics.map(topic => 
-      topic.id === topicId ? { ...topic, isOpen: !topic.isOpen } : topic
-    ));
+    setTopics(
+      topics.map((topic) =>
+        topic.id === topicId ? { ...topic, isOpen: !topic.isOpen } : topic,
+      ),
+    );
   };
 
   const closeAllTopics = () => {
-    setTopics(topics.map(topic => ({ ...topic, isOpen: false })));
+    setTopics(topics.map((topic) => ({ ...topic, isOpen: false })));
   };
 
   if (isLoading) {
@@ -153,7 +194,10 @@ function BancoQuestões() {
           page="Banco de Questões"
           crumbs={[
             { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-            { name: subjectData?.name || "...", link: `/detalhes-uc?ucId=${ucId}` },
+            {
+              name: subjectData?.name || "...",
+              link: `/detalhes-uc?ucId=${ucId}`,
+            },
           ]}
         />
         <div className="flex justify-center items-center h-64">
@@ -170,7 +214,10 @@ function BancoQuestões() {
           page="Banco de Questões"
           crumbs={[
             { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-            { name: subjectData?.name || "...", link: `/detalhes-uc?ucId=${ucId}` },
+            {
+              name: subjectData?.name || "...",
+              link: `/detalhes-uc?ucId=${ucId}`,
+            },
           ]}
         />
         <div className="flex justify-center items-center h-64">
@@ -186,7 +233,10 @@ function BancoQuestões() {
         page="Banco de Questões"
         crumbs={[
           { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-          { name: subjectData?.name || "...", link: `/detalhes-uc?ucId=${ucId}` },
+          {
+            name: subjectData?.name || "...",
+            link: `/detalhes-uc?ucId=${ucId}`,
+          },
         ]}
       />
       <div className="flex justify-center mb-8">
@@ -194,9 +244,7 @@ function BancoQuestões() {
           <div className="text-5xl">
             {subjectData?.name || "UNIDADE CURRICULAR"}
           </div>
-          <h1 className="text-3xl mt-4 text-[#3263A8]">
-            Banco de questões
-          </h1>
+          <h1 className="text-3xl mt-4 text-[#3263A8]">Banco de questões</h1>
         </div>
       </div>
 
@@ -219,11 +267,11 @@ function BancoQuestões() {
 
       {/* Topics List - One per line */}
       <div className="space-y-4">
-        {topics.map(topic => (
+        {topics.map((topic) => (
           <Card key={topic.id} className="overflow-hidden p-0">
             {/* Topic Header */}
             <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
-              <div 
+              <div
                 className="flex items-center gap-3 flex-1"
                 onClick={() => toggleTopic(topic.id)}
               >
@@ -237,11 +285,14 @@ function BancoQuestões() {
                     {topic.name}
                   </h3>
                   <p className="text-sm text-gray-500">
-                    {Object.keys(topic.questions).length} {Object.keys(topic.questions).length === 1 ? 'questão' : 'questões'}
+                    {Object.keys(topic.questions).length}{" "}
+                    {Object.keys(topic.questions).length === 1
+                      ? "questão"
+                      : "questões"}
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => {
@@ -252,7 +303,7 @@ function BancoQuestões() {
                   className="text-gray-600 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
                   title="Editar tópico"
                 >
-                  <SquarePen className="w-5 h-5"/>
+                  <SquarePen className="w-5 h-5" />
                 </button>
                 <button
                   onClick={(e) => {
@@ -262,7 +313,7 @@ function BancoQuestões() {
                   className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
                   title="Excluir tópico"
                 >
-                  <Trash2 className="w-5 h-5"/>
+                  <Trash2 className="w-5 h-5" />
                 </button>
               </div>
             </div>
@@ -276,22 +327,26 @@ function BancoQuestões() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {Object.entries(topic.questions).map(([, question], index) => (
-                      <QuestionItem
-                        key={question.id}
-                        question={question}
-                        questionNumber={index + 1}
-                        topicId={topic.id}
-                        onEdit={() => {
-                          setEditingQuestion({
-                            topicId: topic.id,
-                            question
-                          });
-                          setShowQuestionModal(true);
-                        }}
-                        onDelete={() => handleDeleteQuestion(topic.id, question.id)}
-                      />
-                    ))}
+                    {Object.entries(topic.questions).map(
+                      ([, question], index) => (
+                        <QuestionItem
+                          key={question.id}
+                          question={question}
+                          questionNumber={index + 1}
+                          topicId={topic.id}
+                          onEdit={() => {
+                            setEditingQuestion({
+                              topicId: topic.id,
+                              question,
+                            });
+                            setShowQuestionModal(true);
+                          }}
+                          onDelete={() =>
+                            handleDeleteQuestion(topic.id, question.id)
+                          }
+                        />
+                      ),
+                    )}
                   </div>
                 )}
               </div>
@@ -307,13 +362,13 @@ function BancoQuestões() {
                 }}
                 className="w-fit flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors"
               >
-                <Plus size={16}/>
+                <Plus size={16} />
                 Adicionar Questão
               </button>
             </div>
           </Card>
         ))}
-        
+
         {/* Empty state */}
         {topics.length === 0 && (
           <Card className="p-8 border-dashed border-2 text-center">
@@ -348,7 +403,12 @@ function BancoQuestões() {
         }}
         onUpdate={(questionId, question) => {
           if (editingQuestion) {
-            handleUpdateQuestion(editingQuestion.topicId, questionId, question, editingQuestion.question.options);
+            handleUpdateQuestion(
+              editingQuestion.topicId,
+              questionId,
+              question,
+              editingQuestion.question.options,
+            );
           }
         }}
         editingQuestion={editingQuestion}
@@ -367,7 +427,12 @@ interface QuestionItemProps {
   onDelete: () => void;
 }
 
-function QuestionItem({ question, questionNumber, onEdit, onDelete }: QuestionItemProps) {
+function QuestionItem({
+  question,
+  questionNumber,
+  onEdit,
+  onDelete,
+}: QuestionItemProps) {
   return (
     <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
       <div className="flex-1">
@@ -382,12 +447,16 @@ function QuestionItem({ question, questionNumber, onEdit, onDelete }: QuestionIt
             <div className="space-y-2">
               {Object.entries(question.options).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
-                  <div className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? 'border-green-500 bg-green-500' : 'border-gray-300'}`}>
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? "border-green-500 bg-green-500" : "border-gray-300"}`}
+                  >
                     {parseInt(key) === question.answer && (
                       <div className="w-2 h-2 rounded-full bg-white"></div>
                     )}
                   </div>
-                  <span className={`text-sm ${parseInt(key) === question.answer ? 'text-green-600 font-medium' : 'text-gray-600'}`}>
+                  <span
+                    className={`text-sm ${parseInt(key) === question.answer ? "text-green-600 font-medium" : "text-gray-600"}`}
+                  >
                     {value}
                   </span>
                 </div>
@@ -402,7 +471,7 @@ function QuestionItem({ question, questionNumber, onEdit, onDelete }: QuestionIt
           className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
           title="Editar questão"
         >
-          <SquarePen className="w-4 h-4"/>
+          <SquarePen className="w-4 h-4" />
         </button>
         <button
           onClick={onDelete}
@@ -415,5 +484,3 @@ function QuestionItem({ question, questionNumber, onEdit, onDelete }: QuestionIt
     </div>
   );
 }
-
-export default BancoQuestões;

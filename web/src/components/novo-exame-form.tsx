@@ -49,7 +49,7 @@ export const NovoExameForm = (props: {
   ucID: number;
   ucName: string;
 }) => {
-  const { examData = null, ucID, ucName } = props;
+  const { examData = null, ucID } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null
