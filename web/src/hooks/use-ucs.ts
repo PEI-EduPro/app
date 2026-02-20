@@ -44,11 +44,4 @@ const useDeleteUcById = (ucId: number) => {
   });
 };
 
-// const useGetUcQuestionsById = (ucId: number) =>
-//   useQuery<UcI>({
-//     queryKey: ["uc", ucId],
-//     queryFn: () => apiClient.get(`/subjects/${ucId}/all-questions`)
-//   })
-
-// export { useGetUc, useAddUc, useGetUcById, useDeleteUcById , useGetUcQuestionsById };
-export { useGetUc, useAddUc, useGetUcById, useDeleteUcById};
+export { useGetUc, useAddUc, useGetUcById, useDeleteUcById };

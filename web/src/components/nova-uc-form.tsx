@@ -53,7 +53,6 @@ export function NovaUCForm() {
   const { handleSubmit, control, reset, watch, formState } = form;
 
   const onSubmit = async (formData: NovaUCFormT) => {
-    console.log(formData);
     mutate({ name: formData.nome });
     if (isError) toast.error("An error occoured, please try again later");
     setFormStep(0);
@@ -75,14 +74,14 @@ export function NovaUCForm() {
               className={cn(
                 "w-4 h-4 rounded-full transition-all duration-300 ease-in-out",
                 index <= formStep ? "bg-primary" : "bg-primary/30",
-                index < formStep && "bg-primary"
+                index < formStep && "bg-primary",
               )}
             />
             {index < totalSteps - 1 && (
               <div
                 className={cn(
                   "w-8 h-0.5",
-                  index < formStep ? "bg-primary" : "bg-primary/30"
+                  index < formStep ? "bg-primary" : "bg-primary/30",
                 )}
               />
             )}
@@ -110,7 +109,7 @@ export function NovaUCForm() {
                             "shadow-none",
                             formState.touchedFields.nome &&
                               (!field.value || field.value.trim() == "") &&
-                              "border-red-500"
+                              "border-red-500",
                           )}
                           {...field}
                           placeholder="Nome da UC"
@@ -134,7 +133,7 @@ export function NovaUCForm() {
                           className="relative border-[1px] border-[#e5e5e5] rounded-lg p-8 text-center cursor-pointer"
                           onClick={() => {
                             const el = document?.getElementById(
-                              "file-upload-yI1i8RdV"
+                              "file-upload-yI1i8RdV",
                             ) as HTMLInputElement | null;
                             el?.click();
                           }}
@@ -311,7 +310,7 @@ export function NovaUCForm() {
                           className="relative border-[1px] border-[#e5e5e5] rounded-lg p-8 text-center cursor-pointer"
                           onClick={() => {
                             const el = document?.getElementById(
-                              "file-upload-yI1i8RdV"
+                              "file-upload-yI1i8RdV",
                             ) as HTMLInputElement | null;
                             el?.click();
                           }}

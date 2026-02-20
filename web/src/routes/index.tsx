@@ -1,11 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useKeycloak } from "@/lib/use-keycloak";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
 function Index() {
+  const { keycloak } = useKeycloak();
+
   return (
     <div className="flex flex-col gap-[120px] mt-[170px]">
       <h1 className="font-rubik text-5xl font-semibold text-center mb-20">
@@ -17,13 +20,29 @@ function Index() {
             Um sistema que gera e avalia <br /> unidades curriculares
           </p>
           <Link to="/unidades-curriculares">
-            <Button className="py-[21px] px-[84px] text-4xl h-auto">
+            <Button
+              className="py-[21px] px-[84px] text-4xl h-auto"
+              onClick={() =>
+                keycloak.login({
+                  redirectUri: `${window.location.origin}/unidades-curriculares`,
+                })
+              }
+            >
               Log In
             </Button>
           </Link>
           <p className="text-lg text-gray-600">
             Ainda não tens conta?{" "}
-            <a href="#" className="text-[#41B5C0] hover:underline">
+            <a
+              href="#"
+              className="text-[#41B5C0] hover:underline"
+              onClick={(e) => {
+                e.preventDefault();
+                keycloak.register({
+                  redirectUri: `${window.location.origin}/unidades-curriculares`,
+                });
+              }}
+            >
               Cria uma nova
             </a>
           </p>

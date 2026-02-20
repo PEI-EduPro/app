@@ -35,6 +35,7 @@ services:
       KC_HOSTNAME_STRICT_BACKCHANNEL: false
       KC_HTTP_ENABLED: true
       KC_HOSTNAME_STRICT_HTTPS: false
+      KC_HOSTNAME_STRICT: "false"
       # Note: We REMOVED the --import-realm command because we are doing it via the CLI container below
     ports:
       - "8080:8080"

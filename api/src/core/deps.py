@@ -32,11 +32,15 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
     username = token_info.get("preferred_username")
     email = token_info.get("email")
     realm_roles = token_info.get("realm_access", {}).get("roles", [])
-    groups = token_info.get("groups", []) # Groups are typically here in the token
-
-    # Optional: Fetch more details from userinfo endpoint if needed
-    # user_info = await keycloak_client.get_userinfo(token) # Add this method if needed
-    # groups = user_info.get("groups", groups) # Fallback or additional check
+    
+    # FETCH FRESH GROUPS: Do not trust the token's group claims as they may be stale.
+    # We query the Admin API to get the current real-time groups.
+    try:
+        groups = await keycloak_client.get_user_group_paths(user_id)
+        logger.debug(f"Fetched fresh groups for {username}: {groups}")
+    except Exception as e:
+        logger.warning(f"Could not fetch fresh groups, falling back to token claims: {e}")
+        groups = token_info.get("groups", [])
 
     logger.info(f"Authenticated user: {username}, roles: {realm_roles}, groups: {groups}")
     user = User(user_id=user_id,username=username,email=email,realm_roles=realm_roles,groups=groups)
