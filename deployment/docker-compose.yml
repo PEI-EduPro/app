@@ -1,5 +1,4 @@
-
-name: template-project
+name: edupro
 
 services:
   db:
