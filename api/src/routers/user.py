@@ -83,6 +83,25 @@ async def get_professors(user_info: User = Depends(get_current_user_info)):
         logger.error(f"Error fetching professors: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch professors")
 
+@router.get("/students")
+async def get_students(user_info: User = Depends(get_current_user_info)):
+    """Get all users with student role"""
+    try:
+        users = await keycloak_client.get_users_by_role("student")
+        return [
+            {
+                "id": user["id"],
+                "username": user.get("username"),
+                "email": user.get("email"),
+                "firstName": user.get("firstName"),
+                "lastName": user.get("lastName")
+            }
+            for user in users
+        ]
+    except Exception as e:
+        logger.error(f"Error fetching students: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch students")
+
 @router.get("/debug/token-info")
 async def debug_token_info(
     user_info: User = Depends(get_current_user_info),

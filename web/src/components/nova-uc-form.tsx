@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from "./ui/select";
 import { useAddUc } from "@/hooks/use-ucs";
-import { useGetProfessors } from "@/hooks/use-users";
+import { useGetProfessors, useGetStudents } from "@/hooks/use-users";
 
 type NovaUCFormT = {
   nome: string;
@@ -40,6 +40,7 @@ export function NovaUCForm() {
   const totalSteps = 3;
   const { mutate, isError } = useAddUc();
   const { data: professors, isLoading: loadingProfessors } = useGetProfessors();
+  const { data: students, isLoading: loadingStudents } = useGetStudents();
 
   const form = useForm<NovaUCFormT>({
     defaultValues: {
@@ -293,8 +294,13 @@ export function NovaUCForm() {
                         <MultiSelect
                           value={field.value}
                           onValueChange={(e) => field.onChange(e)}
-                          placeholder="Selecione varios alunos"
-                          options={[]}
+                          placeholder={loadingStudents ? "Loading..." : "Selecione varios alunos"}
+                          options={students?.map(s => ({
+                            value: s.id,
+                            label: s.firstName && s.lastName 
+                              ? `${s.firstName} ${s.lastName}` 
+                              : s.username || s.id
+                          })) || []}
                           popoverClassName="w-[402px]"
                         />
                       </FormControl>

@@ -7,3 +7,9 @@ export const useGetProfessors = () =>
     queryKey: ["professors"],
     queryFn: () => apiClient.get("/users/professors"),
   });
+
+export const useGetStudents = () =>
+  useQuery<UserI[]>({
+    queryKey: ["students"],
+    queryFn: () => apiClient.get("/users/students"),
+  });
