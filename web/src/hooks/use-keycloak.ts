@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { type KeycloakContextValue } from "./keycloak-provider";
+import { type KeycloakContextValue } from "../lib/keycloak-provider";
 
 export function useKeycloak(): KeycloakContextValue {
   const ctx = useContext(KeycloakContext);

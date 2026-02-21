@@ -4,6 +4,7 @@ import {
   BookOpen,
   SquareUserRound,
   ChevronDown,
+  LogOutIcon,
 } from "lucide-react";
 import {
   SidebarContent,
@@ -17,6 +18,7 @@ import {
   SidebarMenuSubItem,
   SidebarMenuSubButton,
   SidebarHeader,
+  SidebarFooter,
 } from "./ui/sidebar";
 
 import {
@@ -25,10 +27,11 @@ import {
   CollapsibleContent,
 } from "./ui/collapsible";
 import { useGetUc } from "@/hooks/use-ucs";
-import { keycloak } from "../lib/keycloak";
+import { useKeycloak } from "@/hooks/use-keycloak.ts";
 
 export function AppSidebar() {
   const { data: ucs } = useGetUc();
+  const { keycloak } = useKeycloak();
 
   const items = [
     {
@@ -116,6 +119,19 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter>
+        <SidebarMenuButton asChild>
+          <div
+            className="cursor-pointer"
+            onClick={() => {
+              keycloak.logout({ redirectUri: window.location.origin });
+            }}
+          >
+            <LogOutIcon />
+            <span>Sair</span>
+          </div>
+        </SidebarMenuButton>
+      </SidebarFooter>
     </Sidebar>
   );
 }

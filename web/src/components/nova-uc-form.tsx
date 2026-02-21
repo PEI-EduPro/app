@@ -210,14 +210,20 @@ export function NovaUCForm() {
                           disabled={loadingProfessors}
                         >
                           <SelectTrigger className="shadow-none w-full">
-                            <SelectValue placeholder={loadingProfessors ? "Loading..." : "Selecione um docente"} />
+                            <SelectValue
+                              placeholder={
+                                loadingProfessors
+                                  ? "Loading..."
+                                  : "Selecione um docente"
+                              }
+                            />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectGroup>
                               {professors?.map((prof) => (
                                 <SelectItem key={prof.id} value={prof.id}>
-                                  {prof.firstName && prof.lastName 
-                                    ? `${prof.firstName} ${prof.lastName}` 
+                                  {prof.firstName && prof.lastName
+                                    ? `${prof.firstName} ${prof.lastName}`
                                     : prof.username}
                                 </SelectItem>
                               ))}
@@ -225,7 +231,6 @@ export function NovaUCForm() {
                           </SelectContent>
                         </Select>
                       </FormControl>
-                      <FormDescription></FormDescription>
                     </FormItem>
                   )}
                 />
@@ -242,16 +247,18 @@ export function NovaUCForm() {
                           value={field.value}
                           onValueChange={(e) => field.onChange(e)}
                           placeholder="Selecione varios docentes"
-                          options={professors?.map(p => ({
-                            value: p.id,
-                            label: p.firstName && p.lastName 
-                              ? `${p.firstName} ${p.lastName}` 
-                              : p.username || p.id
-                          })) || []}
+                          options={
+                            professors?.map((p) => ({
+                              value: p.id,
+                              label:
+                                p.firstName && p.lastName
+                                  ? `${p.firstName} ${p.lastName}`
+                                  : p.username || p.id,
+                            })) || []
+                          }
                           popoverClassName="w-[402px]"
                         />
                       </FormControl>
-                      <FormDescription></FormDescription>
                     </FormItem>
                   )}
                 />
@@ -294,17 +301,23 @@ export function NovaUCForm() {
                         <MultiSelect
                           value={field.value}
                           onValueChange={(e) => field.onChange(e)}
-                          placeholder={loadingStudents ? "Loading..." : "Selecione varios alunos"}
-                          options={students?.map(s => ({
-                            value: s.id,
-                            label: s.firstName && s.lastName 
-                              ? `${s.firstName} ${s.lastName}` 
-                              : s.username || s.id
-                          })) || []}
+                          placeholder={
+                            loadingStudents
+                              ? "Loading..."
+                              : "Selecione varios alunos"
+                          }
+                          options={
+                            students?.map((s) => ({
+                              value: s.id,
+                              label:
+                                s.firstName && s.lastName
+                                  ? `${s.firstName} ${s.lastName}`
+                                  : s.username || s.id,
+                            })) || []
+                          }
                           popoverClassName="w-[402px]"
                         />
                       </FormControl>
-                      <FormDescription></FormDescription>
                     </FormItem>
                   )}
                 />
@@ -357,7 +370,6 @@ export function NovaUCForm() {
                           )}
                         </div>
                       </FormControl>
-                      <FormDescription></FormDescription>
                     </FormItem>
                   )}
                 />
