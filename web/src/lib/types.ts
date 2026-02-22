@@ -6,6 +6,8 @@ export interface UcI {
 export interface NewUcI {
   name: string;
   regent_keycloak_id: string;
+  student_keycloak_ids?: string[];
+  professor_keycloak_ids?: string[];
 }
 
 export interface UserI {
@@ -14,6 +16,8 @@ export interface UserI {
   email?: string;
   firstName?: string;
   lastName?: string;
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface NewExamConfigI {

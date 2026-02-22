@@ -20,6 +20,8 @@ class Subject(SQLModel, table=True):
 class SubjectCreateRequest(BaseModel):
     name: str
     regent_keycloak_id: str
+    student_keycloak_ids: List[str] = []
+    professor_keycloak_ids: List[str] = []
 
 # Used for POST /subject output
 class SubjectCreateResponse(BaseModel):

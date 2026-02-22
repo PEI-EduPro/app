@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteUcById, useGetUcById } from "@/hooks/use-ucs";
+import { useDeleteUcById, useGetUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent } from "@/hooks/use-ucs";
+import { useGetProfessors, useGetStudents } from "@/hooks/use-users";
 import { cn } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
@@ -19,7 +20,7 @@ import {
   FileQuestionMark,
   Pencil,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 
 const detalheUCSearchSchema = z.object({
@@ -32,167 +33,60 @@ export const Route = createFileRoute("/_layout/detalhes-uc")({
 });
 
 function RouteComponent() {
-  const data: Record<string, string>[] = [
-    {
-      id: "m5gr84i9",
-      nome: "Ken",
-      email: "ken99@example.com",
-    },
-    {
-      id: "3u1reuv4",
-      nome: "Abe",
-      email: "Abe45@example.com",
-    },
-    {
-      id: "derv1ws0",
-      nome: "Monserrat",
-      email: "Monserrat44@example.com",
-    },
-    {
-      id: "5kma53ae",
-      nome: "Silas",
-      email: "Silas22@example.com",
-    },
-    {
-      id: "bhqecj4p",
-      nome: "Carmella",
-      email: "carmella@example.com",
-    },
-    {
-      id: "a8k2x9mn",
-      nome: "Patricia",
-      email: "patricia12@example.com",
-    },
-    {
-      id: "q7w3e5rt",
-      nome: "Marcus",
-      email: "marcus88@example.com",
-    },
-    {
-      id: "z9x8c7vb",
-      nome: "Diana",
-      email: "diana.rose@example.com",
-    },
-    {
-      id: "p4l5m6nk",
-      nome: "Roberto",
-      email: "roberto.silva@example.com",
-    },
-    {
-      id: "h3j4k5lm",
-      nome: "Sofia",
-      email: "sofia.lima@example.com",
-    },
-    {
-      id: "t6y7u8io",
-      nome: "Gabriel",
-      email: "gabriel.santos@example.com",
-    },
-    {
-      id: "r2e3w4qa",
-      nome: "Isabella",
-      email: "isabella92@example.com",
-    },
-    {
-      id: "n8m9b0vc",
-      nome: "Lucas",
-      email: "lucas.oliveira@example.com",
-    },
-    {
-      id: "f5g6h7jk",
-      nome: "Mariana",
-      email: "mariana.costa@example.com",
-    },
-    {
-      id: "d1s2a3zx",
-      nome: "Felipe",
-      email: "felipe.alves@example.com",
-    },
-    {
-      id: "v4b5n6mc",
-      nome: "Juliana",
-      email: "juliana.pereira@example.com",
-    },
-    {
-      id: "w7e8r9ty",
-      nome: "Rafael",
-      email: "rafael.cardoso@example.com",
-    },
-    {
-      id: "i0o9p8lk",
-      nome: "Beatriz",
-      email: "beatriz.martins@example.com",
-    },
-    {
-      id: "u6j7h8gf",
-      nome: "Thiago",
-      email: "thiago.ribeiro@example.com",
-    },
-    {
-      id: "y5t4r3ew",
-      nome: "Amanda",
-      email: "amanda.ferreira@example.com",
-    },
-    {
-      id: "q1w2e3rt",
-      nome: "Bruno",
-      email: "bruno.rocha@example.com",
-    },
-    {
-      id: "a9s8d7fg",
-      nome: "Larissa",
-      email: "larissa.souza@example.com",
-    },
-    {
-      id: "z6x5c4vb",
-      nome: "Rodrigo",
-      email: "rodrigo.gomes@example.com",
-    },
-    {
-      id: "m3n4b5vc",
-      nome: "Camila",
-      email: "camila.dias@example.com",
-    },
-    {
-      id: "k8l9p0oi",
-      nome: "Daniel",
-      email: "daniel.barbosa@example.com",
-    },
-    {
-      id: "j7h6g5fd",
-      nome: "Fernanda",
-      email: "fernanda.araujo@example.com",
-    },
-    {
-      id: "x2c3v4bn",
-      nome: "Gustavo",
-      email: "gustavo.monteiro@example.com",
-    },
-    {
-      id: "s1a2q3we",
-      nome: "Aline",
-      email: "aline.mendes@example.com",
-    },
-  ];
-
   const { ucId } = Route.useSearch();
 
   const { data: ucData } = useGetUcById(ucId);
+  const { data: students = [], isLoading: loadingStudents } = useGetUcStudents(ucId);
+  const { data: professors = [], isLoading: loadingProfs } = useGetUcProfessors(ucId);
+  const { data: regent } = useGetUcRegent(ucId);
+  
+  const { data: allProfessors = [] } = useGetProfessors();
+  const { data: allStudents = [] } = useGetStudents();
 
   const { mutate } = useDeleteUcById(ucId);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [profsSelection, setProfsSelection] = useState(data);
-  const [alunosSelection, setAlunosSelection] = useState(data);
-  const [regente, setRegente] = useState<
-    { value: string; label: string } | undefined
-  >({ value: "p1", label: "Joao Rafael" });
 
-  const options = [
-    { value: "p1", label: "Joao Rafael" },
-    { value: "p2", label: "Maria Silva" },
-    { value: "p3", label: "Pedro Santos" },
-  ];
+  const formatUserName = (user: any) => 
+    user?.first_name && user?.last_name 
+      ? `${user.first_name} ${user.last_name}` 
+      : user?.username || "";
+
+  const studentsData = students.map(s => ({
+    id: s.id,
+    nome: formatUserName(s),
+    email: s.email || "",
+  }));
+
+  const professorsData = professors.map(p => ({
+    id: p.id,
+    nome: formatUserName(p),
+    email: p.email || "",
+  }));
+
+  const allStudentsData = allStudents.map(s => ({
+    id: s.id,
+    nome: formatUserName(s),
+    email: s.email || "",
+  }));
+
+  const allProfessorsData = allProfessors.map(p => ({
+    id: p.id,
+    nome: formatUserName(p),
+    email: p.email || "",
+  }));
+
+  console.log("Students:", students);
+  console.log("Professors:", professors);
+  console.log("Regent:", regent);
+
+  const [profsSelection, setProfsSelection] = useState(professorsData);
+  const [alunosSelection, setAlunosSelection] = useState(studentsData);
+
+  useEffect(() => {
+    setProfsSelection(professorsData);
+    setAlunosSelection(studentsData);
+  }, [students, professors]);
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -208,8 +102,8 @@ function RouteComponent() {
           className={`cursor-pointer size-[50px] ${isEditing ? "fill-black stroke-1 stroke-white" : ""}`}
           onClick={() => {
             if (isEditing) {
-              setAlunosSelection(data);
-              setProfsSelection(data);
+              setAlunosSelection(studentsData);
+              setProfsSelection(professorsData);
             }
             setIsEditing(!isEditing);
           }}
@@ -220,49 +114,17 @@ function RouteComponent() {
           <div className="flex flex-row gap-[60px] w-full">
             <div className="w-full flex flex-1 flex-col gap-[30px]">
               <div>
-                {isEditing ? (
-                  <>
-                    <span className="text-[26px] font-medium">Regente</span>
-                    <Select
-                      value={regente?.value}
-                      onValueChange={(e: string) =>
-                        setRegente(
-                          options.find((el) => el.value === e) || undefined,
-                        )
-                      }
-                    >
-                      <SelectTrigger className="shadow-none w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {options.map((option, index) => (
-                            <SelectItem
-                              key={`option.value${index}`}
-                              value={option.value}
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[26px] font-medium">Regente</span>
-                    <Input
-                      className={cn("shadow-none")}
-                      value={regente?.label}
-                      readOnly
-                    />
-                  </>
-                )}
+                <span className="text-[26px] font-medium">Regente</span>
+                <Input
+                  className={cn("shadow-none")}
+                  value={formatUserName(regent)}
+                  readOnly
+                />
               </div>
               <div>
                 <span className="text-[26px] font-medium">Professores</span>
                 <CustomTable
-                  data={data}
+                  data={isEditing ? allProfessorsData : professorsData}
                   isSelectable={isEditing}
                   rowSelection={profsSelection}
                   onChange={(e) => {
@@ -274,7 +136,7 @@ function RouteComponent() {
             <div className="w-full flex-1 h-inherit">
               <span className="text-[26px] font-medium">Alunos</span>
               <CustomTable
-                data={data}
+                data={isEditing ? allStudentsData : studentsData}
                 rowNumber={15}
                 isSelectable={isEditing}
                 rowSelection={alunosSelection}
@@ -300,6 +162,8 @@ function RouteComponent() {
                   className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
                   onClick={() => {
                     setIsEditing(false);
+                    setAlunosSelection(studentsData);
+                    setProfsSelection(professorsData);
                   }}
                 >
                   Guardar

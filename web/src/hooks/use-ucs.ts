@@ -30,6 +30,27 @@ const useGetUcById = (ucId: number) =>
     enabled: !!ucId,
   });
 
+const useGetUcStudents = (ucId: number) =>
+  useQuery<UserI[]>({
+    queryKey: ["uc", ucId, "students"],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/students`),
+    enabled: !!ucId,
+  });
+
+const useGetUcProfessors = (ucId: number) =>
+  useQuery<UserI[]>({
+    queryKey: ["uc", ucId, "professors"],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/professors`),
+    enabled: !!ucId,
+  });
+
+const useGetUcRegent = (ucId: number) =>
+  useQuery<UserI>({
+    queryKey: ["uc", ucId, "regent"],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/regent`),
+    enabled: !!ucId,
+  });
+
 const useDeleteUcById = (ucId: number) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -44,4 +65,4 @@ const useDeleteUcById = (ucId: number) => {
   });
 };
 
-export { useGetUc, useAddUc, useGetUcById, useDeleteUcById };
+export { useGetUc, useAddUc, useGetUcById, useDeleteUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent };

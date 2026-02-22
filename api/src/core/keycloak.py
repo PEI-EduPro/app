@@ -423,6 +423,35 @@ class KeycloakClient:
             logger.error(f"Failed to fetch students for subject {subject_id}: {e}")
             return []
 
+    async def get_subject_professors(self, subject_id: str) -> list[dict]:
+        """Fetch all users in the subject's professors group"""
+        group_name = f"s{subject_id}/professors"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                return []
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+        except Exception as e:
+            logger.error(f"Failed to fetch professors: {e}")
+            return []
+
+    async def get_subject_regent(self, subject_id: str) -> dict:
+        """Fetch the regent (should be single user in regent group)"""
+        group_name = f"s{subject_id}/regent"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError("Regent group not found")
+            loop = asyncio.get_event_loop()
+            members = await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+            if not members:
+                raise ValueError("No regent assigned")
+            return members[0]
+        except Exception as e:
+            logger.error(f"Failed to fetch regent: {e}")
+            raise e
+
     async def add_students_to_subject(self, subject_id: str, student_ids: list[str]) -> None:
         """Add a list of users to the subject's student group"""
         group_name = f"s{subject_id}/students"
@@ -444,6 +473,28 @@ class KeycloakClient:
                     # Continue adding others even if one fails
         except Exception as e:
             logger.error(f"Error in add_students_to_subject: {e}")
+            raise e
+
+    async def add_professors_to_subject(self, subject_id: str, professor_ids: list[str]) -> None:
+        """Add a list of users to the subject's professors group"""
+        group_name = f"s{subject_id}/professors"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+
+            loop = asyncio.get_event_loop()
+            for user_id in professor_ids:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=user_id: self.admin_client.group_user_add(uid, group_id)
+                    )
+                    logger.info(f"Added user {user_id} to {group_name}")
+                except Exception as e:
+                    logger.error(f"Failed to add user {user_id} to group: {e}")
+        except Exception as e:
+            logger.error(f"Error in add_professors_to_subject: {e}")
             raise e
 
 
