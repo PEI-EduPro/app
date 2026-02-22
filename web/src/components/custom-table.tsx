@@ -28,6 +28,19 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 
+const normalizeString = (str: string) => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+};
+
+const accentInsensitiveFilter = (row: any, columnId: string, filterValue: string) => {
+  const cellValue = row.getValue(columnId);
+  if (!cellValue) return false;
+  return normalizeString(String(cellValue)).includes(normalizeString(filterValue));
+};
+
 interface CustomTableProps {
   isSelectable?: boolean;
   data: Record<string, string>[];
@@ -84,6 +97,7 @@ export function CustomTable(props: CustomTableProps) {
     cell: ({ row }: { row: Row<Record<string, string>> }) => (
       <div>{row.getValue(key)}</div>
     ),
+    filterFn: key === "nome" ? accentInsensitiveFilter : undefined,
   })) as ColumnDef<Record<string, string>>[];
 
   const columns = isSelectable ? [selectColumn, ...dataColumns] : dataColumns;

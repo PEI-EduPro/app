@@ -65,4 +65,20 @@ const useDeleteUcById = (ucId: number) => {
   });
 };
 
-export { useGetUc, useAddUc, useGetUcById, useDeleteUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent };
+const useUpdateUc = (ucId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["updateUc", ucId],
+    mutationFn: (data: { regent_keycloak_id?: string; student_keycloak_ids?: string[]; professor_keycloak_ids?: string[] }) => 
+      apiClient.patch(`/subjects/${ucId}/`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId] });
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "students"] });
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "professors"] });
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "regent"] });
+    },
+  });
+};
+
+export { useGetUc, useAddUc, useGetUcById, useDeleteUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent, useUpdateUc };

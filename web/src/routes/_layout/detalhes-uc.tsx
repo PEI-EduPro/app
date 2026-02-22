@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteUcById, useGetUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent } from "@/hooks/use-ucs";
+import { useDeleteUcById, useGetUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent, useUpdateUc } from "@/hooks/use-ucs";
 import { useGetProfessors, useGetStudents } from "@/hooks/use-users";
 import { cn } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { z } from "zod";
+import { useKeycloak } from "@/hooks/use-keycloak";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.number(),
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/_layout/detalhes-uc")({
 });
 
 function RouteComponent() {
+  const { keycloak } = useKeycloak();
   const { ucId } = Route.useSearch();
 
   const { data: ucData } = useGetUcById(ucId);
@@ -43,13 +45,16 @@ function RouteComponent() {
   const { data: allProfessors = [] } = useGetProfessors();
   const { data: allStudents = [] } = useGetStudents();
 
-  const { mutate } = useDeleteUcById(ucId);
+  const { mutate: deleteUc } = useDeleteUcById(ucId);
+  const { mutate: updateUc } = useUpdateUc(ucId);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
   const formatUserName = (user: any) => 
     user?.first_name && user?.last_name 
       ? `${user.first_name} ${user.last_name}` 
+      : user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
       : user?.username || "";
 
   const studentsData = students.map(s => ({
@@ -82,11 +87,19 @@ function RouteComponent() {
 
   const [profsSelection, setProfsSelection] = useState(professorsData);
   const [alunosSelection, setAlunosSelection] = useState(studentsData);
+  const [regentSelection, setRegentSelection] = useState<any[]>([]);
 
   useEffect(() => {
     setProfsSelection(professorsData);
     setAlunosSelection(studentsData);
-  }, [students, professors]);
+    if (regent) {
+      setRegentSelection([{
+        id: regent.id,
+        nome: formatUserName(regent),
+        email: regent.email || "",
+      }]);
+    }
+  }, [students, professors, regent]);
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -104,6 +117,13 @@ function RouteComponent() {
             if (isEditing) {
               setAlunosSelection(studentsData);
               setProfsSelection(professorsData);
+              if (regent) {
+                setRegentSelection([{
+                  id: regent.id,
+                  nome: formatUserName(regent),
+                  email: regent.email || "",
+                }]);
+              }
             }
             setIsEditing(!isEditing);
           }}
@@ -115,10 +135,19 @@ function RouteComponent() {
             <div className="w-full flex flex-1 flex-col gap-[30px]">
               <div>
                 <span className="text-[26px] font-medium">Regente</span>
-                <Input
-                  className={cn("shadow-none")}
-                  value={formatUserName(regent)}
-                  readOnly
+                <CustomTable
+                  data={isEditing ? allProfessorsData : (regent ? [{
+                    id: regent.id,
+                    nome: formatUserName(regent),
+                    email: regent.email || "",
+                  }] : [])}
+                  isSelectable={isEditing}
+                  rowSelection={regentSelection}
+                  onChange={(e) => {
+                    if (isEditing && e.length <= 1) {
+                      setRegentSelection(e);
+                    }
+                  }}
                 />
               </div>
               <div>
@@ -153,7 +182,7 @@ function RouteComponent() {
                   className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
                   size="lg"
                   variant="destructive"
-                  onClick={() => mutate(ucId)}
+                  onClick={() => deleteUc(ucId)}
                 >
                   Apagar Unidade Curricular
                 </Button>
@@ -161,9 +190,17 @@ function RouteComponent() {
                   size="lg"
                   className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
                   onClick={() => {
+                    const updateData: any = {};
+                    
+                    if (regentSelection.length === 1 && regentSelection[0].id !== regent?.id) {
+                      updateData.regent_keycloak_id = regentSelection[0].id;
+                    }
+                    
+                    updateData.student_keycloak_ids = alunosSelection.map(s => s.id);
+                    updateData.professor_keycloak_ids = profsSelection.map(p => p.id);
+                    
+                    updateUc(updateData);
                     setIsEditing(false);
-                    setAlunosSelection(studentsData);
-                    setProfsSelection(professorsData);
                   }}
                 >
                   Guardar

@@ -497,6 +497,46 @@ class KeycloakClient:
             logger.error(f"Error in add_professors_to_subject: {e}")
             raise e
 
+    async def replace_subject_students(self, subject_id: str, student_ids: list[str]) -> None:
+        """Replace all students in subject with new list"""
+        group_name = f"s{subject_id}/students"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+            
+            loop = asyncio.get_event_loop()
+            current_members = await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+            
+            for member in current_members:
+                await loop.run_in_executor(None, lambda m=member: self.admin_client.group_user_remove(m['id'], group_id))
+            
+            for user_id in student_ids:
+                await loop.run_in_executor(None, lambda uid=user_id: self.admin_client.group_user_add(uid, group_id))
+        except Exception as e:
+            logger.error(f"Error replacing students: {e}")
+            raise e
+
+    async def replace_subject_professors(self, subject_id: str, professor_ids: list[str]) -> None:
+        """Replace all professors in subject with new list"""
+        group_name = f"s{subject_id}/professors"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+            
+            loop = asyncio.get_event_loop()
+            current_members = await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+            
+            for member in current_members:
+                await loop.run_in_executor(None, lambda m=member: self.admin_client.group_user_remove(m['id'], group_id))
+            
+            for user_id in professor_ids:
+                await loop.run_in_executor(None, lambda uid=user_id: self.admin_client.group_user_add(uid, group_id))
+        except Exception as e:
+            logger.error(f"Error replacing professors: {e}")
+            raise e
+
 
     async def manage_professor_permissions(
         self, 

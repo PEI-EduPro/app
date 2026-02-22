@@ -42,6 +42,8 @@ class SubjectRead(BaseModel):
 class SubjectUpdate(BaseModel):
     name: Optional[str] = None
     regent_keycloak_id: Optional[str] = None
+    student_keycloak_ids: Optional[List[str]] = None
+    professor_keycloak_ids: Optional[List[str]] = None
 
 # --- Student DTOs ---
 

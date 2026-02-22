@@ -138,6 +138,20 @@ async def update_subject_service(
         )
         if not success:
             raise RuntimeError("Failed to update regent in Keycloak")
+    
+    # Update Students
+    if subject_update.student_keycloak_ids is not None:
+        await keycloak_client.replace_subject_students(
+            subject_id=str(subject_id),
+            student_ids=subject_update.student_keycloak_ids
+        )
+    
+    # Update Professors
+    if subject_update.professor_keycloak_ids is not None:
+        await keycloak_client.replace_subject_professors(
+            subject_id=str(subject_id),
+            professor_ids=subject_update.professor_keycloak_ids
+        )
             
     session.add(subject)
     await session.commit()
