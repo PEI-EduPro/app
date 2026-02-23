@@ -30,6 +30,27 @@ const useGetUcById = (ucId: number) =>
     enabled: !!ucId,
   });
 
+const useGetUcStudents = (ucId: number) =>
+  useQuery<UserI[]>({
+    queryKey: ["uc", ucId, "students"],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/students`),
+    enabled: !!ucId,
+  });
+
+const useGetUcProfessors = (ucId: number) =>
+  useQuery<UserI[]>({
+    queryKey: ["uc", ucId, "professors"],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/professors`),
+    enabled: !!ucId,
+  });
+
+const useGetUcRegent = (ucId: number) =>
+  useQuery<UserI>({
+    queryKey: ["uc", ucId, "regent"],
+    queryFn: () => apiClient.get(`/subjects/${ucId}/regent`),
+    enabled: !!ucId,
+  });
+
 const useDeleteUcById = (ucId: number) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -44,4 +65,20 @@ const useDeleteUcById = (ucId: number) => {
   });
 };
 
-export { useGetUc, useAddUc, useGetUcById, useDeleteUcById };
+const useUpdateUc = (ucId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["updateUc", ucId],
+    mutationFn: (data: { regent_keycloak_id?: string; student_keycloak_ids?: string[]; professor_keycloak_ids?: string[] }) => 
+      apiClient.put(`/subjects/${ucId}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId] });
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "students"] });
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "professors"] });
+      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "regent"] });
+    },
+  });
+};
+
+export { useGetUc, useAddUc, useGetUcById, useDeleteUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent, useUpdateUc };

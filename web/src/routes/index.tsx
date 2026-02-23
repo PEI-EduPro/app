@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useKeycloak } from "@/lib/use-keycloak";
+import { useKeycloak } from "@/hooks/use-keycloak";
 
 export const Route = createFileRoute("/")({
   component: Index,

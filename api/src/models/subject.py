@@ -20,6 +20,8 @@ class Subject(SQLModel, table=True):
 class SubjectCreateRequest(BaseModel):
     name: str
     regent_keycloak_id: str
+    student_keycloak_ids: List[str] = []
+    professor_keycloak_ids: List[str] = []
 
 # Used for POST /subject output
 class SubjectCreateResponse(BaseModel):
@@ -40,6 +42,8 @@ class SubjectRead(BaseModel):
 class SubjectUpdate(BaseModel):
     name: Optional[str] = None
     regent_keycloak_id: Optional[str] = None
+    student_keycloak_ids: Optional[List[str]] = None
+    professor_keycloak_ids: Optional[List[str]] = None
 
 # --- Student DTOs ---
 

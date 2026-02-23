@@ -18,13 +18,16 @@ logger = logging.getLogger(__name__)
 async def create_subject_service(
     session: AsyncSession,
     name: str,
-    regent_keycloak_id: str
+    regent_keycloak_id: str,
+    student_keycloak_ids: List[str] = [],
+    professor_keycloak_ids: List[str] = []
 ) -> dict:
     """
     Orchestrates the creation of a subject:
     1. Verifies regent exists in Keycloak.
     2. Creates Subject in Postgres.
     3. Creates Groups in Keycloak.
+    4. Adds students and professors to groups.
     """
     # 1. Verify regent
     regent_info = await verify_regent_exists(regent_keycloak_id)
@@ -44,6 +47,19 @@ async def create_subject_service(
         )
         if not success:
             raise RuntimeError("Keycloak group creation returned false.")
+        
+        # 4. Add students and professors
+        if student_keycloak_ids:
+            await keycloak_client.add_students_to_subject(
+                subject_id=str(db_subject.id),
+                student_ids=student_keycloak_ids
+            )
+        
+        if professor_keycloak_ids:
+            await keycloak_client.add_professors_to_subject(
+                subject_id=str(db_subject.id),
+                professor_ids=professor_keycloak_ids
+            )
             
     except Exception as e:
         logger.error(f"Failed to create Keycloak groups for subject {db_subject.id}: {e}")
@@ -122,6 +138,20 @@ async def update_subject_service(
         )
         if not success:
             raise RuntimeError("Failed to update regent in Keycloak")
+    
+    # Update Students
+    if subject_update.student_keycloak_ids is not None:
+        await keycloak_client.replace_subject_students(
+            subject_id=str(subject_id),
+            student_ids=subject_update.student_keycloak_ids
+        )
+    
+    # Update Professors
+    if subject_update.professor_keycloak_ids is not None:
+        await keycloak_client.replace_subject_professors(
+            subject_id=str(subject_id),
+            professor_ids=subject_update.professor_keycloak_ids
+        )
             
     session.add(subject)
     await session.commit()
@@ -161,6 +191,16 @@ async def get_students_service(session: AsyncSession, subject_id: int) -> List[d
     
     # Fetch from Keycloak
     return await keycloak_client.get_subject_students(str(subject_id))
+
+async def get_professors_service(session: AsyncSession, subject_id: int) -> List[dict]:
+    if not await get_subject_by_id(session, subject_id):
+        raise ValueError("Subject not found")
+    return await keycloak_client.get_subject_professors(str(subject_id))
+
+async def get_regent_service(session: AsyncSession, subject_id: int) -> dict:
+    if not await get_subject_by_id(session, subject_id):
+        raise ValueError("Subject not found")
+    return await keycloak_client.get_subject_regent(str(subject_id))
 
 async def add_students_service(session: AsyncSession, subject_id: int, student_ids: List[str]):
     if not await get_subject_by_id(session, subject_id):

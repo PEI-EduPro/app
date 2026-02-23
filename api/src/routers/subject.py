@@ -56,7 +56,9 @@ async def create_subject_endpoint(
         result = await subject_service.create_subject_service(
             session=session,
             name=subject_data.name,
-            regent_keycloak_id=subject_data.regent_keycloak_id
+            regent_keycloak_id=subject_data.regent_keycloak_id,
+            student_keycloak_ids=subject_data.student_keycloak_ids,
+            professor_keycloak_ids=subject_data.professor_keycloak_ids
         )
         return SubjectCreateResponse(
             id=result["subject"].id,
@@ -155,6 +157,53 @@ async def get_subject_students(
         ]
     except ValueError:
         raise HTTPException(status_code=404, detail="Subject not found")
+
+@router.get("/{subject_id}/professors", response_model=List[StudentInfo])
+async def get_subject_professors(
+    subject_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """View professors in subject"""
+    roles = user_info.realm_roles
+    groups = user_info.groups
+    
+    if not ("manager" in roles or 
+            any(g.endswith(f"s{subject_id}/regent") for g in groups) or 
+            any(g.endswith(f"s{subject_id}/professors") for g in groups)):
+        raise HTTPException(status_code=403, detail="Access denied")
+    try:
+        professors = await subject_service.get_professors_service(session, subject_id)
+        return [
+            StudentInfo(
+                id=p['id'], 
+                username=p['username'], 
+                email=p.get('email'), 
+                first_name=p.get('firstName'), 
+                last_name=p.get('lastName')
+            ) for p in professors
+        ]
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Subject not found")
+
+@router.get("/{subject_id}/regent", response_model=StudentInfo)
+async def get_subject_regent(
+    subject_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """View subject regent"""
+    try:
+        regent = await subject_service.get_regent_service(session, subject_id)
+        return StudentInfo(
+            id=regent['id'], 
+            username=regent['username'], 
+            email=regent.get('email'), 
+            first_name=regent.get('firstName'), 
+            last_name=regent.get('lastName')
+        )
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Subject not found or no regent assigned")
 
 @router.post("/{subject_id}/students", status_code=status.HTTP_201_CREATED)
 async def add_students_to_subject(

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import Keycloak from "keycloak-js";
 import { useEffect, useState, type ReactNode } from "react";
-import { KeycloakContext } from "./use-keycloak";
+import { KeycloakContext } from "../hooks/use-keycloak";
 
 export interface KeycloakContextValue {
   keycloak: Keycloak;
