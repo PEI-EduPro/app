@@ -14,7 +14,7 @@ from unittest.mock import patch, AsyncMock
 from src.core.keycloak import KeycloakClient
 
 # Use the real database for integration tests
-DB_URL = "postgresql+asyncpg://myuser:mypassword@localhost:5432/mydatabase"
+DB_URL = settings.PGSQL_DATABASE_URI
 
 @pytest_asyncio.fixture(scope="function")
 async def db_engine():

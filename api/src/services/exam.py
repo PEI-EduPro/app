@@ -181,9 +181,16 @@ async def generate_exams_from_configs(
             # Update Rules.tex with actual number of questions and fraction
             _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
+            # Save exam to DB
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
+            session.add(new_exam)
+            await session.commit()
+            await session.refresh(new_exam)
+            exam_id_str = str(new_exam.id)
+
             # Generate exam PDF (blank answer grid)
             _write_blank_answers(tmpdir, num_questions)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year)
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
             if exam_pdf:
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
@@ -191,16 +198,11 @@ async def generate_exams_from_configs(
             # Generate answer key PDF (marked grid)
             ''' Temporarily disable this because of the new all_solutions.pdf
             _write_answer_key(tmpdir, answers_map, num_questions)
-            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year)
+            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
             if key_pdf:
                 with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
                     f.write(key_pdf)
             '''
-
-            # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
-            session.add(new_exam)
-            await session.commit()
 
         # Generate single solutions PDF with all variations
         _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title)
@@ -301,7 +303,7 @@ def _write_blank_answers(workdir: str, num_questions: int):
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
 \\begin{{minipage}}{{0.15\\textwidth}}
-\\qrcode[height=0.75in]{{\\tttnumber}}
+\\qrcode[height=0.75in]{{\\qrcodecontent}}
 \\end{{minipage}}%
 \\begin{{minipage}}{{0.80\\textwidth}}
 \\scriptsize
@@ -333,7 +335,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
 \\begin{{minipage}}{{0.15\\textwidth}}
-\\qrcode[height=0.75in]{{\\tttnumber}}
+\\qrcode[height=0.75in]{{\\qrcodecontent}}
 \\end{{minipage}}%
 \\begin{{minipage}}{{0.80\\textwidth}}
 \\scriptsize
@@ -417,12 +419,13 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
         f.write(content)
 
 
-def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26") -> bytes | None:
+def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26", qrcode_content: str = "0") -> bytes | None:
     """Compile LaTeX to PDF, return PDF bytes or None on failure."""
     main_path = os.path.join(workdir, main_file)
     with open(main_path, "r") as f:
         content = f.read()
     content = content.replace("\\newcommand\\tttnumber{0}", f"\\newcommand\\tttnumber{{{var_num}}}")
+    content = content.replace("\\newcommand\\qrcodecontent{0}", f"\\newcommand\\qrcodecontent{{{qrcode_content}}}")
     content = content.replace("#FOOTER", "")
     content = content.replace("Exame Época Normal", exam_title)
     with open(main_path, "w") as f:

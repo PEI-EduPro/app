@@ -1,0 +1,16 @@
+name: edupro-test
+
+include:
+  - docker-compose.db.yml
+  - docker-compose.keycloak.yml
+
+services:
+  db:
+    ports:
+      - "5433:5432"  # Host Port 5433 -> Container Port 5432
+
+  keycloak:
+    ports:
+      - "8081:8080"  # Host Port 8081 -> Container Port 8080
+    environment:
+      KC_HOSTNAME_PORT: 8081
