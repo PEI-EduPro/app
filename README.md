@@ -5,6 +5,14 @@
 cd deployment
 ```
 
+###
+On first deployment:
+1. Start services with realm.json present
+2. Wait for Keycloak to initialize
+3. Delete realm.json from the keycloak-config directory
+4. Restart services
+This is for persistent data(Works for now)
+
 ### Run Everything (Default)
 ```bash
 sudo docker compose -f docker-compose.dev.yml up --build

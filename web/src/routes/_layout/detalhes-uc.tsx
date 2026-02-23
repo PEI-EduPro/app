@@ -81,10 +81,6 @@ function RouteComponent() {
     email: p.email || "",
   }));
 
-  console.log("Students:", students);
-  console.log("Professors:", professors);
-  console.log("Regent:", regent);
-
   const [profsSelection, setProfsSelection] = useState(professorsData);
   const [alunosSelection, setAlunosSelection] = useState(studentsData);
   const [regentSelection, setRegentSelection] = useState<any[]>([]);

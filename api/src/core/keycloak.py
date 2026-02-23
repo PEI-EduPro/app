@@ -295,23 +295,30 @@ class KeycloakClient:
         try:
             loop = asyncio.get_event_loop()
             
-            # 1. Find the group ID
-            # get_group_by_path returns the group object or raises error if not found
-            # Note: Depending on python-keycloak version, we might need to search for it if get_group_by_path isn't available
-            # We will use a safe search approach:
+            # 1. Find or create the group
             group_id = None
             groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
             
-            # This is a naive search. For production with thousands of groups, use search params.
-            # Since our groups are flat "s{id}/regent", we search for that name.
             for g in groups:
                 if g['name'] == group_path:
                     group_id = g['id']
                     break
             
             if not group_id:
-                logger.error(f"Group {group_path} not found.")
-                return False
+                logger.info(f"Group {group_path} not found, creating it.")
+                await loop.run_in_executor(
+                    None,
+                    lambda: self.admin_client.create_group({"name": group_path})
+                )
+                groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+                for g in groups:
+                    if g['name'] == group_path:
+                        group_id = g['id']
+                        break
+                
+                if not group_id:
+                    logger.error(f"Failed to create group {group_path}")
+                    return False
 
             # 2. Remove existing members (The old regent)
             members = await loop.run_in_executor(

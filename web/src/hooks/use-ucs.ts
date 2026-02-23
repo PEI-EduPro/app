@@ -71,7 +71,7 @@ const useUpdateUc = (ucId: number) => {
   return useMutation({
     mutationKey: ["updateUc", ucId],
     mutationFn: (data: { regent_keycloak_id?: string; student_keycloak_ids?: string[]; professor_keycloak_ids?: string[] }) => 
-      apiClient.patch(`/subjects/${ucId}/`, data),
+      apiClient.put(`/subjects/${ucId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["uc", ucId] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "students"] });
