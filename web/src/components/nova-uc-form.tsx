@@ -114,6 +114,7 @@ export function NovaUCForm() {
                           {...field}
                           placeholder="Nome da UC"
                           autoComplete="off"
+                          autoFocus
                         />
                       </FormControl>
                       <FormDescription></FormDescription>

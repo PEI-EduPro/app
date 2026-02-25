@@ -23,6 +23,7 @@ import {
   useDeleteQuestion,
 } from "@/hooks/use-questions";
 import { z } from "zod";
+import { Button } from "@/components/ui/button";
 
 const bancoQuestoesSearchSchema = z.object({
   ucId: z.number(),
@@ -249,20 +250,18 @@ function BancoQuestões() {
       </div>
 
       <div className="flex mb-6 justify-between">
-        {/* Upload XML File Button */}
         <XmlUploadButton subjectId={ucId} />
 
-        {/* Add Topic Button */}
-        <button
+        <Button
           onClick={() => {
             closeAllTopics();
             setShowTopicModal(true);
           }}
-          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors"
+          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-[40px] cursor-pointer"
         >
-          <Plus size={20} />
+          <Plus className="!h-[20px] !w-[20px]" />
           Adicionar Tópico
-        </button>
+        </Button>
       </div>
 
       {/* Topics List - One per line */}
@@ -294,27 +293,29 @@ function BancoQuestões() {
               </div>
 
               <div className="flex items-center gap-2">
-                <button
+                <Button
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     setEditingTopic(topic);
                     setShowTopicModal(true);
                   }}
-                  className="text-gray-600 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors"
+                  className="text-gray-600 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors cursor-pointer"
                   title="Editar tópico"
                 >
                   <SquarePen className="w-5 h-5" />
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleDeleteTopic(topic.id);
                   }}
-                  className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors"
+                  className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
                   title="Excluir tópico"
                 >
                   <Trash2 className="w-5 h-5" />
-                </button>
+                </Button>
               </div>
             </div>
 
@@ -353,18 +354,18 @@ function BancoQuestões() {
             )}
 
             <div className="flex justify-center pb-6">
-              <button
+              <Button
                 onClick={(e) => {
                   e.stopPropagation();
                   closeAllTopics();
                   setSelectedTopicId(topic.id);
                   setShowQuestionModal(true);
                 }}
-                className="w-fit flex items-center gap-2 bg-black text-white px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors"
+                className="h-[40px] flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
               >
-                <Plus size={16} />
+                <Plus className="!h-[20px] !w-[20px]" />
                 Adicionar Questão
-              </button>
+              </Button>
             </div>
           </Card>
         ))}
@@ -466,20 +467,22 @@ function QuestionItem({
         </div>
       </div>
       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button
+        <Button
+          variant="ghost"
           onClick={onEdit}
-          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
           title="Editar questão"
         >
           <SquarePen className="w-4 h-4" />
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           onClick={onDelete}
-          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
           title="Excluir questão"
         >
           <Trash2 className="w-4 h-4" />
-        </button>
+        </Button>
       </div>
     </div>
   );
