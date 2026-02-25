@@ -38,7 +38,7 @@ services:
   keycloak-config-cli:
     image: adorsys/keycloak-config-cli:latest-24.0.1
     environment:
-      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_URL: ${KEYCLOAK_SERVER_URL}
       KEYCLOAK_USER: ${KEYCLOAK_ADMIN}
       KEYCLOAK_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KEYCLOAK_AVAILABILITYCHECK_ENABLED: "true"
