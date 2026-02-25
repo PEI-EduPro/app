@@ -64,6 +64,21 @@ PYTHONPATH=. uv run pytest tests/unit
 echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Run integration tests (connects to ISOLATED Docker services)
 # Pass env vars explicitly to ensure pytest picks them up
-PYTHONPATH=. POSTGRES_PORT=5433 KEYCLOAK_SERVER_URL="http://localhost:8081" KEYCLOAK_ISSUER_URL="http://localhost:8081" uv run pytest tests/integration
+
+#Se calhar passamos isto para um .env.test um dia 
+PYTHONPATH=. \
+POSTGRES_SERVER=localhost \
+POSTGRES_PORT=5433 \
+POSTGRES_USER=myuser \
+POSTGRES_PASSWORD=mypassword \
+POSTGRES_DB=mydatabase \
+KEYCLOAK_SERVER_URL="http://localhost:8081" \
+KEYCLOAK_ISSUER_URL="http://localhost:8081" \
+KEYCLOAK_REALM=edupro \
+KEYCLOAK_CLIENT_ID=api-backend \
+KEYCLOAK_CLIENT_SECRET="**********" \
+KEYCLOAK_ADMIN_USERNAME=admin \
+KEYCLOAK_ADMIN_PASSWORD=admin \
+uv run pytest tests/integration
 
 echo -e "${GREEN}All tests passed successfully!${NC}"
