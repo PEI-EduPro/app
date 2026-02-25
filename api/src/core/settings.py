@@ -9,7 +9,6 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
-    DB_ECHO: bool = False
     
     # Keycloak
     KEYCLOAK_SERVER_URL: str
@@ -19,7 +18,13 @@ class Settings(BaseSettings):
     KEYCLOAK_CLIENT_SECRET: str
     KEYCLOAK_ADMIN_USERNAME: str
     KEYCLOAK_ADMIN_PASSWORD: str
-
+    
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    SQLALCHEMY_LOG_LEVEL: str = "WARNING"
+    UVICORN_LOG_LEVEL: str = "INFO"
+    DB_ECHO: bool = False
+    
     @property
     def PGSQL_DATABASE_URI(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
