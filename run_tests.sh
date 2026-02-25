@@ -12,10 +12,7 @@ echo -e "${GREEN}Starting Test Suite Setup...${NC}"
 echo -e "${GREEN}1. Starting ISOLATED Docker Services (DB:5433 & Keycloak:8081)...${NC}"
 
 # Define environment variables for the test run to ensure isolation
-export POSTGRES_PORT=5433
-export KEYCLOAK_SERVER_URL="http://localhost:8081"
-# Ensure Keycloak admin uses the test port
-export KEYCLOAK_Admin_URL="http://localhost:8081" 
+export POSTGRES_PORT=5433 
 
 # Use a specific project name 'edupro-test' to namespace volumes and containers
 # This prevents conflict with 'edupro-dev' or 'edupro' project names.
