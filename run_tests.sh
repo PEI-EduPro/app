@@ -59,7 +59,20 @@ cd api
 
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)
-PYTHONPATH=. uv run pytest tests/unit
+PYTHONPATH=. \
+POSTGRES_SERVER=localhost \
+POSTGRES_PORT=5432 \
+POSTGRES_USER=test \
+POSTGRES_PASSWORD=test \
+POSTGRES_DB=test \
+KEYCLOAK_SERVER_URL="http://localhost:8080" \
+KEYCLOAK_ISSUER_URL="http://localhost:8080" \
+KEYCLOAK_REALM=edupro \
+KEYCLOAK_CLIENT_ID=api-backend \
+KEYCLOAK_CLIENT_SECRET="test" \
+KEYCLOAK_ADMIN_USERNAME=admin \
+KEYCLOAK_ADMIN_PASSWORD=admin \
+uv run pytest tests/unit
 
 echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Run integration tests (connects to ISOLATED Docker services)

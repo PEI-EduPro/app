@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     POSTGRES_USER: str
     POSTGRES_PASSWORD: str
     POSTGRES_DB: str
+    DB_ECHO: bool = False
     
     # Keycloak
     KEYCLOAK_SERVER_URL: str
