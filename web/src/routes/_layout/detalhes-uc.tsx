@@ -1,28 +1,26 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useDeleteUcById, useGetUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent, useUpdateUc } from "@/hooks/use-ucs";
+  useDeleteUcById,
+  useGetUcById,
+  useGetUcStudents,
+  useGetUcProfessors,
+  useGetUcRegent,
+  useUpdateUc,
+} from "@/hooks/use-ucs";
 import { useGetProfessors, useGetStudents } from "@/hooks/use-users";
-import { cn } from "@/lib/utils";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BookOpen,
   ClipboardList,
   FileQuestionMark,
+  LoaderCircle,
   Pencil,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { z } from "zod";
-import { useKeycloak } from "@/hooks/use-keycloak";
+import type { UserI } from "@/lib/types";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.number(),
@@ -34,14 +32,15 @@ export const Route = createFileRoute("/_layout/detalhes-uc")({
 });
 
 function RouteComponent() {
-  const { keycloak } = useKeycloak();
   const { ucId } = Route.useSearch();
 
   const { data: ucData } = useGetUcById(ucId);
-  const { data: students = [], isLoading: loadingStudents } = useGetUcStudents(ucId);
-  const { data: professors = [], isLoading: loadingProfs } = useGetUcProfessors(ucId);
-  const { data: regent } = useGetUcRegent(ucId);
-  
+  const { data: students = [], isLoading: loadingStudents } =
+    useGetUcStudents(ucId);
+  const { data: professors = [], isLoading: loadingProfs } =
+    useGetUcProfessors(ucId);
+  const { data: regent, isLoading: loadingRegent } = useGetUcRegent(ucId);
+
   const { data: allProfessors = [] } = useGetProfessors();
   const { data: allStudents = [] } = useGetStudents();
 
@@ -50,50 +49,58 @@ function RouteComponent() {
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
-  const formatUserName = (user: any) => 
-    user?.first_name && user?.last_name 
-      ? `${user.first_name} ${user.last_name}` 
+  const formatUserName = (user: UserI) =>
+    user?.first_name && user?.last_name
+      ? `${user.first_name} ${user.last_name}`
       : user?.firstName && user?.lastName
-      ? `${user.firstName} ${user.lastName}`
-      : user?.username || "";
+        ? `${user.firstName} ${user.lastName}`
+        : user?.username || "";
 
-  const studentsData = students.map(s => ({
+  const studentsData = students.map((s) => ({
     id: s.id,
     nome: formatUserName(s),
     email: s.email || "",
   }));
 
-  const professorsData = professors.map(p => ({
+  const professorsData = professors.map((p) => ({
     id: p.id,
     nome: formatUserName(p),
     email: p.email || "",
   }));
 
-  const allStudentsData = allStudents.map(s => ({
+  const allStudentsData = allStudents.map((s) => ({
     id: s.id,
     nome: formatUserName(s),
     email: s.email || "",
   }));
 
-  const allProfessorsData = allProfessors.map(p => ({
+  const allProfessorsData = allProfessors.map((p) => ({
     id: p.id,
     nome: formatUserName(p),
     email: p.email || "",
   }));
 
-  const [profsSelection, setProfsSelection] = useState(professorsData);
-  const [alunosSelection, setAlunosSelection] = useState(studentsData);
-  const [regentSelection, setRegentSelection] = useState<any[]>([]);
+  const [profsSelection, setProfsSelection] = useState<
+    { id: string; nome: string; email: string }[]
+  >([]);
+  const [alunosSelection, setAlunosSelection] = useState<
+    { id: string; nome: string; email: string }[]
+  >([]);
+  const [regentSelection, setRegentSelection] = useState<
+    { id: string; nome: string; email: string }[]
+  >([]);
 
   useEffect(() => {
     setProfsSelection(professorsData);
     setAlunosSelection(studentsData);
     if (regent) {
-      setRegentSelection([{
-        id: regent.id,
-        nome: formatUserName(regent),
-        email: regent.email || "",
-      }]);
+      setRegentSelection([
+        {
+          id: regent.id,
+          nome: formatUserName(regent),
+          email: regent.email || "",
+        },
+      ]);
     }
   }, [students, professors, regent]);
 
@@ -110,67 +117,71 @@ function RouteComponent() {
         <Pencil
           className={`cursor-pointer size-[50px] ${isEditing ? "fill-black stroke-1 stroke-white" : ""}`}
           onClick={() => {
-            if (isEditing) {
-              setAlunosSelection(studentsData);
-              setProfsSelection(professorsData);
-              if (regent) {
-                setRegentSelection([{
-                  id: regent.id,
-                  nome: formatUserName(regent),
-                  email: regent.email || "",
-                }]);
-              }
-            }
             setIsEditing(!isEditing);
           }}
         />
       </div>
+
       <div className="flex flex-col gap-[60px] items-center">
         <div className="flex flex-col gap-[60px] w-[1050px]">
-          <div className="flex flex-row gap-[60px] w-full">
-            <div className="w-full flex flex-1 flex-col gap-[30px]">
-              <div>
-                <span className="text-[26px] font-medium">Regente</span>
-                <CustomTable
-                  data={isEditing ? allProfessorsData : (regent ? [{
-                    id: regent.id,
-                    nome: formatUserName(regent),
-                    email: regent.email || "",
-                  }] : [])}
-                  isSelectable={isEditing}
-                  rowSelection={regentSelection}
-                  onChange={(e) => {
-                    if (isEditing && e.length <= 1) {
-                      setRegentSelection(e);
+          {loadingStudents || loadingProfs || loadingRegent ? (
+            <div className="flex justify-center items-center w-full h-40">
+              <LoaderCircle className="animate-spin size-16" />
+            </div>
+          ) : (
+            <div className="flex flex-row gap-[60px] w-full">
+              <div className="w-full flex flex-1 flex-col gap-[30px]">
+                <div>
+                  <span className="text-[26px] font-medium">Regente</span>
+                  <CustomTable
+                    data={
+                      isEditing
+                        ? allProfessorsData
+                        : regent
+                          ? regentSelection
+                          : []
                     }
-                  }}
-                />
+                    isSelectable={isEditing}
+                    rowSelection={regentSelection}
+                    onChange={(e) => {
+                      if (isEditing && e.length <= 1) {
+                        setRegentSelection(
+                          e as { id: string; nome: string; email: string }[],
+                        );
+                      }
+                    }}
+                  />
+                </div>
+                <div>
+                  <span className="text-[26px] font-medium">Professores</span>
+                  <CustomTable
+                    data={isEditing ? allProfessorsData : professorsData}
+                    isSelectable={isEditing}
+                    rowSelection={profsSelection}
+                    onChange={(e) => {
+                      setProfsSelection(
+                        e as { id: string; nome: string; email: string }[],
+                      );
+                    }}
+                  />
+                </div>
               </div>
-              <div>
-                <span className="text-[26px] font-medium">Professores</span>
+              <div className="w-full flex-1 h-inherit">
+                <span className="text-[26px] font-medium">Alunos</span>
                 <CustomTable
-                  data={isEditing ? allProfessorsData : professorsData}
+                  data={isEditing ? allStudentsData : studentsData}
+                  rowNumber={15}
                   isSelectable={isEditing}
-                  rowSelection={profsSelection}
+                  rowSelection={alunosSelection}
                   onChange={(e) => {
-                    setProfsSelection(e);
+                    setAlunosSelection(
+                      e as { id: string; nome: string; email: string }[],
+                    );
                   }}
                 />
               </div>
             </div>
-            <div className="w-full flex-1 h-inherit">
-              <span className="text-[26px] font-medium">Alunos</span>
-              <CustomTable
-                data={isEditing ? allStudentsData : studentsData}
-                rowNumber={15}
-                isSelectable={isEditing}
-                rowSelection={alunosSelection}
-                onChange={(e) => {
-                  setAlunosSelection(e);
-                }}
-              />
-            </div>
-          </div>
+          )}
           <div className="flex justify-between">
             {isEditing ? (
               <>
@@ -186,16 +197,11 @@ function RouteComponent() {
                   size="lg"
                   className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
                   onClick={() => {
-                    const updateData: any = {};
-                    
-                    if (regentSelection.length === 1 && regentSelection[0].id !== regent?.id) {
-                      updateData.regent_keycloak_id = regentSelection[0].id;
-                    }
-                    
-                    updateData.student_keycloak_ids = alunosSelection.map(s => s.id);
-                    updateData.professor_keycloak_ids = profsSelection.map(p => p.id);
-                    
-                    updateUc(updateData);
+                    updateUc({
+                      regent_keycloak_id: regentSelection[0].id,
+                      student_keycloak_ids: alunosSelection.map((a) => a.id),
+                      professor_keycloak_ids: profsSelection.map((a) => a.id),
+                    });
                     setIsEditing(false);
                   }}
                 >

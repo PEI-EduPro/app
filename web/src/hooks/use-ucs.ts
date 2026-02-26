@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
-import { type NewUcI, type UcI } from "@/lib/types";
+import { type NewUcI, type UcI, type UserI } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
 
 const useGetUc = () =>
@@ -70,8 +70,11 @@ const useUpdateUc = (ucId: number) => {
 
   return useMutation({
     mutationKey: ["updateUc", ucId],
-    mutationFn: (data: { regent_keycloak_id?: string; student_keycloak_ids?: string[]; professor_keycloak_ids?: string[] }) => 
-      apiClient.put(`/subjects/${ucId}`, data),
+    mutationFn: (data: {
+      regent_keycloak_id: string;
+      student_keycloak_ids: string[];
+      professor_keycloak_ids: string[];
+    }) => apiClient.put(`/subjects/${ucId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["uc", ucId] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "students"] });
@@ -81,4 +84,13 @@ const useUpdateUc = (ucId: number) => {
   });
 };
 
-export { useGetUc, useAddUc, useGetUcById, useDeleteUcById, useGetUcStudents, useGetUcProfessors, useGetUcRegent, useUpdateUc };
+export {
+  useGetUc,
+  useAddUc,
+  useGetUcById,
+  useDeleteUcById,
+  useGetUcStudents,
+  useGetUcProfessors,
+  useGetUcRegent,
+  useUpdateUc,
+};

@@ -52,7 +52,7 @@ export const NovoExameForm = (props: {
   const { examData = null, ucID } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
-    null
+    null,
   );
   const totalSteps = 5;
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export const NovoExameForm = (props: {
       number_exams: examData?.number_exams || 1,
       fraction: examData?.fraction || 0,
       exam_title: examData?.exam_title || "Exame Época Normal",
-      exam_date: examData?.exam_date || new Date().toISOString().split('T')[0],
+      exam_date: examData?.exam_date || new Date().toISOString().split("T")[0],
       semester: examData?.semester || "1",
       academic_year: examData?.academic_year || "2025/26",
     },
@@ -77,7 +77,7 @@ export const NovoExameForm = (props: {
   const { handleSubmit, control, reset, watch, setValue, getValues } = form;
 
   const validateAndNormalizeData = (
-    formData: NovoExameFormT
+    formData: NovoExameFormT,
   ): NovoExameFormT => {
     const validated: NovoExameFormT = {
       ...formData,
@@ -136,7 +136,7 @@ export const NovoExameForm = (props: {
       Object.keys(validated.relative_quotations).forEach((key) => {
         setValue(
           `relative_quotations.${key}`,
-          validated.relative_quotations[key]
+          validated.relative_quotations[key],
         );
       });
     }
@@ -219,14 +219,14 @@ export const NovoExameForm = (props: {
               className={cn(
                 "w-4 h-4 rounded-full transition-all duration-300 ease-in-out",
                 index <= formStep ? "bg-primary" : "bg-primary/30",
-                index < formStep && "bg-primary"
+                index < formStep && "bg-primary",
               )}
             />
             {index < totalSteps - 1 && (
               <div
                 className={cn(
                   "w-8 h-0.5",
-                  index < formStep ? "bg-primary" : "bg-primary/30"
+                  index < formStep ? "bg-primary" : "bg-primary/30",
                 )}
               />
             )}
@@ -264,8 +264,7 @@ export const NovoExameForm = (props: {
 
                 <div className="flex justify-between">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     disabled
@@ -274,9 +273,8 @@ export const NovoExameForm = (props: {
                   </Button>
                   <Button
                     disabled={!(watch("topics")?.length > 0)}
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -296,84 +294,97 @@ export const NovoExameForm = (props: {
                   </FormLabel>
 
                   {watch("topics")?.map((topic) => {
-                    const maxQuestions = topics
-                      ?.map((t) =>
-                        t[0].id.toString() === topic.id ? t[1] : 0
-                      )
-                      .filter((n) => n !== 0)[0] || 1;
-                    
+                    const maxQuestions =
+                      topics
+                        ?.map((t) =>
+                          t[0].id.toString() === topic.id ? t[1] : 0,
+                        )
+                        .filter((n) => n !== 0)[0] || 1;
+
                     return (
-                    <FormItem
-                      key={topic.id}
-                      className="flex items-center gap-x-4"
-                    >
-                      <FormLabel className="flex-shrink-0 w-140">
-                        {topic.nome} (max: {maxQuestions})
-                      </FormLabel>
-                      <FormControl className="flex-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          max={maxQuestions}
-                          placeholder="1"
-                          value={watch(`number_questions.${topic.id}`) || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
+                      <FormItem
+                        key={topic.id}
+                        className="flex items-center gap-x-4"
+                      >
+                        <FormLabel className="flex-shrink-0 w-140">
+                          {topic.nome} (max: {maxQuestions})
+                        </FormLabel>
+                        <FormControl className="flex-1">
+                          <Input
+                            type="number"
+                            min="1"
+                            max={maxQuestions}
+                            placeholder="1"
+                            value={watch(`number_questions.${topic.id}`) || ""}
+                            onChange={(e) => {
+                              const value = e.target.value;
 
-                            // Allow empty value for backspacing
-                            if (value === "") {
-                              setValue(`number_questions.${topic.id}`, NaN);
-                              return;
-                            }
+                              // Allow empty value for backspacing
+                              if (value === "") {
+                                setValue(`number_questions.${topic.id}`, NaN);
+                                return;
+                              }
 
-                            const numValue = parseInt(value);
-                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
-                            setValue(`number_questions.${topic.id}`, clampedValue);
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
+                              const numValue = parseInt(value);
+                              const clampedValue = Math.min(
+                                Math.max(isNaN(numValue) ? 1 : numValue, 1),
+                                maxQuestions,
+                              );
+                              setValue(
+                                `number_questions.${topic.id}`,
+                                clampedValue,
+                              );
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value;
 
-                            // Only validate and set to 1 on blur if empty
-                            if (value === "") {
-                              setValue(`number_questions.${topic.id}`, 1);
-                              return;
-                            }
+                              // Only validate and set to 1 on blur if empty
+                              if (value === "") {
+                                setValue(`number_questions.${topic.id}`, 1);
+                                return;
+                              }
 
-                            const numValue = parseInt(value);
-                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
-                            setValue(`number_questions.${topic.id}`, clampedValue);
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              !/[0-9]/.test(e.key) &&
-                              ![
-                                "Backspace",
-                                "Delete",
-                                "Tab",
-                                "Escape",
-                                "Enter",
-                                "ArrowLeft",
-                                "ArrowRight",
-                                "ArrowUp",
-                                "ArrowDown",
-                                "Home",
-                                "End",
-                              ].includes(e.key) &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )})}
+                              const numValue = parseInt(value);
+                              const clampedValue = Math.min(
+                                Math.max(isNaN(numValue) ? 1 : numValue, 1),
+                                maxQuestions,
+                              );
+                              setValue(
+                                `number_questions.${topic.id}`,
+                                clampedValue,
+                              );
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                !/[0-9]/.test(e.key) &&
+                                ![
+                                  "Backspace",
+                                  "Delete",
+                                  "Tab",
+                                  "Escape",
+                                  "Enter",
+                                  "ArrowLeft",
+                                  "ArrowRight",
+                                  "ArrowUp",
+                                  "ArrowDown",
+                                  "Home",
+                                  "End",
+                                ].includes(e.key) &&
+                                !e.ctrlKey &&
+                                !e.metaKey
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    );
+                  })}
                 </div>
                 <div className="flex justify-between">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -381,9 +392,8 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -427,7 +437,7 @@ export const NovoExameForm = (props: {
                             const numValue = parseInt(value);
                             setValue(
                               `relative_quotations.${topic.id}`,
-                              isNaN(numValue) || numValue < 1 ? 1 : numValue
+                              isNaN(numValue) || numValue < 1 ? 1 : numValue,
                             );
                           }}
                           onBlur={(e) => {
@@ -486,8 +496,7 @@ export const NovoExameForm = (props: {
 
                 <div className="flex justify-between">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -495,9 +504,8 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -546,10 +554,7 @@ export const NovoExameForm = (props: {
                           Data do exame
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                          />
+                          <Input type="date" {...field} />
                         </FormControl>
                       </FormItem>
                     )}
@@ -564,7 +569,10 @@ export const NovoExameForm = (props: {
                         <FormLabel className="flex-shrink-0 w-140">
                           Semestre
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione o semestre" />
@@ -588,7 +596,10 @@ export const NovoExameForm = (props: {
                         <FormLabel className="flex-shrink-0 w-140">
                           Ano letivo
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione o ano" />
@@ -632,7 +643,7 @@ export const NovoExameForm = (props: {
                               const numValue = parseInt(value);
                               setValue(
                                 `number_exams`,
-                                isNaN(numValue) || numValue < 1 ? 1 : numValue
+                                isNaN(numValue) || numValue < 1 ? 1 : numValue,
                               );
                             }}
                             onBlur={(e) => {
@@ -758,8 +769,7 @@ export const NovoExameForm = (props: {
 
                 <div className="flex justify-between">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -767,9 +777,8 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
+                    className="cursor-pointer"
                     size="sm"
-                    className="font-medium"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -791,8 +800,7 @@ export const NovoExameForm = (props: {
 
                 <div className="flex justify-between pt-4">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -800,9 +808,8 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     disabled={isPending}
                     onClick={() => {
                       handleSubmit(onSubmit)();

@@ -28,7 +28,6 @@ import { useGetProfessors, useGetStudents } from "@/hooks/use-users";
 
 type NovaUCFormT = {
   nome: string;
-  imagem: File | null;
   regente: string;
   professores: string[];
   alunos: string[];
@@ -37,7 +36,7 @@ type NovaUCFormT = {
 
 export function NovaUCForm() {
   const [formStep, setFormStep] = useState<number>(0);
-  const totalSteps = 3;
+  const totalSteps = 2;
   const { mutate, isError } = useAddUc();
   const { data: professors, isLoading: loadingProfessors } = useGetProfessors();
   const { data: students, isLoading: loadingStudents } = useGetStudents();
@@ -45,7 +44,6 @@ export function NovaUCForm() {
   const form = useForm<NovaUCFormT>({
     defaultValues: {
       nome: "",
-      imagem: null,
       regente: "",
       professores: [],
       alunos: [],
@@ -56,11 +54,11 @@ export function NovaUCForm() {
   const { handleSubmit, control, reset, watch, formState } = form;
 
   const onSubmit = async (formData: NovaUCFormT) => {
-    mutate({ 
-      name: formData.nome, 
+    mutate({
+      name: formData.nome,
       regent_keycloak_id: formData.regente,
       student_keycloak_ids: formData.alunos,
-      professor_keycloak_ids: formData.professores
+      professor_keycloak_ids: formData.professores,
     });
     if (isError) toast.error("An error occoured, please try again later");
     setFormStep(0);
@@ -116,6 +114,7 @@ export function NovaUCForm() {
                           {...field}
                           placeholder="Nome da UC"
                           autoComplete="off"
+                          autoFocus
                         />
                       </FormControl>
                       <FormDescription></FormDescription>
@@ -123,81 +122,6 @@ export function NovaUCForm() {
                   )}
                 />
 
-                <FormField
-                  key="yI1i8RdV"
-                  control={control}
-                  name="imagem"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Imagem</FormLabel>
-                      <FormControl>
-                        <div
-                          className="relative border-[1px] border-[#e5e5e5] rounded-lg p-8 text-center cursor-pointer"
-                          onClick={() => {
-                            const el = document?.getElementById(
-                              "file-upload-yI1i8RdV",
-                            ) as HTMLInputElement | null;
-                            el?.click();
-                          }}
-                        >
-                          <input
-                            type="file"
-                            id="file-upload-yI1i8RdV"
-                            onChange={(e) => {
-                              field.onChange(e.target.files?.[0] || null);
-                            }}
-                            accept="image/*, application/pdf"
-                            className="hidden"
-                          />
-
-                          {!field.value ? (
-                            <div className="flex flex-col items-center space-y-3">
-                              <Upload className="w-6 h-6 text-gray-400" />
-                              <div className="text-sm text-gray-500">
-                                Clique{" "}
-                                <span className="text-[#41B5C0] font-medium">
-                                  aqui
-                                </span>{" "}
-                                para selecionar um ficheiro
-                              </div>
-                            </div>
-                          ) : (
-                            <span>{field.value.name}</span>
-                          )}
-                        </div>
-                      </FormControl>
-                      <FormDescription></FormDescription>
-                    </FormItem>
-                  )}
-                />
-
-                <div className="flex justify-between">
-                  <Button
-                    type="button"
-                    className="font-medium"
-                    size="sm"
-                    disabled
-                    variant="outline"
-                  >
-                    Retroceder
-                  </Button>
-                  <Button
-                    disabled={!watch("nome") || watch("nome").trim() === ""}
-                    type="button"
-                    size="sm"
-                    className="font-medium"
-                    onClick={() => setFormStep(formStep + 1)}
-                  >
-                    Próximo
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          )}
-
-          {formStep === 1 && (
-            <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
                 <FormField
                   key="5trP2rUr"
                   control={control}
@@ -273,13 +197,17 @@ export function NovaUCForm() {
                     type="button"
                     className="font-medium"
                     size="sm"
+                    disabled
                     variant="outline"
-                    onClick={() => setFormStep(formStep - 1)}
                   >
                     Retroceder
                   </Button>
                   <Button
-                    disabled={!watch("regente")}
+                    disabled={
+                      !watch("nome") ||
+                      watch("nome").trim() === "" ||
+                      !watch("regente")
+                    }
                     type="button"
                     size="sm"
                     className="font-medium"
@@ -292,7 +220,7 @@ export function NovaUCForm() {
             </Form>
           )}
 
-          {formStep === 2 && (
+          {formStep === 1 && (
             <Form {...form}>
               <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
                 <FormField
