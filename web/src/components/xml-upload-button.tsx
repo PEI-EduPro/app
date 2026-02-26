@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Button } from "./ui/button";
 
 interface XmlUploadButtonProps {
   subjectId: number;
@@ -15,7 +16,9 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -27,20 +30,23 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
     setIsUploading(true);
     try {
       const xmlContent = await file.text();
-      
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/questions/${subjectId}/XML`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/xml',
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/questions/${subjectId}/XML`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/xml",
+          },
+          body: xmlContent,
         },
-        body: xmlContent,
-      });
+      );
 
       if (!response.ok) {
         throw new Error(`Upload failed: ${response.statusText}`);
       }
-      
-      queryClient.invalidateQueries({ queryKey: ['questions', subjectId] });
+
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
       alert("Questões importadas com sucesso!");
     } catch (error) {
       console.error("Error uploading XML:", error);
@@ -48,21 +54,21 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
       }
     }
   };
 
   return (
     <>
-      <button
+      <Button
         onClick={handleButtonClick}
         disabled={isUploading}
-        className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors disabled:opacity-50 disabled:cursor-not-allowed h-[40px] cursor-pointer"
       >
-        <Upload />
+        <Upload className="!h-[20px] !w-[20px]" />
         {isUploading ? "Importando..." : "Importar questões"}
-      </button>
+      </Button>
 
       <input
         type="file"

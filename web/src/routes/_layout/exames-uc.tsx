@@ -1,5 +1,6 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { ExamConfigCard } from "@/components/exam-config-card";
+import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useGetExamConfig } from "@/hooks/use-exams";
 import { useGetUcById } from "@/hooks/use-ucs";
@@ -28,16 +29,17 @@ const IconButton = ({
   label: string;
   onClick: () => void;
 }) => (
-  <button
+  <Button
+    variant="ghost"
     onClick={(e) => {
       e.stopPropagation();
       onClick();
     }}
     aria-label={label}
-    className="p-3 m-1 rounded-full text-gray-700 hover:bg-gray-200 transition-colors duration-150"
+    className="cursor-pointer rounded-full p-2 hover:bg-gray-200 transition-colors duration-150"
   >
-    <Icon className="h-6 w-6" />
-  </button>
+    <Icon className="!h-[25px] !w-[25px]" />
+  </Button>
 );
 
 const ContentActionCard = ({

@@ -1,8 +1,9 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
+import { useKeycloak } from "@/hooks/use-keycloak";
 import { useGetUc } from "@/hooks/use-ucs";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { LoaderCircle, Plus } from "lucide-react";
 
 export const Route = createFileRoute("/_layout/unidades-curriculares")({
   component: UCS,
@@ -27,7 +28,12 @@ function UCCard({ label, srcImage, id }: UCCArdProps) {
 }
 
 function UCS() {
-  const { data } = useGetUc();
+  const { data, isLoading } = useGetUc();
+  const { keycloak } = useKeycloak();
+  const isManager =
+    (keycloak.tokenParsed?.realm_access?.roles || []).find(
+      (e) => e == "manager",
+    ) != undefined;
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -35,21 +41,38 @@ function UCS() {
       <div className="font-rubik flex justify-center text-5xl mb-35">
         Unidades Curriculares
       </div>
-      <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-x-[70px] gap-y-[50px]">
-        {data?.map((el, index) => (
-          <UCCard
-            label={el.name}
-            srcImage={"/card-image.png"}
-            id={el.id}
-            key={index}
-          />
-        ))}
-        <Link to="/nova-uc" className="w-fit">
-          <Card className="w-80 h-57.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
-            <Plus className="stroke-[rgb(86,89,98)] h-[40px] w-[40px]" />
-          </Card>
-        </Link>
-      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center w-full h-40">
+          <LoaderCircle className="animate-spin size-16" />
+        </div>
+      ) : (
+        <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-x-[70px] gap-y-[50px]">
+          {data &&
+            (data.length === 0 && !isManager ? (
+              <div className="col-span-full flex flex-col items-center gap-4">
+                <span className="text-2xl text-gray-500">
+                  Nenhuma unidade curricular encontrada.
+                </span>
+              </div>
+            ) : (
+              data?.map((el, index) => (
+                <UCCard
+                  label={el.name}
+                  srcImage={"/card-image.png"}
+                  id={el.id}
+                  key={index}
+                />
+              ))
+            ))}
+          {isManager && !isLoading && (
+            <Link to="/nova-uc" className="w-fit">
+              <Card className="w-80 h-57.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
+                <Plus className="stroke-[rgb(86,89,98)] h-[40px] w-[40px]" />
+              </Card>
+            </Link>
+          )}
+        </div>
+      )}
     </div>
   );
 }

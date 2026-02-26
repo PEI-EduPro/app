@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
 
 interface TopicModalProps {
   isOpen: boolean;
@@ -15,7 +18,7 @@ export default function TopicModal({
   onClose,
   onCreate,
   onUpdate,
-  editingTopic
+  editingTopic,
 }: TopicModalProps) {
   const [topicName, setTopicName] = useState("");
 
@@ -49,43 +52,43 @@ export default function TopicModal({
             <h2 className="text-2xl font-semibold">
               {editingTopic ? "Editar Tópico" : "Novo Tópico"}
             </h2>
-            <button
+            <Button
+              variant="ghost"
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="cursor-pointer"
             >
-              <X size={24} />
-            </button>
+              <X className="!h-[25px] !w-[25px]" />
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Label htmlFor="topicName" className="mb-2">
                 Nome do Tópico
-              </label>
-              <input
-                type="text"
+              </Label>
+              <Input
                 value={topicName}
                 onChange={(e) => setTopicName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                 placeholder="Ex: Instruções de decisão, Recursividade, etc."
                 autoFocus
               />
             </div>
 
             <div className="flex gap-3 justify-end">
-              <button
-                type="button"
+              <Button
+                variant="destructive"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="cursor-pointer"
               >
                 Cancelar
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-[#2e2e2e] transition-colors"
+                className="cursor-pointer"
+                disabled={!topicName.trim()}
               >
                 {editingTopic ? "Guardar" : "Criar"}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
