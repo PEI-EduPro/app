@@ -16,6 +16,7 @@ class ExamConfig(SQLModel, table=True):
     
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+    
     exams: List["Exam"] = Relationship(back_populates="exam_config")
 
 # ExamConfig schemas

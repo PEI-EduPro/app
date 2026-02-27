@@ -10,8 +10,14 @@ class Exam(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     exam_config_id: int = Field(foreign_key="exam_config.id")
     exam_xml: Optional[str] = Field(default=None)
+    nmec: Optional[int] = Field(default=None)
+    grade: Optional[float] = Field(default=None)
+    answer_sheet: Optional[str] = Field(default=None)
+    capture_path: Optional[str] = Field(default=None)
     
     # Relationships
+    exam_warnings: List["ExamWarning"] = Relationship(back_populates="exam", sa_relationship_kwargs={"cascade": "all, delete-orphan"})
+
     exam_config: "ExamConfig" = Relationship(back_populates="exams")
 
 # Exam schemas
@@ -19,17 +25,29 @@ class ExamCreate(SQLModel):
     """Schema for creating a new exam"""
     exam_config_id: int
     exam_xml: Optional[str] = None
+    nmec: Optional[int] = None
+    grade: Optional[float] = None
+    answer_sheet: Optional[str] = None
+    capture_path: Optional[str] = None
 
 class ExamUpdate(SQLModel):
     """Schema for updating exam data"""
     exam_config_id: Optional[int] = None
     exam_xml: Optional[str] = None
+    nmec: Optional[int] = None
+    grade: Optional[float] = None
+    answer_sheet: Optional[str] = None
+    capture_path: Optional[str] = None
 
 class ExamRead(SQLModel):
     """Schema for reading exam data"""
     id: int
     exam_config_id: int
     exam_xml: Optional[str] = None
+    nmec: Optional[int] = None
+    grade: Optional[float] = None
+    answer_sheet: Optional[str] = None
+    capture_path: Optional[str] = None
 
 class ExamPublic(SQLModel):
     """Schema for public exam data (no answers exposed)"""
