@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import List
 import jwt
 
 from fastapi import Depends, HTTPException, status
@@ -61,6 +62,19 @@ def require_role(role_name: str):
         return user_info
     return role_check
 
+def require_one_of_roles(roles: List[str]):
+    """Dependency factory to require a specific realm role"""
+    async def one_role_check(user_info: User = Depends(get_current_user_info)):
+        if all(role not in user_info.realm_roles for role in roles):
+            logger.warning(f"User {user_info.username} lacks required role from: {roles}")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Requires role from {roles} role"
+            )
+        return user_info
+    return one_role_check
+
+
 def require_group(group_name: str):
     """Dependency factory to require a specific group membership"""
     async def group_check(user_info: User = Depends(get_current_user_info)):
@@ -78,6 +92,9 @@ def require_group(group_name: str):
 require_manager = require_role("manager")
 require_professor = require_role("professor")
 require_student = require_role("student")
+
+require_manager_or_regent = require_one_of_roles(["manager","regent"])
+
 
 def require_subject_regent(subject_id: str):
     group_name = f"/s{subject_id}/regent"

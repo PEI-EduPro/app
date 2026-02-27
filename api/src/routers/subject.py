@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.db import get_session
-from src.core.deps import require_manager, get_current_user_info
+from src.core.deps import require_manager, get_current_user_info,require_manager_or_regent
 from src.models.user import User 
 from src.models.subject import (
     SubjectCreateRequest, 
@@ -92,7 +92,7 @@ async def get_subject(subject_id: int, session: AsyncSession = Depends(get_sessi
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
 
-@router.put("/{subject_id}", response_model=SubjectRead, dependencies=[Depends(require_manager)])
+@router.put("/{subject_id}", response_model=SubjectRead, dependencies=[Depends(require_manager_or_regent)])
 async def update_subject(
     subject_id: int,
     subject_update: SubjectUpdate,
