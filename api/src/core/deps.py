@@ -91,6 +91,40 @@ def require_edit_question_bank(subject_id: str):
     group_name = f"/s{subject_id}/edit_question_bank"
     return require_group(group_name)
 
+def verify_permission(user_info: User, permission: str, allow_manager: bool = False) -> bool:
+    """
+    Verify if a user has a specific permission.
+    `permission` should be a group path like '/s1/regent', '/s1/add_students', or a role like 'manager'.
+    If `permission` is just a subject prefix like '/s1', it checks if the user is in ANY group for that subject.
+    If `allow_manager` is True, a user with the 'manager' realm role will always pass.
+    """
+    if allow_manager and "manager" in user_info.realm_roles:
+        return True
+        
+    if permission in user_info.realm_roles:
+        return True
+        
+    if permission in user_info.groups:
+        return True
+        
+    # Check if we are looking for ANY group in a subject (e.g., permission = "/s1")
+    if permission.startswith("/s") and len(permission.split("/")) == 2:
+        if any(g.startswith(permission + "/") for g in user_info.groups):
+            return True
+            
+    # Regent has all permissions for their subject
+    if permission.startswith("/s") and len(permission.split("/")) == 3:
+        subject_id_part = permission.split("/")[1] # e.g., s1
+        regent_group = f"/{subject_id_part}/regent"
+        if regent_group in user_info.groups:
+            return True
+            
+    logger.warning(f"User {user_info.username} denied access. Missing permission: {permission}")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Access denied."
+    )
+
 
 async def verify_regent_exists(regent_keycloak_id: str):
     """Dependency to check if the regent user exists in Keycloak before proceeding."""

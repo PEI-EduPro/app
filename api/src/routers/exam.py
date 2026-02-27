@@ -7,7 +7,7 @@ from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfigResponse
 from src.models.topic_config import TopicConfigDTO
-from src.core.deps import get_current_user_info
+from src.core.deps import get_current_user_info, verify_permission
 import logging
 import traceback
 
@@ -17,11 +17,13 @@ router = APIRouter()
 @router.get("/subject/{subject_id}/configs", response_model=List[ExamConfigResponse])
 async def get_subject_exam_configs(
     subject_id: int,
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
     Get all exam configurations for a subject.
     """
+    verify_permission(user_info, f"/s{subject_id}")
     configs = await exam.get_exam_configs_by_subject(session, subject_id)
     
     response = []
@@ -52,13 +54,18 @@ async def get_subject_exam_configs(
 @router.post("/generate")
 async def generate_exams(
     exam_specs: dict,
-    session: AsyncSession = Depends(get_session),
-    #current_user: User = Depends(get_current_user_info)
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
 ):
     """
     Generate exams based on specifications.
     Returns a ZIP file containing the generated exam PDFs.
     """
+    subject_id = exam_specs.get("subject_id")
+    if not subject_id:
+        raise HTTPException(status_code=400, detail="subject_id is required in exam_specs")
+        
+    verify_permission(user_info, f"/s{subject_id}/generate_exams")
     try:
         num_variations = exam_specs.get("num_variations", 1)
 

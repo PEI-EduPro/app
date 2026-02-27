@@ -4,10 +4,9 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.services import topic
 from src.services import question
 from src.core.db import get_session
-from src.core.deps import require_subject_regent, verify_regent_exists
+from src.core.deps import get_current_user_info, verify_permission
 from src.models.topic import Topic, TopicCreate, TopicPublic, TopicUpdate
 from src.models.user import User
-from src.core.deps import get_current_user_info
 import logging
 from sqlmodel import select
 from typing import List
@@ -16,24 +15,18 @@ import src.services.topic as topic_service
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-@router.post("/", response_model=TopicPublic)#, dependencies=[Depends(require_subject_regent)])
+@router.post("/", response_model=TopicPublic)
 async def create_topic(
-    topic_data: TopicCreate, # Receive the request body data
+    topic_data: TopicCreate,
     session: AsyncSession = Depends(get_session),
-    #current_user: User = Depends(get_current_user_info)
+    user_info: User = Depends(get_current_user_info)
 ):
     """
     Create a new topic in the database.
-    Requires the 'regent' role.
+    Requires the 'edit_topics' group permission.
     """
-    #logger.info(f"User '{current_user.user_id}' is attempting to create topic '{topic_data.name}'")
-
+    verify_permission(user_info, f"/s{topic_data.subject_id}/edit_topics")
     try:
-        # 1. Verify current_user is regent BEFORE creating anything in the database
-        # Call the verification function explicitly here, now that we have current_user
-        #regent_info = await verify_regent_exists(current_user.user_id)
-
-        # 2. Create the Topic in the local database
         db_topic = await topic.create_topic(session,topic_data)
 
         logger.info(f"Topic '{db_topic.name}' created in database with ID: {db_topic.id}")
@@ -57,38 +50,48 @@ async def create_topic(
             detail="An error occurred while creating the topic in the database."
         )
 
-@router.get("/", response_model=List[TopicPublic])
-async def get_subjects(session: AsyncSession = Depends(get_session)):
-    """Get all topics."""
-    return await topic_service.get_all_topics(session)
-
 @router.get("/{id}", response_model=TopicPublic)
 async def read_topic(
     id: int,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    user_info: User = Depends(get_current_user_info)
 ):
     """Get topic info from provided name"""
     result = await topic.get_topic_by_id(session,id)
     
     if not result:
         raise HTTPException(status_code=404, detail="Topic not found")
+        
+    verify_permission(user_info, f"/s{result.subject_id}")
     return TopicPublic.model_validate(result)
 
 @router.put("/{id}", response_model=TopicPublic)
 async def update_topic(
     id: int,
     topic_data: topic.TopicUpdate,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    user_info: User = Depends(get_current_user_info)
 ):
     """Update topic"""
+    existing_topic = await topic.get_topic_by_id(session, id)
+    if not existing_topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+        
+    verify_permission(user_info, f"/s{existing_topic.subject_id}/edit_topics")
     return await topic.update_topic(session, topic_data, id)
 
 @router.delete("/{id}")
 async def delete_topic(
     id: int,
-    session: AsyncSession = Depends(get_session)
+    session: AsyncSession = Depends(get_session),
+    user_info: User = Depends(get_current_user_info)
 ):
     """Delete topic"""
+    existing_topic = await topic.get_topic_by_id(session, id)
+    if not existing_topic:
+        raise HTTPException(status_code=404, detail="Topic not found")
+        
+    verify_permission(user_info, f"/s{existing_topic.subject_id}/edit_topics")
     if await topic.delete_topic(session, id):
         return {"message": "Topic deleted successfully"}
     raise HTTPException(status_code=404, detail="Topic not found")
