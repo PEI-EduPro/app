@@ -270,7 +270,7 @@ async def get_all_topics_by_subject(
     session: AsyncSession = Depends(get_session)
 ):
     """Get all subject topics by subject ID."""
-    verify_permission(user_info, [f"/s{subject_id}"])
+    verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     result = await subject_service.get_all_subject_topics(session, subject_id)
     if not result:
         raise HTTPException(status_code=404, detail="Topics not found")
@@ -284,7 +284,7 @@ async def get_all_by_subject(
     session: AsyncSession = Depends(get_session)
 ):
     """Get subject by ID."""
-    verify_permission(user_info, [f"/s{subject_id}"])
+    verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     result = await subject_service.get_topics_questions_and_options_by_subject_id(session, subject_id)
     if not result:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -302,5 +302,5 @@ async def get_subject_topics_list(
     session: AsyncSession = Depends(get_session)
 ):
     """Get all topics from a given subject_id (Simple List)"""
-    verify_permission(user_info, [f"/s{subject_id}"])
+    verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     return await subject_service.get_topics_from_subject(session, subject_id)

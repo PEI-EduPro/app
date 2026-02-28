@@ -79,9 +79,9 @@ Professors have **subject-specific access** based on group membership. They must
 | `/api/subjects/{id}/students` | GET | `/professors`, `/regent` | View enrolled students |
 | `/api/subjects/{id}/professors` | GET | `/professors`, `/regent` | View enrolled professors |
 | `/api/subjects/{id}/regent` | GET | Any subject group | View subject regent |
-| `/api/subjects/{id}/topics` | GET | Any subject group | Get topics |
-| `/api/subjects/{id}/topics-list` | GET | Any subject group | Get topics list |
-| `/api/subjects/{id}/all-questions` | GET | Any subject group | Get all questions |
+| `/api/subjects/{id}/topics` | GET | `/view_question_bank`, `/regent` | Get topics |
+| `/api/subjects/{id}/topics-list` | GET | `/view_question_bank`, `/regent` | Get topics list |
+| `/api/subjects/{id}/all-questions` | GET | `/view_question_bank`, `/regent` | Get all questions |
 | `/api/topics/` | POST | `/edit_topics`, `/regent` | Create topics |
 | `/api/topics/{id}` | PUT | `/edit_topics`, `/regent` | Update topics |
 | `/api/topics/{id}` | DELETE | `/edit_topics`, `/regent` | Delete topics |
@@ -195,9 +195,9 @@ Same as professors with **all permission groups** directly evaluated via `verify
 | `/api/subjects/{id}/professors` | POST | `manager`, `/s{id}/regent` | Add professor |
 | `/api/subjects/{id}/professors/{prof_id}` | PUT | `manager`, `/s{id}/regent` | Update professor permissions |
 | `/api/subjects/{id}/professors/{prof_id}` | DELETE | `manager`, `/s{id}/regent` | Remove professor |
-| `/api/subjects/{id}/topics` | GET | Subject group member (`/s{id}`) | Get topics with question counts |
-| `/api/subjects/{id}/topics-list` | GET | Subject group member (`/s{id}`) | Get topics list |
-| `/api/subjects/{id}/all-questions` | GET | Subject group member (`/s{id}`) | Get all questions and options |
+| `/api/subjects/{id}/topics` | GET | `/s{id}/view_question_bank`, `/s{id}/regent` | Get topics with question counts |
+| `/api/subjects/{id}/topics-list` | GET | `/s{id}/view_question_bank`, `/s{id}/regent` | Get topics list |
+| `/api/subjects/{id}/all-questions` | GET | `/s{id}/view_question_bank`, `/s{id}/regent` | Get all questions and options |
 
 ---
 
