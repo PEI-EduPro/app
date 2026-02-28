@@ -12,10 +12,7 @@ echo -e "${GREEN}Starting Test Suite Setup...${NC}"
 echo -e "${GREEN}1. Starting ISOLATED Docker Services (DB:5433 & Keycloak:8081)...${NC}"
 
 # Define environment variables for the test run to ensure isolation
-export POSTGRES_PORT=5433
-export KEYCLOAK_SERVER_URL="http://localhost:8081"
-# Ensure Keycloak admin uses the test port
-export KEYCLOAK_Admin_URL="http://localhost:8081" 
+export POSTGRES_PORT=5433 
 
 # Use a specific project name 'edupro-test' to namespace volumes and containers
 # This prevents conflict with 'edupro-dev' or 'edupro' project names.
@@ -59,11 +56,39 @@ cd api
 
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)
-PYTHONPATH=. uv run pytest tests/unit
+PYTHONPATH=. \
+POSTGRES_SERVER=localhost \
+POSTGRES_PORT=5432 \
+POSTGRES_USER=test \
+POSTGRES_PASSWORD=test \
+POSTGRES_DB=test \
+KEYCLOAK_SERVER_URL="http://localhost:8080" \
+KEYCLOAK_ISSUER_URL="http://localhost:8080" \
+KEYCLOAK_REALM=edupro \
+KEYCLOAK_CLIENT_ID=api-backend \
+KEYCLOAK_CLIENT_SECRET="test" \
+KEYCLOAK_ADMIN_USERNAME=admin \
+KEYCLOAK_ADMIN_PASSWORD=admin \
+uv run pytest tests/unit
 
 echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Run integration tests (connects to ISOLATED Docker services)
 # Pass env vars explicitly to ensure pytest picks them up
-PYTHONPATH=. POSTGRES_PORT=5433 KEYCLOAK_SERVER_URL="http://localhost:8081" KEYCLOAK_ISSUER_URL="http://localhost:8081" uv run pytest tests/integration
+
+#Se calhar passamos isto para um .env.test um dia 
+PYTHONPATH=. \
+POSTGRES_SERVER=localhost \
+POSTGRES_PORT=5433 \
+POSTGRES_USER=myuser \
+POSTGRES_PASSWORD=mypassword \
+POSTGRES_DB=mydatabase \
+KEYCLOAK_SERVER_URL="http://localhost:8081" \
+KEYCLOAK_ISSUER_URL="http://localhost:8081" \
+KEYCLOAK_REALM=edupro \
+KEYCLOAK_CLIENT_ID=api-backend \
+KEYCLOAK_CLIENT_SECRET="**********" \
+KEYCLOAK_ADMIN_USERNAME=admin \
+KEYCLOAK_ADMIN_PASSWORD=admin \
+uv run pytest tests/integration
 
 echo -e "${GREEN}All tests passed successfully!${NC}"

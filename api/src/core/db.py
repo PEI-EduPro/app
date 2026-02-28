@@ -7,7 +7,7 @@ from src.core.settings import settings
 # Create async engine
 engine = create_async_engine(
     str(settings.PGSQL_DATABASE_URI).replace("postgresql://", "postgresql+asyncpg://"),
-    echo=True,  # Set to False in production
+    echo=settings.DB_ECHO,
     future=True
 )
 
