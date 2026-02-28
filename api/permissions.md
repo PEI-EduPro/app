@@ -328,7 +328,7 @@ async def create_topic(
 | Create questions (own subject) | ❌ | ✅ | ⚠️ | ❌ |
 | Generate exams (own subject) | ❌ | ✅ | ⚠️ | ❌ |
 | View own subjects | ✅ | ✅ | ✅ | ✅ |
-| View questions | ❌ | ✅ | ✅ | ⚠️ |
+| View questions | ❌ | ✅ | ⚠️ | ❌ |
 
 **Legend:**
 - ✅ = Full access
