@@ -15,7 +15,7 @@ This document details the role-based access control (RBAC) system for the Educat
 
 | Role | Description | Scope |
 |------|-------------|-------|
-| `manager` | Platform administrators | Global - all subjects |
+| `manager` | Platform administrators | Global - all subjects, but only for administrative actions |
 | `professor` | Teaching staff | Subject-specific via groups |
 | `student` | Students | Subject-specific via groups |
 
@@ -25,7 +25,7 @@ This document details the role-based access control (RBAC) system for the Educat
 
 **Realm Role:** `manager`
 
-Managers have **full access** to all endpoints and all subjects. They bypass group-based restrictions.
+Managers have **administrative access** to the platform. They can manage subjects, users, enrollments, and roles. However, **they do not have implicit access to subject content** (topics, questions, exams).
 
 #### Endpoints Accessible by Managers
 
@@ -38,32 +38,14 @@ Managers have **full access** to all endpoints and all subjects. They bypass gro
 | `/api/users/debug/token-info` | GET | Debug token information |
 | `/api/subjects/` | POST | Create new subjects |
 | `/api/subjects/` | GET | List all subjects |
-| `/api/subjects/{id}` | GET | Get any subject |
 | `/api/subjects/{id}` | PUT | Update any subject |
 | `/api/subjects/{id}` | DELETE | Delete any subject |
 | `/api/subjects/{id}/students` | GET | View enrolled students |
 | `/api/subjects/{id}/professors` | GET | View enrolled professors |
-| `/api/subjects/{id}/regent` | GET | View subject regent |
 | `/api/subjects/{id}/students` | POST | Add students to subject |
 | `/api/subjects/{id}/professors` | POST | Add professor to subject |
 | `/api/subjects/{id}/professors/{prof_id}` | PUT | Update professor permissions |
 | `/api/subjects/{id}/professors/{prof_id}` | DELETE | Remove professor from subject |
-| `/api/subjects/{id}/topics` | GET | Get all topics with question counts |
-| `/api/subjects/{id}/topics-list` | GET | Get topics list |
-| `/api/subjects/{id}/all-questions` | GET | Get all questions |
-| `/api/topics/` | POST | Create topics |
-| `/api/topics/{id}` | PUT | Update topics |
-| `/api/topics/{id}` | DELETE | Delete topics |
-| `/api/questions/` | POST | Create questions |
-| `/api/questions/{id}` | GET | Get question |
-| `/api/questions/{id}` | PUT | Update question |
-| `/api/questions/{id}` | DELETE | Delete question |
-| `/api/questions/{id}/question-options` | GET | Get question options |
-| `/api/question-options/` | POST | Create question options |
-| `/api/question-options/{id}` | PUT | Update option |
-| `/api/question-options/{id}` | DELETE | Delete option |
-| `/api/exams/generate` | POST | Generate exams |
-| `/api/exams/subject/{id}/configs` | GET | Get exam configs |
 
 ---
 
@@ -97,25 +79,21 @@ Professors have **subject-specific access** based on group membership. They must
 | `/api/subjects/{id}/students` | GET | `/professors`, `/regent` | View enrolled students |
 | `/api/subjects/{id}/professors` | GET | `/professors`, `/regent` | View enrolled professors |
 | `/api/subjects/{id}/regent` | GET | Any subject group | View subject regent |
-| `/api/subjects/{id}/students` | POST | `/add_students`, Manager, Regent | Add students |
-| `/api/subjects/{id}/professors` | POST | Manager, Regent | Add professor |
-| `/api/subjects/{id}/professors/{prof_id}` | PUT | Manager, Regent | Update professor permissions |
-| `/api/subjects/{id}/professors/{prof_id}` | DELETE | Manager, Regent | Remove professor |
 | `/api/subjects/{id}/topics` | GET | Any subject group | Get topics |
 | `/api/subjects/{id}/topics-list` | GET | Any subject group | Get topics list |
 | `/api/subjects/{id}/all-questions` | GET | Any subject group | Get all questions |
-| `/api/topics/` | POST | `/edit_topics`, Regent | Create topics |
-| `/api/topics/{id}` | PUT | `/edit_topics`, Regent | Update topics |
-| `/api/topics/{id}` | DELETE | `/edit_topics`, Regent | Delete topics |
-| `/api/questions/` | POST | `/edit_questions`, Regent | Create questions |
+| `/api/topics/` | POST | `/edit_topics`, `/regent` | Create topics |
+| `/api/topics/{id}` | PUT | `/edit_topics`, `/regent` | Update topics |
+| `/api/topics/{id}` | DELETE | `/edit_topics`, `/regent` | Delete topics |
+| `/api/questions/` | POST | `/edit_questions`, `/regent` | Create questions |
 | `/api/questions/{id}` | GET | Any subject group | Get question |
-| `/api/questions/{id}` | PUT | `/edit_questions`, Regent | Update question |
-| `/api/questions/{id}` | DELETE | `/edit_questions`, Regent | Delete question |
+| `/api/questions/{id}` | PUT | `/edit_questions`, `/regent` | Update question |
+| `/api/questions/{id}` | DELETE | `/edit_questions`, `/regent` | Delete question |
 | `/api/questions/{id}/question-options` | GET | Any subject group | Get question options |
-| `/api/question-options/` | POST | `/edit_questions`, Regent | Create options |
-| `/api/question-options/{id}` | PUT | `/edit_questions`, Regent | Update option |
-| `/api/question-options/{id}` | DELETE | `/edit_questions`, Regent | Delete option |
-| `/api/exams/generate` | POST | `/generate_exams` | Generate exams |
+| `/api/question-options/` | POST | `/edit_questions`, `/regent` | Create options |
+| `/api/question-options/{id}` | PUT | `/edit_questions`, `/regent` | Update option |
+| `/api/question-options/{id}` | DELETE | `/edit_questions`, `/regent` | Delete option |
+| `/api/exams/generate` | POST | `/generate_exams`, `/regent` | Generate exams |
 | `/api/exams/subject/{id}/configs` | GET | Any subject group | Get exam configs |
 
 ---
@@ -143,7 +121,6 @@ Students have **read-only access** to subjects they are enrolled in.
 | `/api/subjects/{id}/topics` | GET | Get topics |
 | `/api/subjects/{id}/topics-list` | GET | Get topics list |
 | `/api/subjects/{id}/all-questions` | GET | View questions (if permitted) |
-| `/api/topics/` | GET | List all topics |
 | `/api/topics/{id}` | GET | Get topic details |
 | `/api/questions/{id}` | GET | Get question (view only) |
 | `/api/questions/{id}/question-options` | GET | View question options |
@@ -173,7 +150,7 @@ Regents have **full management** over their assigned subject:
 
 #### Endpoints Accessible by Regents
 
-Same as professors with **all permission groups** automatically granted for their subject.
+Same as professors with **all permission groups** directly evaluated via `verify_permission`.
 
 ---
 
@@ -208,19 +185,19 @@ Same as professors with **all permission groups** automatically granted for thei
 |----------|--------|---------------------|-------------|
 | `/api/subjects/` | POST | `manager` role | Create new subject |
 | `/api/subjects/` | GET | Authenticated | List accessible subjects |
-| `/api/subjects/{id}` | GET | Subject group member | Get subject by ID |
+| `/api/subjects/{id}` | GET | Subject group member (`/s{id}`) | Get subject by ID |
 | `/api/subjects/{id}` | PUT | `manager` role | Update subject |
 | `/api/subjects/{id}` | DELETE | `manager` role | Delete subject |
-| `/api/subjects/{id}/students` | GET | `manager`, `/regent`, `/professors` | View students |
-| `/api/subjects/{id}/professors` | GET | `manager`, `/regent`, `/professors` | View professors |
-| `/api/subjects/{id}/regent` | GET | Subject group member | View regent |
-| `/api/subjects/{id}/students` | POST | `manager`, `/regent`, `/add_students` | Add students |
-| `/api/subjects/{id}/professors` | POST | `manager`, `/regent` | Add professor |
-| `/api/subjects/{id}/professors/{prof_id}` | PUT | `manager`, `/regent` | Update professor permissions |
-| `/api/subjects/{id}/professors/{prof_id}` | DELETE | `manager`, `/regent` | Remove professor |
-| `/api/subjects/{id}/topics` | GET | Subject group member | Get topics with question counts |
-| `/api/subjects/{id}/topics-list` | GET | Subject group member | Get topics list |
-| `/api/subjects/{id}/all-questions` | GET | Subject group member | Get all questions and options |
+| `/api/subjects/{id}/students` | GET | `manager`, `/s{id}/professors`, `/s{id}/regent` | View students |
+| `/api/subjects/{id}/professors` | GET | `manager`, `/s{id}/professors`, `/s{id}/regent` | View professors |
+| `/api/subjects/{id}/regent` | GET | Subject group member (`/s{id}`) | View regent |
+| `/api/subjects/{id}/students` | POST | `manager`, `/s{id}/add_students`, `/s{id}/regent` | Add students |
+| `/api/subjects/{id}/professors` | POST | `manager`, `/s{id}/regent` | Add professor |
+| `/api/subjects/{id}/professors/{prof_id}` | PUT | `manager`, `/s{id}/regent` | Update professor permissions |
+| `/api/subjects/{id}/professors/{prof_id}` | DELETE | `manager`, `/s{id}/regent` | Remove professor |
+| `/api/subjects/{id}/topics` | GET | Subject group member (`/s{id}`) | Get topics with question counts |
+| `/api/subjects/{id}/topics-list` | GET | Subject group member (`/s{id}`) | Get topics list |
+| `/api/subjects/{id}/all-questions` | GET | Subject group member (`/s{id}`) | Get all questions and options |
 
 ---
 
@@ -228,11 +205,10 @@ Same as professors with **all permission groups** automatically granted for thei
 
 | Endpoint | Method | Required Permission | Description |
 |----------|--------|---------------------|-------------|
-| `/api/topics/` | POST | `/edit_topics`, Regent | Create topic |
-| `/api/topics/` | GET | Authenticated | List all topics |
-| `/api/topics/{id}` | GET | Authenticated | Get topic by ID |
-| `/api/topics/{id}` | PUT | `/edit_topics`, Regent | Update topic |
-| `/api/topics/{id}` | DELETE | `/edit_topics`, Regent | Delete topic |
+| `/api/topics/` | POST | `/s{id}/edit_topics`, `/s{id}/regent` | Create topic |
+| `/api/topics/{id}` | GET | Subject group member (`/s{id}`) | Get topic by ID |
+| `/api/topics/{id}` | PUT | `/s{id}/edit_topics`, `/s{id}/regent` | Update topic |
+| `/api/topics/{id}` | DELETE | `/s{id}/edit_topics`, `/s{id}/regent` | Delete topic |
 
 ---
 
@@ -240,12 +216,12 @@ Same as professors with **all permission groups** automatically granted for thei
 
 | Endpoint | Method | Required Permission | Description |
 |----------|--------|---------------------|-------------|
-| `/api/questions/` | POST | `/edit_questions`, Regent | Create questions |
-| `/api/questions/{subject_id}/XML` | POST | `/edit_questions`, Regent | Create questions from XML |
-| `/api/questions/{id}` | GET | Authenticated | Get question by ID |
-| `/api/questions/{id}` | PUT | `/edit_questions`, Regent | Update question |
-| `/api/questions/{id}` | DELETE | `/edit_questions`, Regent | Delete question |
-| `/api/questions/{id}/question-options` | GET | Authenticated | Get question options |
+| `/api/questions/` | POST | `/s{id}/edit_questions`, `/s{id}/regent` | Create questions |
+| `/api/questions/{subject_id}/XML` | POST | `/s{id}/edit_questions`, `/s{id}/regent` | Create questions from XML |
+| `/api/questions/{id}` | GET | Subject group member (`/s{id}`) | Get question by ID |
+| `/api/questions/{id}` | PUT | `/s{id}/edit_questions`, `/s{id}/regent` | Update question |
+| `/api/questions/{id}` | DELETE | `/s{id}/edit_questions`, `/s{id}/regent` | Delete question |
+| `/api/questions/{id}/question-options` | GET | Subject group member (`/s{id}`) | Get question options |
 
 ---
 
@@ -253,9 +229,9 @@ Same as professors with **all permission groups** automatically granted for thei
 
 | Endpoint | Method | Required Permission | Description |
 |----------|--------|---------------------|-------------|
-| `/api/question-options/` | POST | `/edit_questions`, Regent | Create question options |
-| `/api/question-options/{id}` | PUT | `/edit_questions`, Regent | Update option |
-| `/api/question-options/{id}` | DELETE | `/edit_questions`, Regent | Delete option |
+| `/api/question-options/` | POST | `/s{id}/edit_questions`, `/s{id}/regent` | Create question options |
+| `/api/question-options/{id}` | PUT | `/s{id}/edit_questions`, `/s{id}/regent` | Update option |
+| `/api/question-options/{id}` | DELETE | `/s{id}/edit_questions`, `/s{id}/regent` | Delete option |
 
 ---
 
@@ -263,8 +239,8 @@ Same as professors with **all permission groups** automatically granted for thei
 
 | Endpoint | Method | Required Permission | Description |
 |----------|--------|---------------------|-------------|
-| `/api/exams/generate` | POST | `/generate_exams` | Generate exam PDFs |
-| `/api/exams/subject/{id}/configs` | GET | Subject group member | Get exam configurations |
+| `/api/exams/generate` | POST | `/s{id}/generate_exams`, `/s{id}/regent` | Generate exam PDFs |
+| `/api/exams/subject/{id}/configs` | GET | Subject group member (`/s{id}`) | Get exam configurations |
 
 ---
 
@@ -288,45 +264,39 @@ s{subject_id}/                    # Base subject group
 
 ## Permission Check Implementation
 
-### Role-Based Check
-
-```python
-from src.core.deps import require_manager
-
-@router.post("/", dependencies=[Depends(require_manager)])
-async def create_subject():
-    # Only managers can access
-```
-
-### Group-Based Check
-
-```python
-from src.core.deps import require_group
-
-@router.post("/students")
-async def add_students(
-    user: User = Depends(require_group("/s123/add_students"))
-):
-    # Only users in s123/add_students group can access
-```
-
 ### Custom Permission Check
 
-```python
-from src.core.deps import get_current_user_info
+Permissions are enforced using the `verify_permission` function, checking if the authenticated user has one of a required list of permissions. 
 
-@router.get("/{subject_id}/students")
-async def get_students(
+```python
+from src.core.deps import get_current_user_info, verify_permission
+
+@router.post("/{subject_id}/students")
+async def add_students(
     subject_id: int,
     user_info: User = Depends(get_current_user_info)
 ):
-    roles = user_info.realm_roles
-    groups = user_info.groups
+    # Checking if the user possesses `/s{id}/add_students`, `/s{id}/regent`, or is a global `manager`
+    verify_permission(
+        user_info, 
+        [f"/s{subject_id}/add_students", f"/s{subject_id}/regent"], 
+        allow_manager=True
+    )
+```
 
-    if not ("manager" in roles or
-            any(g.endswith(f"s{subject_id}/regent") for g in groups) or
-            any(g.endswith(f"s{subject_id}/professors") for g in groups)):
-        raise HTTPException(status_code=403, detail="Access denied")
+```python
+from src.core.deps import get_current_user_info, verify_permission
+
+@router.post("/topics/")
+async def create_topic(
+    topic_data: TopicCreate,
+    user_info: User = Depends(get_current_user_info)
+):
+    # Only checks explicit groups (Managers are implicitly denied unless they belong to the groups)
+    verify_permission(
+        user_info, 
+        [f"/s{topic_data.subject_id}/edit_topics", f"/s{topic_data.subject_id}/regent"]
+    )
 ```
 
 ---
@@ -337,7 +307,7 @@ async def get_students(
 2. **Keycloak returns JWT** with roles and groups
 3. **Frontend includes token** in `Authorization: Bearer <token>` header
 4. **API verifies token** using `get_current_user_info` dependency
-5. **Permission checks** validate roles/groups before executing endpoint
+5. **Permission checks** validate roles/groups before executing endpoint using `verify_permission`
 
 ---
 
@@ -347,8 +317,6 @@ async def get_students(
 |-------------|---------|----------|
 | `401` | Not authenticated | `{"detail": "Not authenticated"}` |
 | `401` | Invalid token | `{"detail": "Invalid token"}` |
-| `403` | Missing role | `{"detail": "Requires {role} role"}` |
-| `403` | Missing group | `{"detail": "Requires membership in group {group}"}` |
 | `403` | Custom denial | `{"detail": "Access denied"}` |
 
 ---
@@ -362,46 +330,14 @@ async def get_students(
 | Create subjects | ✅ | ❌ | ❌ | ❌ |
 | Update/Delete any subject | ✅ | ❌ | ❌ | ❌ |
 | Create users | ✅ | ❌ | ❌ | ❌ |
-| Create topics (own subject) | ✅ | ✅ | ⚠️ | ❌ |
-| Create questions (own subject) | ✅ | ✅ | ⚠️ | ❌ |
-| Add students (own subject) | ✅ | ✅ | ⚠️ | ❌ |
-| Generate exams (own subject) | ✅ | ✅ | ⚠️ | ❌ |
+| Add students/professors to any subject | ✅ | ✅ | ⚠️ | ❌ |
+| Create topics (own subject) | ❌ | ✅ | ⚠️ | ❌ |
+| Create questions (own subject) | ❌ | ✅ | ⚠️ | ❌ |
+| Generate exams (own subject) | ❌ | ✅ | ⚠️ | ❌ |
 | View own subjects | ✅ | ✅ | ✅ | ✅ |
-| View questions | ✅ | ✅ | ✅ | ⚠️ |
+| View questions | ❌ | ✅ | ✅ | ⚠️ |
 
 **Legend:**
 - ✅ = Full access
 - ⚠️ = Requires specific permission group
 - ❌ = No access
-
----
-
-## Adding New Permissions
-
-To add a new permission group:
-
-1. **Add group to Keycloak** when creating subject:
-```python
-subgroups = [
-    "regent", "students", "professors",
-    "edit_topics", "edit_questions",
-    "view_question_bank", "add_students",
-    "generate_exams", "view_grades",
-    "auto_correct_exams",
-    "NEW_PERMISSION"  # Add here
-]
-```
-
-2. **Create dependency** in `src/core/deps.py`:
-```python
-def require_new_permission(subject_id: str):
-    group_name = f"/s{subject_id}/NEW_PERMISSION"
-    return require_group(group_name)
-```
-
-3. **Apply to endpoint**:
-```python
-@router.post("/new-feature", dependencies=[Depends(require_new_permission)])
-async def new_feature():
-    ...
-```
