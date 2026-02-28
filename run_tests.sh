@@ -6,6 +6,15 @@ GREEN='\033[0;32m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+START_DIR=$(pwd)
+
+function cleanup {
+    echo -e "${GREEN}Cleaning up test infrastructure...${NC}"
+    cd "$START_DIR"
+    docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v
+}
+trap cleanup EXIT
+
 echo -e "${GREEN}Starting Test Suite Setup...${NC}"
 
 # 1. Start Infrastructure
