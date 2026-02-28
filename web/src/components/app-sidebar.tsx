@@ -1,7 +1,6 @@
 import {
   Settings2,
   GraduationCap,
-  BookOpen,
   SquareUserRound,
   ChevronDown,
   LogOutIcon,
@@ -34,15 +33,6 @@ export function AppSidebar() {
   const { keycloak } = useKeycloak();
 
   const items = [
-    {
-      title: "Manuais",
-      icon: BookOpen,
-      subContent: [
-        { title: "Manual 1", url: "#" },
-        { title: "Manual 2", url: "#" },
-        { title: "Manual 3", url: "#" },
-      ],
-    },
     {
       title: "Unidades Curriculares",
       icon: GraduationCap,
