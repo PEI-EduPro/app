@@ -86,10 +86,10 @@ Professors have **subject-specific access** based on group membership. They must
 | `/api/topics/{id}` | PUT | `/edit_topics`, `/regent` | Update topics |
 | `/api/topics/{id}` | DELETE | `/edit_topics`, `/regent` | Delete topics |
 | `/api/questions/` | POST | `/edit_questions`, `/regent` | Create questions |
-| `/api/questions/{id}` | GET | Any subject group | Get question |
+| `/api/questions/{id}` | GET | `/view_question_bank`, `/regent` | Get question |
 | `/api/questions/{id}` | PUT | `/edit_questions`, `/regent` | Update question |
 | `/api/questions/{id}` | DELETE | `/edit_questions`, `/regent` | Delete question |
-| `/api/questions/{id}/question-options` | GET | Any subject group | Get question options |
+| `/api/questions/{id}/question-options` | GET | `/view_question_bank`, `/regent` | Get question options |
 | `/api/question-options/` | POST | `/edit_questions`, `/regent` | Create options |
 | `/api/question-options/{id}` | PUT | `/edit_questions`, `/regent` | Update option |
 | `/api/question-options/{id}` | DELETE | `/edit_questions`, `/regent` | Delete option |
@@ -218,10 +218,10 @@ Same as professors with **all permission groups** directly evaluated via `verify
 |----------|--------|---------------------|-------------|
 | `/api/questions/` | POST | `/s{id}/edit_questions`, `/s{id}/regent` | Create questions |
 | `/api/questions/{subject_id}/XML` | POST | `/s{id}/edit_questions`, `/s{id}/regent` | Create questions from XML |
-| `/api/questions/{id}` | GET | Subject group member (`/s{id}`) | Get question by ID |
+| `/api/questions/{id}` | GET | `/s{id}/view_question_bank`, `/s{id}/regent` | Get question by ID |
 | `/api/questions/{id}` | PUT | `/s{id}/edit_questions`, `/s{id}/regent` | Update question |
 | `/api/questions/{id}` | DELETE | `/s{id}/edit_questions`, `/s{id}/regent` | Delete question |
-| `/api/questions/{id}/question-options` | GET | Subject group member (`/s{id}`) | Get question options |
+| `/api/questions/{id}/question-options` | GET | `/s{id}/view_question_bank`, `/s{id}/regent` | Get question options |
 
 ---
 

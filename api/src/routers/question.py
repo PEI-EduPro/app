@@ -88,7 +88,7 @@ async def get_question(
         raise HTTPException(status_code=404, detail="Question not found")
         
     topic = await topic_service.get_topic_by_id(session, result.topic_id)
-    verify_permission(user_info, [f"/s{topic.subject_id}"])
+    verify_permission(user_info, [f"/s{topic.subject_id}/view_question_bank", f"/s{topic.subject_id}/regent"])
     
     return result
 
@@ -104,7 +104,7 @@ async def get_question_options(
         raise HTTPException(status_code=404, detail="Question not found")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
-    verify_permission(user_info, [f"/s{topic.subject_id}"])
+    verify_permission(user_info, [f"/s{topic.subject_id}/view_question_bank", f"/s{topic.subject_id}/regent"])
         
     result = await question.get_question_options_by_question_id(session,id)
 
