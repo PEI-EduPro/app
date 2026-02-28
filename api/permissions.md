@@ -40,6 +40,7 @@ Managers have **administrative access** to the platform. They can manage subject
 | `/api/subjects/` | GET | List all subjects |
 | `/api/subjects/{id}` | PUT | Update any subject |
 | `/api/subjects/{id}` | DELETE | Delete any subject |
+| `/api/subjects/{id}/regent` | GET | View subject regent |
 | `/api/subjects/{id}/students` | GET | View enrolled students |
 | `/api/subjects/{id}/professors` | GET | View enrolled professors |
 | `/api/subjects/{id}/students` | POST | Add students to subject |
@@ -183,7 +184,7 @@ Same as professors with **all permission groups** directly evaluated via `verify
 | `/api/subjects/{id}` | DELETE | `manager` role | Delete subject |
 | `/api/subjects/{id}/students` | GET | `manager`, `/s{id}/professors`, `/s{id}/regent` | View students |
 | `/api/subjects/{id}/professors` | GET | `manager`, `/s{id}/professors`, `/s{id}/regent` | View professors |
-| `/api/subjects/{id}/regent` | GET | Subject group member (`/s{id}`) | View regent |
+| `/api/subjects/{id}/regent` | GET | `manager`, Subject group member (`/s{id}`) | View regent |
 | `/api/subjects/{id}/students` | POST | `manager`, `/s{id}/add_students`, `/s{id}/regent` | Add students |
 | `/api/subjects/{id}/professors` | POST | `manager`, `/s{id}/regent` | Add professor |
 | `/api/subjects/{id}/professors/{prof_id}` | PUT | `manager`, `/s{id}/regent` | Update professor permissions |

@@ -160,7 +160,7 @@ async def get_subject_regent(
     session: AsyncSession = Depends(get_session)
 ):
     """View subject regent"""
-    verify_permission(user_info, [f"/s{subject_id}"])
+    verify_permission(user_info, [f"/s{subject_id}", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         regent = await subject_service.get_regent_service(session, subject_id)
         return StudentInfo(
