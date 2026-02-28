@@ -118,13 +118,6 @@ Students have **read-only access** to subjects they are enrolled in.
 | `/api/users/students` | GET | List all students |
 | `/api/subjects/` | GET | List enrolled subjects |
 | `/api/subjects/{id}` | GET | Get subject details |
-| `/api/subjects/{id}/topics` | GET | Get topics |
-| `/api/subjects/{id}/topics-list` | GET | Get topics list |
-| `/api/subjects/{id}/all-questions` | GET | View questions (if permitted) |
-| `/api/topics/{id}` | GET | Get topic details |
-| `/api/questions/{id}` | GET | Get question (view only) |
-| `/api/questions/{id}/question-options` | GET | View question options |
-| `/api/exams/subject/{id}/configs` | GET | View exam configs |
 
 ---
 
