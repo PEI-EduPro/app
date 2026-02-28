@@ -34,7 +34,7 @@ async def create_question_options(
         if not topic:
             raise ValueError(f"Topic {q.topic_id} not found.")
             
-        verify_permission(user_info, f"/s{topic.subject_id}/edit_questions")
+        verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
         
         db_options = await question_option.create_question_options(session, question_options_data)
         return db_options
@@ -59,7 +59,7 @@ async def update_question_option(
         
     q = await question_service.get_question_by_id(session, existing_option.question_id)
     topic = await topic_service.get_topic_by_id(session, q.topic_id)
-    verify_permission(user_info, f"/s{topic.subject_id}/edit_questions")
+    verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
     
     try:
         result = await question_option.update_question_option(session, id, option_data)
@@ -85,7 +85,7 @@ async def delete_question_option(
         
     q = await question_service.get_question_by_id(session, existing_option.question_id)
     topic = await topic_service.get_topic_by_id(session, q.topic_id)
-    verify_permission(user_info, f"/s{topic.subject_id}/edit_questions")
+    verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
     try:
         if await question_option.delete_question_option(session, id):
             return {"message": "Question option deleted successfully"}

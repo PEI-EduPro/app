@@ -115,7 +115,7 @@ async def get_subject_students(
     """
     View enrolled students.
     """
-    verify_permission(user_info, f"/s{subject_id}/professors", allow_manager=True)
+    verify_permission(user_info, [f"/s{subject_id}/professors", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         students = await subject_service.get_students_service(session, subject_id)
         # Map raw dictionary from Keycloak to Pydantic model
@@ -138,7 +138,7 @@ async def get_subject_professors(
     session: AsyncSession = Depends(get_session)
 ):
     """View professors in subject"""
-    verify_permission(user_info, f"/s{subject_id}/professors", allow_manager=True)
+    verify_permission(user_info, [f"/s{subject_id}/professors", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         professors = await subject_service.get_professors_service(session, subject_id)
         return [
@@ -160,7 +160,7 @@ async def get_subject_regent(
     session: AsyncSession = Depends(get_session)
 ):
     """View subject regent"""
-    verify_permission(user_info, f"/s{subject_id}")
+    verify_permission(user_info, [f"/s{subject_id}"])
     try:
         regent = await subject_service.get_regent_service(session, subject_id)
         return StudentInfo(
@@ -183,7 +183,7 @@ async def add_students_to_subject(
     """
     Add students to a subject.
     """
-    verify_permission(user_info, f"/s{subject_id}/add_students", allow_manager=True)
+    verify_permission(user_info, [f"/s{subject_id}/add_students", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.add_students_service(session, subject_id, request.student_keycloak_ids)
         return {"message": "Students added successfully"}
@@ -202,7 +202,7 @@ async def add_professor_to_subject(
     """
     Add a professor with specific permissions.
     """
-    verify_permission(user_info, f"/s{subject_id}/regent", allow_manager=True)
+    verify_permission(user_info, [f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.manage_professor_service(
             session, 
@@ -228,7 +228,7 @@ async def update_professor_permissions(
     """
     Update permissions for an existing professor.
     """
-    verify_permission(user_info, f"/s{subject_id}/regent", allow_manager=True)
+    verify_permission(user_info, [f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.manage_professor_service(
             session, 
@@ -253,7 +253,7 @@ async def remove_professor_from_subject(
     """
     Remove a professor from all subject groups.
     """
-    verify_permission(user_info, f"/s{subject_id}/regent", allow_manager=True)
+    verify_permission(user_info, [f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.remove_professor_service(session, subject_id, professor_id)
     except ValueError:
@@ -270,7 +270,7 @@ async def get_all_topics_by_subject(
     session: AsyncSession = Depends(get_session)
 ):
     """Get all subject topics by subject ID."""
-    verify_permission(user_info, f"/s{subject_id}")
+    verify_permission(user_info, [f"/s{subject_id}"])
     result = await subject_service.get_all_subject_topics(session, subject_id)
     if not result:
         raise HTTPException(status_code=404, detail="Topics not found")
@@ -284,7 +284,7 @@ async def get_all_by_subject(
     session: AsyncSession = Depends(get_session)
 ):
     """Get subject by ID."""
-    verify_permission(user_info, f"/s{subject_id}")
+    verify_permission(user_info, [f"/s{subject_id}"])
     result = await subject_service.get_topics_questions_and_options_by_subject_id(session, subject_id)
     if not result:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -302,5 +302,5 @@ async def get_subject_topics_list(
     session: AsyncSession = Depends(get_session)
 ):
     """Get all topics from a given subject_id (Simple List)"""
-    verify_permission(user_info, f"/s{subject_id}")
+    verify_permission(user_info, [f"/s{subject_id}"])
     return await subject_service.get_topics_from_subject(session, subject_id)

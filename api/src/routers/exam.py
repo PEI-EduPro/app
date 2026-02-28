@@ -23,7 +23,7 @@ async def get_subject_exam_configs(
     """
     Get all exam configurations for a subject.
     """
-    verify_permission(user_info, f"/s{subject_id}")
+    verify_permission(user_info, [f"/s{subject_id}"])
     configs = await exam.get_exam_configs_by_subject(session, subject_id)
     
     response = []
@@ -65,7 +65,7 @@ async def generate_exams(
     if not subject_id:
         raise HTTPException(status_code=400, detail="subject_id is required in exam_specs")
         
-    verify_permission(user_info, f"/s{subject_id}/generate_exams")
+    verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     try:
         num_variations = exam_specs.get("num_variations", 1)
 

@@ -35,7 +35,7 @@ async def create_question(
             raise ValueError(f"Topic {first_topic_id} not found.")
             
         # Verify permission
-        verify_permission(user_info, f"/s{topic.subject_id}/edit_questions")
+        verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
 
         # 2. Create the Question in the local database
         db_questions = await question.create_question(session,question_data)
@@ -69,7 +69,7 @@ async def create_question_from_XML(
     session: AsyncSession = Depends(get_session)
 ):
     "Create questions from XML file"
-    verify_permission(user_info, f"/s{subject_id}/edit_questions")
+    verify_permission(user_info, [f"/s{subject_id}/edit_questions", f"/s{subject_id}/regent"])
     result = await question.create_question_XML(session,subject_id,xml)
 
     return result
@@ -88,7 +88,7 @@ async def get_question(
         raise HTTPException(status_code=404, detail="Question not found")
         
     topic = await topic_service.get_topic_by_id(session, result.topic_id)
-    verify_permission(user_info, f"/s{topic.subject_id}")
+    verify_permission(user_info, [f"/s{topic.subject_id}"])
     
     return result
 
@@ -104,7 +104,7 @@ async def get_question_options(
         raise HTTPException(status_code=404, detail="Question not found")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
-    verify_permission(user_info, f"/s{topic.subject_id}")
+    verify_permission(user_info, [f"/s{topic.subject_id}"])
         
     result = await question.get_question_options_by_question_id(session,id)
 
@@ -127,7 +127,7 @@ async def put_question(
         raise HTTPException(status_code=404, detail="Question not found")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
-    verify_permission(user_info, f"/s{topic.subject_id}/edit_questions")
+    verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
     try:
         result = await question.update_question(session, question_data)
         return result
@@ -151,7 +151,7 @@ async def delete_question(
         raise HTTPException(status_code=404, detail="Question not found")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
-    verify_permission(user_info, f"/s{topic.subject_id}/edit_questions")
+    verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
     try:
         result = await question.delete_question(session, id)
         if result:

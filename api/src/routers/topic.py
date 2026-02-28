@@ -25,7 +25,7 @@ async def create_topic(
     Create a new topic in the database.
     Requires the 'edit_topics' group permission.
     """
-    verify_permission(user_info, f"/s{topic_data.subject_id}/edit_topics")
+    verify_permission(user_info, [f"/s{topic_data.subject_id}/edit_topics", f"/s{topic_data.subject_id}/regent"])
     try:
         db_topic = await topic.create_topic(session,topic_data)
 
@@ -62,7 +62,7 @@ async def read_topic(
     if not result:
         raise HTTPException(status_code=404, detail="Topic not found")
         
-    verify_permission(user_info, f"/s{result.subject_id}")
+    verify_permission(user_info, [f"/s{result.subject_id}"])
     return TopicPublic.model_validate(result)
 
 @router.put("/{id}", response_model=TopicPublic)
@@ -77,7 +77,7 @@ async def update_topic(
     if not existing_topic:
         raise HTTPException(status_code=404, detail="Topic not found")
         
-    verify_permission(user_info, f"/s{existing_topic.subject_id}/edit_topics")
+    verify_permission(user_info, [f"/s{existing_topic.subject_id}/edit_topics", f"/s{existing_topic.subject_id}/regent"])
     return await topic.update_topic(session, topic_data, id)
 
 @router.delete("/{id}")
@@ -91,7 +91,7 @@ async def delete_topic(
     if not existing_topic:
         raise HTTPException(status_code=404, detail="Topic not found")
         
-    verify_permission(user_info, f"/s{existing_topic.subject_id}/edit_topics")
+    verify_permission(user_info, [f"/s{existing_topic.subject_id}/edit_topics", f"/s{existing_topic.subject_id}/regent"])
     if await topic.delete_topic(session, id):
         return {"message": "Topic deleted successfully"}
     raise HTTPException(status_code=404, detail="Topic not found")
