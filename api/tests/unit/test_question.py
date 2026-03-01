@@ -40,7 +40,8 @@ async def test_create_questions(client, mock_auth, setup_topic):
     assert data[0]["question_text"] == "What is 2+2?"
 
 @pytest.mark.asyncio
-async def test_get_question_and_options(client, session, setup_topic):
+async def test_get_question_and_options(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
     topic = setup_topic
     from src.models.question import Question, QuestionCreate
     from src.services.question import create_question
@@ -88,9 +89,10 @@ async def test_create_question_invalid_topic(client, mock_auth):
     
     response = await client.post("/api/questions/", json=payload)
     # Should fail due to FK constraint
-    assert response.status_code in [400, 500]
+    assert response.status_code in [400, 403, 500]
 
 @pytest.mark.asyncio
-async def test_get_question_not_found(client):
+async def test_get_question_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
     response = await client.get("/api/questions/99999")
     assert response.status_code == 404

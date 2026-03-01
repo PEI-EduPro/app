@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.db import get_session
-from src.core.deps import require_manager, get_current_user_info
+from src.core.deps import require_manager, get_current_user_info, verify_permission
 from src.models.user import User 
 from src.models.subject import (
     SubjectCreateRequest, 
@@ -21,26 +21,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
-
-# --- Helpers ---
-async def verify_manager_or_regent(subject_id: int, user_info: User):
-    """
-    Helper to enforce Manager or Regent access.
-    Uses dot notation for the Pydantic User object.
-    """
-    username = user_info.username
-    roles = user_info.realm_roles
-    groups = user_info.groups
-    
-    is_manager = "manager" in roles
-    is_regent = any(g.endswith(f"s{subject_id}/regent") for g in groups)
-    
-    if not (is_manager or is_regent):
-         logger.warning(f"User {username} denied access (Not Manager/Regent)")
-         raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only Managers or the Subject Regent can perform this action."
-        )
 
 # --- Endpoints ---
 
@@ -135,14 +115,7 @@ async def get_subject_students(
     """
     View enrolled students.
     """
-    # Permission Check
-    roles = user_info.realm_roles
-    groups = user_info.groups
-    
-    if not ("manager" in roles or 
-            any(g.endswith(f"s{subject_id}/regent") for g in groups) or 
-            any(g.endswith(f"s{subject_id}/professors") for g in groups)):
-        raise HTTPException(status_code=403, detail="Access denied")
+    verify_permission(user_info, [f"/s{subject_id}/professors", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         students = await subject_service.get_students_service(session, subject_id)
         # Map raw dictionary from Keycloak to Pydantic model
@@ -165,13 +138,7 @@ async def get_subject_professors(
     session: AsyncSession = Depends(get_session)
 ):
     """View professors in subject"""
-    roles = user_info.realm_roles
-    groups = user_info.groups
-    
-    if not ("manager" in roles or 
-            any(g.endswith(f"s{subject_id}/regent") for g in groups) or 
-            any(g.endswith(f"s{subject_id}/professors") for g in groups)):
-        raise HTTPException(status_code=403, detail="Access denied")
+    verify_permission(user_info, [f"/s{subject_id}/professors", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         professors = await subject_service.get_professors_service(session, subject_id)
         return [
@@ -193,6 +160,7 @@ async def get_subject_regent(
     session: AsyncSession = Depends(get_session)
 ):
     """View subject regent"""
+    verify_permission(user_info, [f"/s{subject_id}", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         regent = await subject_service.get_regent_service(session, subject_id)
         return StudentInfo(
@@ -215,14 +183,7 @@ async def add_students_to_subject(
     """
     Add students to a subject.
     """
-    # Permission Check
-    roles = user_info.realm_roles
-    groups = user_info.groups
-    
-    if not ("manager" in roles or 
-            any(g.endswith(f"s{subject_id}/regent") for g in groups) or 
-            any(g.endswith(f"s{subject_id}/add_students") for g in groups)):
-        raise HTTPException(status_code=403, detail="Access denied")
+    verify_permission(user_info, [f"/s{subject_id}/add_students", f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.add_students_service(session, subject_id, request.student_keycloak_ids)
         return {"message": "Students added successfully"}
@@ -241,7 +202,7 @@ async def add_professor_to_subject(
     """
     Add a professor with specific permissions.
     """
-    await verify_manager_or_regent(subject_id, user_info)
+    verify_permission(user_info, [f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.manage_professor_service(
             session, 
@@ -267,7 +228,7 @@ async def update_professor_permissions(
     """
     Update permissions for an existing professor.
     """
-    await verify_manager_or_regent(subject_id, user_info)
+    verify_permission(user_info, [f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.manage_professor_service(
             session, 
@@ -292,7 +253,7 @@ async def remove_professor_from_subject(
     """
     Remove a professor from all subject groups.
     """
-    await verify_manager_or_regent(subject_id, user_info)
+    verify_permission(user_info, [f"/s{subject_id}/regent"], allow_manager=True)
     try:
         await subject_service.remove_professor_service(session, subject_id, professor_id)
     except ValueError:
@@ -303,8 +264,13 @@ async def remove_professor_from_subject(
 # --- Existing Endpoints (Kept from current version) ---
 
 @router.get("/{subject_id}/topics", response_model=List[Tuple[TopicPublic, int]])
-async def get_all_topics_by_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+async def get_all_topics_by_subject(
+    subject_id: int, 
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
     """Get all subject topics by subject ID."""
+    verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     result = await subject_service.get_all_subject_topics(session, subject_id)
     if not result:
         raise HTTPException(status_code=404, detail="Topics not found")
@@ -312,8 +278,13 @@ async def get_all_topics_by_subject(subject_id: int, session: AsyncSession = Dep
 
 
 @router.get("/{subject_id}/all-questions", response_model=dict)
-async def get_all_by_subject(subject_id: int, session: AsyncSession = Depends(get_session)):
+async def get_all_by_subject(
+    subject_id: int, 
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
     """Get subject by ID."""
+    verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     result = await subject_service.get_topics_questions_and_options_by_subject_id(session, subject_id)
     if not result:
         raise HTTPException(status_code=404, detail="Subject not found")
@@ -325,6 +296,11 @@ async def get_all_by_subject(subject_id: int, session: AsyncSession = Depends(ge
 # The original file had both. I'll keep the one that matches the signature found in the previous read.
 
 @router.get("/{subject_id}/topics-list", response_model=List[TopicPublic])
-async def get_subject_topics_list(subject_id: int, session: AsyncSession = Depends(get_session)):
+async def get_subject_topics_list(
+    subject_id: int, 
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
     """Get all topics from a given subject_id (Simple List)"""
+    verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     return await subject_service.get_topics_from_subject(session, subject_id)

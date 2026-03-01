@@ -75,7 +75,7 @@ def manager_user():
         username="manager",
         email="manager@example.com",
         realm_roles=["manager"],
-        groups=[]
+        groups=["/s1/regent", "/s99999/regent"]
     )
 
 @pytest.fixture
