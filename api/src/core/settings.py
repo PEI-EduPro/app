@@ -4,25 +4,27 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Database
-    POSTGRES_SERVER: str = Field(default="localhost")
-    POSTGRES_PORT: int = Field(default=5432)
-    POSTGRES_USER: str = Field(default="myuser")
-    POSTGRES_PASSWORD: str = Field(default="mypassword")
-    POSTGRES_DB: str = Field(default="mydatabase")
+    POSTGRES_SERVER: str
+    POSTGRES_PORT: int
+    POSTGRES_USER: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_DB: str
     
     # Keycloak
-    KEYCLOAK_SERVER_URL: str = Field(default="http://keycloak:8080")
-    KEYCLOAK_ISSUER_URL: str = Field(default="http://localhost:8080")
-
-    KEYCLOAK_REALM: str = Field(default="edupro")
-    KEYCLOAK_CLIENT_ID: str = Field(default="api-backend") # this is not used
-    KEYCLOAK_CLIENT_SECRET: str = Field(default="**********") # this is not used
-    KEYCLOAK_PUBLIC_KEY: str = Field(default="")
-    # Note: These are for the initial admin-cli authentication method.
-    # The preferred method is service account as described below.
-    KEYCLOAK_ADMIN_USERNAME: str = Field(default="admin") # Default admin username
-    KEYCLOAK_ADMIN_PASSWORD: str = Field(default="admin") # Default admin password
-
+    KEYCLOAK_SERVER_URL: str
+    KEYCLOAK_ISSUER_URL: str
+    KEYCLOAK_REALM: str
+    KEYCLOAK_CLIENT_ID: str
+    KEYCLOAK_CLIENT_SECRET: str
+    KEYCLOAK_ADMIN_USERNAME: str
+    KEYCLOAK_ADMIN_PASSWORD: str
+    
+    # Logging
+    LOG_LEVEL: str = "INFO"
+    SQLALCHEMY_LOG_LEVEL: str = "WARNING"
+    UVICORN_LOG_LEVEL: str = "INFO"
+    DB_ECHO: bool = False
+    
     @property
     def PGSQL_DATABASE_URI(self) -> str:
         return f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}@{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
