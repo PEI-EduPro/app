@@ -1,0 +1,19 @@
+name: Test Dev Runner
+
+on:
+  push:
+    branches:
+      - test/runner-test
+  workflow_dispatch:
+
+jobs:
+  app:
+    runs-on: [self-hosted, dev]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run docker compose
+        working-directory: deployment
+        run: docker compose up -d --build
