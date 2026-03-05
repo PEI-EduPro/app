@@ -116,8 +116,8 @@ async def create_waiting_room(
     """
     # Fetch ExamConfig to get subject_id
     stmt = select(ExamConfig).where(ExamConfig.id == request.exam_config_id)
-    result = await session.execute(stmt)
-    exam_config = result.scalar_one_or_none()
+    result = await session.exec(stmt)
+    exam_config = result.first()
 
     if not exam_config:
         raise HTTPException(
@@ -165,6 +165,10 @@ async def store_student_list(
     """
     Store information in csv file as a dict of nmec: student_name
     """
+    group_name = exam.get_subject_id_by_exam_config_id(exam_config_id,session)
+
+    verify_permission(user_info, [f"/s{group_name}/regent"])
+
     if file.content_type not in ("text/csv", "text/plain", "application/octet-stream"):
         raise HTTPException(status_code=400, detail="Only CSV files are accepted.")
     
@@ -195,3 +199,16 @@ async def store_student_list(
     await exam.store_student_list(session, exam_config_id, nmec_name_list)
     
     return {"message": "Student list stored successfully."}
+
+@router.get("exam/{exam_config_id}/student_list",response_model=ExamConfigResponse)
+async def retrieve_student_list(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    #what is the group for the vigilantes in the waiting room?
+    group_name = exam.get_subject_id_by_exam_config_id(exam_config_id,session)
+
+    verify_permission(user_info, [f"/s{group_name}/regent"])
+
+    return 

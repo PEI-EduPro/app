@@ -543,3 +543,29 @@ async def store_student_list(
     exam_config.nmec_name_list = nmec_name_list
     session.add(exam_config)
     await session.commit()
+
+async def get_subject_id_by_exam_config_id(
+    exam_config_id:int,
+    session: AsyncSession
+):
+    """Get subject's id by exam config id"""
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    return exam_config.subject_id
+
+async def get_student_list(
+    session: AsyncSession,
+    exam_config_id: int
+):
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    return exam_config.nmec_name_list
+
