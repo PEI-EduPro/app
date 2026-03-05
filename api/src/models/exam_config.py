@@ -47,4 +47,4 @@ class ExamConfigResponse(SQLModel):
     fraction: int
     #creator_keycloak_id: str
     topic_configs: List[TopicConfigDTO]
-    nmec_list: Optional[str]
+    nmec_name_list: Optional[str]

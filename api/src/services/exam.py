@@ -514,6 +514,7 @@ async def get_exam_configs_by_subject(
     result = await session.exec(statement)
     return list(result.all())
 
+
 async def get_exam_config_by_id(
     session: AsyncSession,
     exam_config_id: int
@@ -524,6 +525,7 @@ async def get_exam_config_by_id(
     statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
     result = await session.exec(statement)
     return result.first()
+
 
 async def store_student_list(
     session: AsyncSession,
@@ -544,6 +546,7 @@ async def store_student_list(
     session.add(exam_config)
     await session.commit()
 
+
 async def get_subject_id_by_exam_config_id(
     exam_config_id:int,
     session: AsyncSession
@@ -557,6 +560,7 @@ async def get_subject_id_by_exam_config_id(
     
     return exam_config.subject_id
 
+
 async def get_student_list(
     session: AsyncSession,
     exam_config_id: int
@@ -568,4 +572,16 @@ async def get_student_list(
         raise ValueError("Exam configuration not found.")
     
     return exam_config.nmec_name_list
+
+async def get_exams_by_config_id(
+    session: AsyncSession,
+    exam_config_id: int
+):
+    statement = select(Exam).where(Exam.exam_config_id == exam_config_id)
+    result = await session.exec(statement)
+    
+    if not result:
+        raise ValueError("Exam configuration not found.")
+    
+    return result
 
