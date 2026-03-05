@@ -507,13 +507,13 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/edupro/account/",
+      "baseUrl": "/keycloak/edupro/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/edupro/account/*"
+        "/keycloak/edupro/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -551,13 +551,13 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/edupro/account/",
+      "baseUrl": "/keycloak/edupro/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/realms/edupro/account/*"
+        "/keycloak/edupro/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -691,11 +691,13 @@
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
         "http://localhost:5173/*",
-        "http://localhost/*"
+        "http://localhost/*",
+        "https://mednat.ieeta.pt:9042/*"
       ],
       "webOrigins": [
         "http://localhost:5173",
-        "http://localhost"
+        "http://localhost",
+        "https://mednat.ieeta.pt:9042"
       ],
       "notBefore": 0,
       "bearerOnly": false,
