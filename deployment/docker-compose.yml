@@ -42,8 +42,6 @@ services:
       KC_HTTP_ENABLED: "true"
       KC_HOSTNAME_STRICT_HTTPS: "false"
       KC_PROXY: edge
-    ports:
-      - "${KEYCLOAK_PORT}:8080"
     command: start
     depends_on:
       keycloak-db:
