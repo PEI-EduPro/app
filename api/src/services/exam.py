@@ -528,7 +528,7 @@ async def get_exam_config_by_id(
 async def store_student_list(
     session: AsyncSession,
     exam_config_id: int,
-    nmec_dict: Dict[str, str]
+    nmec_name_list: str
 ):
     """
     Store the student list (nmec and names) for a given exam configuration.
@@ -540,6 +540,6 @@ async def store_student_list(
     if not exam_config:
         raise ValueError("Exam configuration not found.")
     
-    exam_config.nmec_list = nmec_dict
+    exam_config.nmec_name_list = nmec_name_list
     session.add(exam_config)
     await session.commit()

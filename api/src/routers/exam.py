@@ -1,6 +1,7 @@
 # src/routers/exam.py
 import csv
 import io
+import json
 from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -181,6 +182,8 @@ async def store_student_list(
         name = row.get("name")
         if nmec and name:
             nmec_dict[nmec] = name
+            
+    nmec_name_list = json.dumps(nmec_dict) #to unmarshall use json.loads(nmec_name_list)
     
     # Always release the file buffer when done
     await file.close()
@@ -189,6 +192,6 @@ async def store_student_list(
     if not exam_config:
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
     
-    await exam.store_student_list(session, exam_config_id, nmec_dict)
+    await exam.store_student_list(session, exam_config_id, nmec_name_list)
     
     return {"message": "Student list stored successfully."}
