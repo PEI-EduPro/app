@@ -513,3 +513,33 @@ async def get_exam_configs_by_subject(
     )
     result = await session.exec(statement)
     return list(result.all())
+
+async def get_exam_config_by_id(
+    session: AsyncSession,
+    exam_config_id: int
+) -> ExamConfig | None:
+    """
+    Get a specific exam configuration by ID.
+    """
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    return result.first()
+
+async def store_student_list(
+    session: AsyncSession,
+    exam_config_id: int,
+    nmec_dict: Dict[str, str]
+):
+    """
+    Store the student list (nmec and names) for a given exam configuration.
+     This will be used to associate generated exams with students.
+     """
+    # This function would typically update the ExamConfig with the provided nmec_dict
+    # For example, you could add a new column to ExamConfig to store this information as JSON
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    exam_config.nmec_list = nmec_dict
+    session.add(exam_config)
+    await session.commit()

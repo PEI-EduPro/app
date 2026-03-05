@@ -1,6 +1,8 @@
 # src/routers/exam.py
+import csv
+import io
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.services import exam
@@ -151,3 +153,42 @@ async def create_waiting_room(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create waiting room: {str(e)}"
         )
+    
+@router.post("exam/{exam_config_id}/student_list")
+async def store_student_list(
+    exam_config_id: int,
+    file: UploadFile = File(...),
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Store information in csv file as a dict of nmec: student_name
+    """
+    if file.content_type not in ("text/csv", "text/plain", "application/octet-stream"):
+        raise HTTPException(status_code=400, detail="Only CSV files are accepted.")
+    
+    # Read file contents asynchronously
+    contents = await file.read()
+    
+    # Decode bytes and wrap in StringIO for the csv reader
+    csv_text = contents.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(csv_text))
+    
+    nmec_dict = {}
+
+    for row in reader:
+        nmec = row.get("nmec")
+        name = row.get("name")
+        if nmec and name:
+            nmec_dict[nmec] = name
+    
+    # Always release the file buffer when done
+    await file.close()
+
+    exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+    
+    await exam.store_student_list(session, exam_config_id, nmec_dict)
+    
+    return {"message": "Student list stored successfully."}
