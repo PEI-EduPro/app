@@ -49,6 +49,3 @@ class ExamPublic(SQLModel):
     nmec: Optional[int] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
-
-    
-
