@@ -46,6 +46,7 @@ class ExamPublic(SQLModel):
     """Schema for public exam data (no answers exposed)"""
     id: int
     exam_config_id: int
+    nmec: Optional[int] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
 
