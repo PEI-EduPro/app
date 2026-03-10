@@ -35,10 +35,16 @@ const normalizeString = (str: string) => {
     .toLowerCase();
 };
 
-const accentInsensitiveFilter = (row: any, columnId: string, filterValue: string) => {
+const accentInsensitiveFilter = (
+  row: any,
+  columnId: string,
+  filterValue: string,
+) => {
   const cellValue = row.getValue(columnId);
   if (!cellValue) return false;
-  return normalizeString(String(cellValue)).includes(normalizeString(filterValue));
+  return normalizeString(String(cellValue)).includes(
+    normalizeString(filterValue),
+  );
 };
 
 interface CustomTableProps {
@@ -111,13 +117,13 @@ export function CustomTable(props: CustomTableProps) {
                 acc[el.id] = true;
                 return acc;
               },
-              {} as Record<string, boolean>
-            )
+              {} as Record<string, boolean>,
+            ),
           )
         : updater;
 
     const selectedIds = Object.keys(newSelection).filter(
-      (key) => newSelection[key]
+      (key) => newSelection[key],
     );
     const selectedRows = data.filter((row) => selectedIds.includes(row.id));
 
@@ -141,7 +147,7 @@ export function CustomTable(props: CustomTableProps) {
           acc[el.id] = true;
           return acc;
         },
-        {} as Record<string, boolean>
+        {} as Record<string, boolean>,
       ),
     },
     initialState: {
@@ -176,7 +182,7 @@ export function CustomTable(props: CustomTableProps) {
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   );
@@ -195,7 +201,7 @@ export function CustomTable(props: CustomTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}

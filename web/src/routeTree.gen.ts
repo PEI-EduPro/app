@@ -14,6 +14,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
 import { Route as LayoutNovoExameRouteImport } from './routes/_layout/novo-exame'
 import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
+import { Route as LayoutMobile_scan_testeRouteImport } from './routes/_layout/mobile_scan_teste'
 import { Route as LayoutExamesUcRouteImport } from './routes/_layout/exames-uc'
 import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
 import { Route as LayoutBancoQuestoesRouteImport } from './routes/_layout/banco-questoes'
@@ -43,6 +44,11 @@ const LayoutNovaUcRoute = LayoutNovaUcRouteImport.update({
   path: '/nova-uc',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutMobile_scan_testeRoute = LayoutMobile_scan_testeRouteImport.update({
+  id: '/mobile_scan_teste',
+  path: '/mobile_scan_teste',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutExamesUcRoute = LayoutExamesUcRouteImport.update({
   id: '/exames-uc',
   path: '/exames-uc',
@@ -64,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/exames-uc': typeof LayoutExamesUcRoute
+  '/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/novo-exame': typeof LayoutNovoExameRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -73,6 +80,7 @@ export interface FileRoutesByTo {
   '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/exames-uc': typeof LayoutExamesUcRoute
+  '/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
   '/nova-uc': typeof LayoutNovaUcRoute
   '/novo-exame': typeof LayoutNovoExameRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -84,6 +92,7 @@ export interface FileRoutesById {
   '/_layout/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
   '/_layout/exames-uc': typeof LayoutExamesUcRoute
+  '/_layout/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
   '/_layout/nova-uc': typeof LayoutNovaUcRoute
   '/_layout/novo-exame': typeof LayoutNovoExameRoute
   '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -95,6 +104,7 @@ export interface FileRouteTypes {
     | '/banco-questoes'
     | '/detalhes-uc'
     | '/exames-uc'
+    | '/mobile_scan_teste'
     | '/nova-uc'
     | '/novo-exame'
     | '/unidades-curriculares'
@@ -104,6 +114,7 @@ export interface FileRouteTypes {
     | '/banco-questoes'
     | '/detalhes-uc'
     | '/exames-uc'
+    | '/mobile_scan_teste'
     | '/nova-uc'
     | '/novo-exame'
     | '/unidades-curriculares'
@@ -114,6 +125,7 @@ export interface FileRouteTypes {
     | '/_layout/banco-questoes'
     | '/_layout/detalhes-uc'
     | '/_layout/exames-uc'
+    | '/_layout/mobile_scan_teste'
     | '/_layout/nova-uc'
     | '/_layout/novo-exame'
     | '/_layout/unidades-curriculares'
@@ -129,7 +141,7 @@ declare module '@tanstack/react-router' {
     '/_layout': {
       id: '/_layout'
       path: ''
-      fullPath: ''
+      fullPath: '/'
       preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
@@ -161,6 +173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutNovaUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/mobile_scan_teste': {
+      id: '/_layout/mobile_scan_teste'
+      path: '/mobile_scan_teste'
+      fullPath: '/mobile_scan_teste'
+      preLoaderRoute: typeof LayoutMobile_scan_testeRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/exames-uc': {
       id: '/_layout/exames-uc'
       path: '/exames-uc'
@@ -189,6 +208,7 @@ interface LayoutRouteChildren {
   LayoutBancoQuestoesRoute: typeof LayoutBancoQuestoesRoute
   LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
   LayoutExamesUcRoute: typeof LayoutExamesUcRoute
+  LayoutMobile_scan_testeRoute: typeof LayoutMobile_scan_testeRoute
   LayoutNovaUcRoute: typeof LayoutNovaUcRoute
   LayoutNovoExameRoute: typeof LayoutNovoExameRoute
   LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
@@ -198,6 +218,7 @@ const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBancoQuestoesRoute: LayoutBancoQuestoesRoute,
   LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
   LayoutExamesUcRoute: LayoutExamesUcRoute,
+  LayoutMobile_scan_testeRoute: LayoutMobile_scan_testeRoute,
   LayoutNovaUcRoute: LayoutNovaUcRoute,
   LayoutNovoExameRoute: LayoutNovoExameRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,

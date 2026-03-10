@@ -1,6 +1,7 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
 import { useKeycloak } from "@/hooks/use-keycloak";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useGetUc } from "@/hooks/use-ucs";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircle, Plus } from "lucide-react";
@@ -15,11 +16,30 @@ interface UCCArdProps {
   id: number;
 }
 function UCCard({ label, srcImage, id }: UCCArdProps) {
+  const isMobile = useIsMobile();
+
   return (
-    <Link to={`/detalhes-uc`} search={{ ucId: id }} className="w-fit">
-      <Card className="w-80 h-57.5 py-0 overflow-hidden gap-2.5 hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
-        <img src={srcImage || "/card-image.png"} />
-        <span className="px-1.75 h-auto line-clamp-2 overflow-hidden text-ellipsis">
+    <Link
+      to={isMobile ? `/mobile_scan_teste` : `/detalhes-uc`}
+      search={{ ucId: id }}
+      className="w-fit"
+    >
+      <Card className="w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)] active:shadow-[inset_2px_2px_4px_0px_rgba(174,174,174,0.35)] transition-shadow duration-200">
+        <img src={srcImage || "/card-image.png"} className="hidden md:block" />
+
+        <div className="flex md:hidden items-center gap-3">
+          <div className="w-12 h-12 rounded-bl-lg rounded-tl-lg overflow-hidden bg-muted">
+            <img
+              src={srcImage || "/card-image.png"}
+              className="w-full h-full object-cover"
+            />
+          </div>
+          <span className="text-sm font-medium leading-snug line-clamp-2 text-foreground">
+            {label}
+          </span>
+        </div>
+
+        <span className="hidden md:block px-1.75 h-auto line-clamp-2 overflow-hidden text-ellipsis">
           {label}
         </span>
       </Card>
@@ -34,11 +54,12 @@ function UCS() {
     (keycloak.tokenParsed?.realm_access?.roles || []).find(
       (e) => e == "manager",
     ) != undefined;
+  const isMobile = useIsMobile();
 
   return (
     <div className="py-3.5 px-6 w-full">
       <AppBreadcrumb page="Unidades Curriculares" />
-      <div className="font-rubik flex justify-center text-5xl mb-35">
+      <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-35">
         Unidades Curriculares
       </div>
       {isLoading ? (
@@ -46,7 +67,7 @@ function UCS() {
           <LoaderCircle className="animate-spin size-16" />
         </div>
       ) : (
-        <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-x-[70px] gap-y-[50px]">
+        <div className="md:px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
           {data &&
             (data.length === 0 && !isManager ? (
               <div className="col-span-full flex flex-col items-center gap-4">
@@ -64,10 +85,10 @@ function UCS() {
                 />
               ))
             ))}
-          {isManager && !isLoading && (
+          {isManager && !isLoading && !isMobile && (
             <Link to="/nova-uc" className="w-fit">
               <Card className="w-80 h-57.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
-                <Plus className="stroke-[rgb(86,89,98)] h-[40px] w-[40px]" />
+                <Plus className="stroke-[rgb(86,89,98)] h-10 w-10" />
               </Card>
             </Link>
           )}

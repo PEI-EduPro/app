@@ -38,7 +38,7 @@ const IconButton = ({
     aria-label={label}
     className="cursor-pointer rounded-full p-2 hover:bg-gray-200 transition-colors duration-150"
   >
-    <Icon className="!h-[25px] !w-[25px]" />
+    <Icon className="h-6.25! w-6.25!" />
   </Button>
 );
 
@@ -66,7 +66,7 @@ const ContentActionCard = ({
   return (
     <>
       <Card
-        className="w-[150px] h-[250px]  group relative cursor-pointer hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]"
+        className="w-37.5 h-62.5  group relative cursor-pointer hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]"
         onClick={handleOpenModal}
       >
         <div className="absolute inset-0 bg-[#2E2B50] rounded-[14px] text-white p-4 transition-opacity duration-300 group-hover:opacity-0 z-10 flex items-end">
@@ -80,7 +80,7 @@ const ContentActionCard = ({
               onClick={handleUpload}
             />
           </div>
-          <div className="flex-grow"></div>
+          <div className="grow"></div>
           <div className="flex justify-around w-full">
             <IconButton
               Icon={Pencil}
@@ -137,11 +137,11 @@ function RouteComponent() {
           },
         ]}
       />
-      <div className="flex flex-col gap-[10px] items-center justify-center mb-35">
+      <div className="flex flex-col gap-2.5 items-center justify-center mb-35">
         <span className="font-rubik text-5xl">{ucData?.name}</span>
         <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
       </div>
-      <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-[70px] gap-y-[50px]">
+      <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-17.5 gap-y-12.5">
         {examConfigs?.map((el, index) => (
           <ContentActionCard
             id={el.id}
@@ -153,8 +153,8 @@ function RouteComponent() {
           />
         ))}
         <Link to="/novo-exame" search={{ ucId: ucId, ucName: ucName }}>
-          <Card className="w-[150px] h-[250px] flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
-            <Plus className="stroke-[rgb(86,89,98)] h-[40px] w-[40px]" />
+          <Card className="w-37.5 h-62.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
+            <Plus className="stroke-[rgb(86,89,98)] h-10 w-10" />
           </Card>
         </Link>
       </div>
