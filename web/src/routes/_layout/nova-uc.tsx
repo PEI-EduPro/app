@@ -22,7 +22,7 @@ function NovaUC() {
         Nova Unidade Curricular
       </div>
       <div className="flex flex-col items-center">
-        <div className="w-[450px] h-auto">
+        <div className="w-112.5 h-auto">
           <NovaUCForm />
         </div>
       </div>

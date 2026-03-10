@@ -6,6 +6,9 @@ import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  optimizeDeps: {
+    include: ["@yudiel/react-qr-scanner"],
+  },
   plugins: [
     tanstackRouter({
       target: "react",

@@ -1,12 +1,14 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
-import { Card } from "@/components/ui/card";
+import { Scanner } from "@yudiel/react-qr-scanner";
 import { useGetUcById, useGetUcStudents } from "@/hooks/use-ucs";
 import type { UserI } from "@/lib/types";
 import { createFileRoute } from "@tanstack/react-router";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import z from "zod";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.number(),
@@ -23,9 +25,13 @@ function RouteComponent() {
   const { data: ucData } = useGetUcById(ucId);
   const { data: students = [], isLoading: loadingStudents } =
     useGetUcStudents(ucId);
-  const [alunosSelection, setAlunosSelection] = useState<
-    { id: string; nome: string; nmec: string }[]
-  >([]);
+  const [alunosSelection, setAlunosSelection] = useState<{
+    id: string;
+    nome: string;
+    nmec: string;
+  }>();
+
+  const [canAssociate, setCanAssociate] = useState<boolean>(false);
 
   const formatUserName = (user: UserI) =>
     user?.first_name && user?.last_name
@@ -40,38 +46,6 @@ function RouteComponent() {
     email: s.email || "",
   }));
 
-  const studentsDataMock = [
-    {
-      id: "111111",
-      nmec: "123456",
-      nome: "bla bla bla",
-    },
-    {
-      id: "111112",
-      nmec: "123457",
-      nome: "ble ble ble",
-    },
-    {
-      id: "111113",
-      nmec: "123458",
-      nome: "bli bli bli",
-    },
-    {
-      id: "111114",
-      nmec: "123459",
-      nome: "blo blo blo",
-    },
-    {
-      id: "111115",
-      nmec: "123460",
-      nome: "blu blu blu",
-    },
-    {
-      id: "111116",
-      nmec: "123461",
-      nome: "bls bls bls",
-    },
-  ];
   return (
     <div className="py-3.5 px-6 w-full">
       <AppBreadcrumb
@@ -90,24 +64,63 @@ function RouteComponent() {
             <LoaderCircle className="animate-spin size-16" />
           </div>
         ) : (
-          <div className="flex flex-col justify-center gap-15 md:w-full">
-            <div className="flex flex-row gap-15 w-full">
-              <Card></Card>
-            </div>
-            <div className="md:w-full flex flex-1 flex-col gap-7.5">
-              <span className="text-[26px] font-medium">Alunos</span>
-              <CustomTable
-                data={studentsDataMock}
-                rowNumber={15}
-                isSelectable
-                rowSelection={alunosSelection}
-                onChange={(e) => {
-                  setAlunosSelection(
-                    e as { id: string; nome: string; nmec: string }[],
-                  );
+          <div className="flex flex-col justify-center gap-10 md:w-full">
+            <div className="flex flex-row justify-center">
+              <Scanner
+                onScan={() => {
+                  setCanAssociate(true);
+                }}
+                paused={canAssociate}
+                formats={["qr_code"]}
+                styles={{
+                  container: {
+                    width: "70%",
+                    aspectRatio: "1 / 1",
+                    border: "2px dashed rgba(239, 68, 68, 0.4)",
+                    borderRadius: "0.5rem",
+                  },
+                }}
+                components={{
+                  finder: false,
                 }}
               />
             </div>
+            <div className="md:w-full flex flex-1 flex-col">
+              <span className="text-[26px] font-medium">Alunos</span>
+              <CustomTable
+                data={studentsData}
+                rowNumber={15}
+                isSelectable
+                rowSelection={alunosSelection ? [alunosSelection] : []}
+                onChange={(e) => {
+                  const newSelection = e.filter(
+                    (el) => el.id != alunosSelection?.id,
+                  );
+                  if (newSelection.length > 0) {
+                    setAlunosSelection({
+                      id: newSelection[0].id,
+                      nome: newSelection[0].nome,
+                      nmec: newSelection[0].nmec,
+                    });
+                  } else {
+                    setAlunosSelection(undefined);
+                  }
+                }}
+              />
+            </div>
+            <Button
+              className="cursor-pointer h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
+              disabled={!canAssociate || alunosSelection === undefined}
+              onClick={() => {
+                setCanAssociate(false);
+                toast.success("Exame associado com sucesso!");
+                setAlunosSelection(undefined);
+              }}
+            >
+              <span className="w-fit font-medium text-[26px]">
+                Associar aluno
+              </span>
+            </Button>
           </div>
         )}
       </div>
