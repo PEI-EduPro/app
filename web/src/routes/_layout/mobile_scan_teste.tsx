@@ -24,7 +24,7 @@ function RouteComponent() {
   const { data: students = [], isLoading: loadingStudents } =
     useGetUcStudents(ucId);
   const [alunosSelection, setAlunosSelection] = useState<
-    { id: string; nome: string; email: string }[]
+    { id: string; nome: string; nmec: string }[]
   >([]);
 
   const formatUserName = (user: UserI) =>
@@ -43,26 +43,32 @@ function RouteComponent() {
   const studentsDataMock = [
     {
       id: "111111",
+      nmec: "123456",
       nome: "bla bla bla",
     },
     {
       id: "111112",
+      nmec: "123457",
       nome: "ble ble ble",
     },
     {
       id: "111113",
+      nmec: "123458",
       nome: "bli bli bli",
     },
     {
       id: "111114",
+      nmec: "123459",
       nome: "blo blo blo",
     },
     {
       id: "111115",
+      nmec: "123460",
       nome: "blu blu blu",
     },
     {
       id: "111116",
+      nmec: "123461",
       nome: "bls bls bls",
     },
   ];
@@ -97,7 +103,7 @@ function RouteComponent() {
                 rowSelection={alunosSelection}
                 onChange={(e) => {
                   setAlunosSelection(
-                    e as { id: string; nome: string; email: string }[],
+                    e as { id: string; nome: string; nmec: string }[],
                   );
                 }}
               />
