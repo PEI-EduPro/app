@@ -38,7 +38,7 @@ services:
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
       KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
       KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    command: start --hostname https://mednat.ieeta.pt:9042/keycloak --hostname-admin https://mednat.ieeta.pt:9042/keycloak --proxy-headers forwarded --http-enabled=true
+    command: start --hostname mednat.ieeta.pt:9042 --hostname-path /keycloak --hostname-admin mednat.ieeta.pt:9042 --proxy-headers forwarded --http-enabled=true
     depends_on:
       keycloak-db:
         condition: service_healthy
@@ -47,7 +47,7 @@ services:
   keycloak-config-cli:
     image: adorsys/keycloak-config-cli:latest-24.0.1
     environment:
-      KEYCLOAK_URL: https://mednat.ieeta.pt:9042/keycloak
+      KEYCLOAK_URL: http://keycloak:8080
       KEYCLOAK_USER: ${KEYCLOAK_ADMIN}
       KEYCLOAK_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
       KEYCLOAK_AVAILABILITYCHECK_ENABLED: "true"
@@ -69,8 +69,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      #keycloak-config-cli:
-      #  condition: service_completed_successfully
+      keycloak-config-cli:
+        condition: service_completed_successfully
     restart: unless-stopped
     # TODO Healthcheck que verifica se a BD já está ligada
 
