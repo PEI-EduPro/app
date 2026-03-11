@@ -39,11 +39,17 @@ sudo docker compose -f docker-compose.db.yml -f docker-compose.api.yml up
 **Database + Keycloak:**
 ```bash
 sudo docker compose -f docker-compose.db.yml -f docker-compose.keycloak.yml up
+
+# Down with
+sudo docker compose down
 ```
 
 **Everything except frontend:**
 ```bash
 sudo docker compose -f docker-compose.db.yml -f docker-compose.keycloak.yml -f docker-compose.api.yml up
+
+# Down with
+sudo docker compose --profile setup down
 ```
 
 ### Docker Compose Structure
