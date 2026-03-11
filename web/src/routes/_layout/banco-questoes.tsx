@@ -24,14 +24,18 @@ import {
 } from "@/hooks/use-questions";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
+import { decodeId } from "@/lib/id-encoder";
 
 const bancoQuestoesSearchSchema = z.object({
-  ucId: z.number(),
+  ucId: z.string(),
 });
 
 export const Route = createFileRoute("/_layout/banco-questoes")({
   validateSearch: bancoQuestoesSearchSchema,
   component: BancoQuestões,
+  beforeLoad: ({ search }) => ({
+    ucId: decodeId(search.ucId),
+  }),
 });
 
 interface Question {
@@ -49,15 +53,17 @@ interface Topic {
 }
 function BancoQuestões() {
   const { ucId } = Route.useSearch();
-  const { data: subjectData } = useSubject(ucId);
-  const { data: apiData, isLoading, error } = useQuestions(ucId);
+  const realId = decodeId(ucId);
 
-  const createTopicMutation = useCreateTopic(ucId);
-  const updateTopicMutation = useUpdateTopic(ucId);
-  const deleteTopicMutation = useDeleteTopic(ucId);
-  const createQuestionMutation = useCreateQuestion(ucId);
-  const updateQuestionMutation = useUpdateQuestion(ucId);
-  const deleteQuestionMutation = useDeleteQuestion(ucId);
+  const { data: subjectData } = useSubject(realId);
+  const { data: apiData, isLoading, error } = useQuestions(realId);
+
+  const createTopicMutation = useCreateTopic(realId);
+  const updateTopicMutation = useUpdateTopic(realId);
+  const deleteTopicMutation = useDeleteTopic(realId);
+  const createQuestionMutation = useCreateQuestion(realId);
+  const updateQuestionMutation = useUpdateQuestion(realId);
+  const deleteQuestionMutation = useDeleteQuestion(realId);
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [showTopicModal, setShowTopicModal] = useState(false);
@@ -250,16 +256,16 @@ function BancoQuestões() {
       </div>
 
       <div className="flex mb-6 justify-between">
-        <XmlUploadButton subjectId={ucId} />
+        <XmlUploadButton subjectId={realId} />
 
         <Button
           onClick={() => {
             closeAllTopics();
             setShowTopicModal(true);
           }}
-          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-[40px] cursor-pointer"
+          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-10 cursor-pointer"
         >
-          <Plus className="!h-[20px] !w-[20px]" />
+          <Plus className="h-5! w-5!" />
           Adicionar Tópico
         </Button>
       </div>
@@ -361,9 +367,9 @@ function BancoQuestões() {
                   setSelectedTopicId(topic.id);
                   setShowQuestionModal(true);
                 }}
-                className="h-[40px] flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
+                className="h-10 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
               >
-                <Plus className="!h-[20px] !w-[20px]" />
+                <Plus className="h-5! w-5!" />
                 Adicionar Questão
               </Button>
             </div>

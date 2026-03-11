@@ -26,6 +26,7 @@ import { ExamConfigCard } from "./exam-config-card";
 import { useAddExamConfig } from "@/hooks/use-exams";
 import type { NewExamConfigI } from "@/lib/types";
 import { useGetUCTopics } from "@/hooks/use-questions";
+import { encodeId } from "@/lib/id-encoder";
 
 type TopicSelection = {
   id: string;
@@ -183,7 +184,7 @@ export const NovoExameForm = (props: {
         setFormStep(0);
         setValidatedData(null);
         reset();
-        navigate({ to: "/detalhes-uc", search: { ucId: ucID } });
+        navigate({ to: "/detalhes-uc", search: { ucId: encodeId(ucID) } });
       },
       onError: (error) => {
         toast.dismiss(loadingToast);
