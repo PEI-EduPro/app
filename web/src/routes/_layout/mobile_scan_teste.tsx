@@ -9,22 +9,27 @@ import { useState } from "react";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { decodeId } from "@/lib/id-encoder";
 
 const detalheUCSearchSchema = z.object({
-  ucId: z.number(),
+  ucId: z.string(),
 });
 
 export const Route = createFileRoute("/_layout/mobile_scan_teste")({
   validateSearch: detalheUCSearchSchema,
   component: RouteComponent,
+  beforeLoad: ({ search }) => ({
+    ucId: decodeId(search.ucId),
+  }),
 });
 
 function RouteComponent() {
   const { ucId } = Route.useSearch();
+  const realId = decodeId(ucId);
 
-  const { data: ucData } = useGetUcById(ucId);
+  const { data: ucData } = useGetUcById(realId);
   const { data: students = [], isLoading: loadingStudents } =
-    useGetUcStudents(ucId);
+    useGetUcStudents(realId);
   const [alunosSelection, setAlunosSelection] = useState<{
     id: string;
     nome: string;

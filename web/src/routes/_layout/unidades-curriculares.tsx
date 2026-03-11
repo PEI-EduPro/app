@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/card";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGetUc } from "@/hooks/use-ucs";
+import { encodeId } from "@/lib/id-encoder";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircle, Plus } from "lucide-react";
 
@@ -21,7 +22,7 @@ function UCCard({ label, srcImage, id }: UCCArdProps) {
   return (
     <Link
       to={isMobile ? `/mobile_scan_teste` : `/detalhes-uc`}
-      search={{ ucId: id }}
+      search={{ ucId: encodeId(id) }}
       className="w-fit"
     >
       <Card className="w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)] active:shadow-[inset_2px_2px_4px_0px_rgba(174,174,174,0.35)] transition-shadow duration-200">

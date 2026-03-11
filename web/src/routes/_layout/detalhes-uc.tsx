@@ -21,31 +21,36 @@ import {
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import type { UserI } from "@/lib/types";
+import { decodeId } from "@/lib/id-encoder";
 
 const detalheUCSearchSchema = z.object({
-  ucId: z.number(),
+  ucId: z.string(),
 });
 
 export const Route = createFileRoute("/_layout/detalhes-uc")({
   validateSearch: detalheUCSearchSchema,
   component: RouteComponent,
+  beforeLoad: ({ search }) => ({
+    ucId: decodeId(search.ucId),
+  }),
 });
 
 function RouteComponent() {
   const { ucId } = Route.useSearch();
+  const realId = decodeId(ucId);
 
-  const { data: ucData } = useGetUcById(ucId);
+  const { data: ucData } = useGetUcById(realId);
   const { data: students = [], isLoading: loadingStudents } =
-    useGetUcStudents(ucId);
+    useGetUcStudents(realId);
   const { data: professors = [], isLoading: loadingProfs } =
-    useGetUcProfessors(ucId);
-  const { data: regent, isLoading: loadingRegent } = useGetUcRegent(ucId);
+    useGetUcProfessors(realId);
+  const { data: regent, isLoading: loadingRegent } = useGetUcRegent(realId);
 
   const { data: allProfessors = [] } = useGetProfessors();
   const { data: allStudents = [] } = useGetStudents();
 
-  const { mutate: deleteUc } = useDeleteUcById(ucId);
-  const { mutate: updateUc } = useUpdateUc(ucId);
+  const { mutate: deleteUc } = useDeleteUcById(realId);
+  const { mutate: updateUc } = useUpdateUc(realId);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
 
@@ -189,7 +194,7 @@ function RouteComponent() {
                   className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
                   size="lg"
                   variant="destructive"
-                  onClick={() => deleteUc(ucId)}
+                  onClick={() => deleteUc(realId)}
                 >
                   Apagar Unidade Curricular
                 </Button>

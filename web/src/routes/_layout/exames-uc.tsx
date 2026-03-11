@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useGetExamConfig } from "@/hooks/use-exams";
 import { useGetUcById } from "@/hooks/use-ucs";
+import { decodeId } from "@/lib/id-encoder";
 import type { ExamConfigI } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Pencil, Plus, Trash2, Download, type LucideIcon } from "lucide-react";
@@ -11,13 +12,16 @@ import { useCallback, useState } from "react";
 import { z } from "zod";
 
 const examesUCSearchSchema = z.object({
-  ucId: z.number(),
+  ucId: z.string(),
   ucName: z.string(),
 });
 
 export const Route = createFileRoute("/_layout/exames-uc")({
   validateSearch: examesUCSearchSchema,
   component: RouteComponent,
+  beforeLoad: ({ search }) => ({
+    ucId: decodeId(search.ucId),
+  }),
 });
 
 const IconButton = ({
@@ -51,7 +55,7 @@ const ContentActionCard = ({
 }: {
   id: number;
   name: string;
-  ucId: number;
+  ucId: string;
   ucName: string;
   examConfig: ExamConfigI;
 }) => {
@@ -119,8 +123,10 @@ const ContentActionCard = ({
 
 function RouteComponent() {
   const { ucId, ucName } = Route.useSearch();
-  const { data: ucData } = useGetUcById(ucId);
-  const { data: examConfigs } = useGetExamConfig(ucId);
+  const realId = decodeId(ucId);
+
+  const { data: ucData } = useGetUcById(realId);
+  const { data: examConfigs } = useGetExamConfig(realId);
 
   return (
     <div className="py-3.5 px-6 w-full">
