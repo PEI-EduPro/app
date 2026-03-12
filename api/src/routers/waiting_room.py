@@ -195,3 +195,47 @@ async def get_waiting_room_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve waiting room metrics: {str(e)}"
         )
+
+@router.patch("/{waiting_room_id}/close", response_model=WaitingRoomResponse)
+async def close_waiting_room(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Close a waiting room. Checks for association conflicts (e.g. one student to multiple exams).
+    If conflicts exist, stops at the CLOSED state and raises an error.
+    If no conflicts exist, maps the students to exams and transitions to FINISHED.
+    Only the regent of the subject can perform this action.
+    """
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    # Verify permission - only regent can close waiting room
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    try:
+        updated_room = await waiting_room_service.close_waiting_room_service(session, waiting_room_id)
+        
+        return WaitingRoomResponse(
+            id=updated_room.id,
+            exam_config_id=updated_room.exam_config_id,
+            state=updated_room.state,
+            associations=updated_room.associations,
+            message="Waiting room closed successfully. Associations processed."
+        )
+    except ValueError as ve:
+        # Conflicts found, or invalid state. Raise HTTP 400 Bad Request
+        logger.warning(f"Failed to close waiting room due to conflicts or invalid state: {ve}")
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to close waiting room: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to close waiting room: {str(e)}"
+        )

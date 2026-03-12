@@ -34,7 +34,6 @@ Also, the student list is stored in the exam_config
 
 # Tasks
 
- - make an endpoint to close a room. It needs to check if there are problems, for example a student with multiple exams, or an exam with multiple students. If there are errors, raise an error and stop (in this case, just stop, since I don't know yet how to raise and solve those errors). If there are no errors, make the associations and put the waiting room in the finished state.
 
 # On hold
 I still do not know how to raise errors when the waiting room closes and how to solve them, so this will be on hold.
