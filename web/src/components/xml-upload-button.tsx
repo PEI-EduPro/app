@@ -66,7 +66,7 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
         disabled={isUploading}
         className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors disabled:opacity-50 disabled:cursor-not-allowed h-[40px] cursor-pointer"
       >
-        <Upload className="!h-[20px] !w-[20px]" />
+        <Upload className="h-5! w-5!" />
         {isUploading ? "Importando..." : "Importar questões"}
       </Button>
 

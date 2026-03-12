@@ -26,7 +26,6 @@ export const Route = createFileRoute("/_layout/mobile_scan_teste")({
 function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
-
   const { data: ucData } = useGetUcById(realId);
   const { data: students = [], isLoading: loadingStudents } =
     useGetUcStudents(realId);
@@ -35,8 +34,10 @@ function RouteComponent() {
     nome: string;
     nmec: string;
   }>();
+  const isRegent = false;
 
   const [canAssociate, setCanAssociate] = useState<boolean>(false);
+  const [isOpen, setIsOpen] = useState<boolean>(false);
 
   const formatUserName = (user: UserI) =>
     user?.first_name && user?.last_name
@@ -70,6 +71,26 @@ function RouteComponent() {
           </div>
         ) : (
           <div className="flex flex-col justify-center gap-10 md:w-full">
+            {isRegent && (
+              <div className="flex flex-row justify-between items-center">
+                <span className="text-sm font-medium">0/200</span>
+                {isOpen ? (
+                  <Button
+                    className="cursor-pointer h-auto w-auto px-4 py-2 bg-red-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <span className="w-fit font-medium">Fechar Exame</span>
+                  </Button>
+                ) : (
+                  <Button
+                    className="cursor-pointer h-auto w-auto px-4 py-2 bg-green-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
+                    onClick={() => setIsOpen(true)}
+                  >
+                    <span className="w-fit font-medium">Abrir Exame</span>
+                  </Button>
+                )}
+              </div>
+            )}
             <div className="flex flex-row justify-center">
               <Scanner
                 onScan={() => {
@@ -115,7 +136,9 @@ function RouteComponent() {
             </div>
             <Button
               className="cursor-pointer h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
-              disabled={!canAssociate || alunosSelection === undefined}
+              disabled={
+                isOpen ? !canAssociate || alunosSelection === undefined : true
+              }
               onClick={() => {
                 setCanAssociate(false);
                 toast.success("Exame associado com sucesso!");

@@ -21,7 +21,7 @@ function UCCard({ label, srcImage, id }: UCCArdProps) {
 
   return (
     <Link
-      to={isMobile ? `/mobile_scan_teste` : `/detalhes-uc`}
+      to={isMobile ? `/mobile_evaluate_tests` : `/detalhes-uc`}
       search={{ ucId: encodeId(id) }}
       className="w-fit"
     >
