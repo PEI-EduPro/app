@@ -724,6 +724,7 @@
           "protocolMapper": "oidc-group-membership-mapper",
           "consentRequired": false,
           "config": {
+            "claim.name": "groups",
             "full.path": "true",
             "introspection.token.claim": "true",
             "userinfo.token.claim": "true",
