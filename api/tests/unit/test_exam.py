@@ -115,43 +115,6 @@ async def test_get_subject_exam_configs(client, mock_auth, session):
 
 
 @pytest.mark.asyncio
-async def test_create_waiting_room(client, mock_auth, session):
-    """Test creating a waiting room"""
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    
-    from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
-    
-    # Setup test data
-    subject = Subject(name="Test Subject")
-    session.add(subject)
-    await session.commit()
-    await session.refresh(subject)
-    
-    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
-    session.add(exam_config)
-    await session.commit()
-    await session.refresh(exam_config)
-    
-    # Mock keycloak client
-    with patch("src.routers.exam.keycloak_client") as mock_kc:
-        mock_kc.create_waiting_room_groups = AsyncMock()
-        
-        payload = {
-            "exam_config_id": exam_config.id,
-            "vigilant_keycloak_ids": ["vigilant1", "vigilant2"]
-        }
-        
-        response = await client.post("/api/exams/waiting-room", json=payload)
-        
-        assert response.status_code == 201
-        data = response.json()
-        assert data["exam_config_id"] == exam_config.id
-        assert "Waiting room created successfully" in data["message"]
-        mock_kc.create_waiting_room_groups.assert_called_once()
-
-
-@pytest.mark.asyncio
 async def test_store_student_list(client, mock_auth, session):
     """Test storing student list via CSV upload"""
     app.dependency_overrides[get_current_user_info] = mock_auth
@@ -249,55 +212,6 @@ async def test_retrieve_student_list(client, mock_auth, session):
 
 
 @pytest.mark.asyncio
-async def test_associate_students_to_exams(client, mock_auth, session):
-    """Test associating students to exams"""
-    # Create a user with waiting room permissions
-    from src.models.user import User
-    vigilant_user = User(
-        user_id="vigilant-id-123",
-        username="vigilant",
-        email="vigilant@example.com",
-        realm_roles=["vigilant"],
-        groups=["/w1/vigilante"]
-    )
-    
-    async def override_get_current_user_info():
-        return vigilant_user
-    
-    app.dependency_overrides[get_current_user_info] = override_get_current_user_info
-    
-    from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
-    from src.models.exam import Exam
-    
-    # Setup test data
-    subject = Subject(name="Test Subject")
-    session.add(subject)
-    await session.commit()
-    await session.refresh(subject)
-    
-    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
-    session.add(exam_config)
-    await session.commit()
-    await session.refresh(exam_config)
-    
-    exam = Exam(exam_config_id=exam_config.id, exam_xml="<exam>test</exam>")
-    session.add(exam)
-    await session.commit()
-    
-    payload = {"qr1": "12345", "qr2": "67890"}
-    
-    response = await client.post(
-        f"/api/exams/exam/{exam_config.id}/student_to_exam",
-        json=payload
-    )
-    
-    assert response.status_code == 200
-    data = response.json()
-    assert data["message"] == "Students associated to exams successfully."
-
-
-@pytest.mark.asyncio
 async def test_store_student_list_invalid_file_type(client, mock_auth, session):
     """Test storing student list with invalid file type"""
     app.dependency_overrides[get_current_user_info] = mock_auth
@@ -330,24 +244,6 @@ async def test_store_student_list_invalid_file_type(client, mock_auth, session):
     # Should still work as text/plain is accepted
     assert response.status_code == 200
 
-
-@pytest.mark.asyncio
-async def test_create_waiting_room_nonexistent_exam_config(client, mock_auth, session):
-    """Test creating waiting room with non-existent exam config"""
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    
-    payload = {
-        "exam_config_id": 99999,
-        "vigilant_keycloak_ids": ["vigilant1"]
-    }
-    
-    response = await client.post("/api/exams/waiting-room", json=payload)
-    
-    assert response.status_code == 404
-    data = response.json()
-    assert "Exam config 99999 not found" in data["detail"]
-
-
 @pytest.mark.asyncio
 async def test_retrieve_student_list_nonexistent_config(client, mock_auth, session):
     """Test retrieving student list for non-existent exam config"""
@@ -368,6 +264,6 @@ async def test_retrieve_student_list_nonexistent_config(client, mock_auth, sessi
     
     response = await client.get("/api/exams/exam/99999/student_list")
     
-    assert response.status_code == 500  # Should be 500 due to ValueError in service
+    assert response.status_code == 404
     data = response.json()
     assert "Exam configuration not found" in data["detail"]

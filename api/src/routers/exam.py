@@ -156,7 +156,10 @@ async def retrieve_student_list(
     session: AsyncSession = Depends(get_session)
 ):
     #correct to the waiting room id
-    group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+    try:
+        group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
 
     verify_permission(user_info, [f"/w{group_name}/vigilante", f"/w{group_name}/regent"])
 
