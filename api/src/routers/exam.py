@@ -11,7 +11,8 @@ from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig, ExamConfigResponse
 from src.models.topic_config import TopicConfigDTO
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState
+import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
 import logging
@@ -157,7 +158,47 @@ async def create_waiting_room(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create waiting room: {str(e)}"
         )
-    
+
+@router.patch("/waiting-room/{waiting_room_id}/start", response_model=WaitingRoomResponse)
+async def start_waiting_room(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Start a waiting room (transition from preparation to running).
+    Only the regent of the subject can perform this action.
+    """
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    # Verify permission - only regent can start waiting room
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if waiting_room.state != WaitingRoomState.PREPARATION:
+        raise HTTPException(status_code=400, detail="Waiting room must be in preparation state to be started.")
+
+    try:
+        updated_room = await waiting_room_service.update_waiting_room_state(session, waiting_room_id, WaitingRoomState.RUNNING)
+        return WaitingRoomResponse(
+            id=updated_room.id,
+            exam_config_id=updated_room.exam_config_id,
+            state=updated_room.state,
+            associations=updated_room.associations,
+            message="Waiting room started successfully."
+        )
+    except Exception as e:
+        logger.error(f"Failed to start waiting room: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to start waiting room: {str(e)}"
+        )
+
 @router.post("/exam/{exam_config_id}/student_list")
 async def store_student_list(
     exam_config_id: int,

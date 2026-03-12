@@ -34,8 +34,6 @@ Also, the student list is stored in the exam_config
 
 # Tasks
 
- - make sure that the waiting room creation endpoint starts the waiting rooms in the preparation state
-
  - make an endpoint for the regent to start the waiting room (the exam starts)
 
  - make an endpoint for vigilantes (and the regent) to get all the information regarding the exam they will be overseeing. This includes the student list, state of the waiting room, students list (so it's easier to associate the students to the exams), exam list (ids of all the exams). Also, have fields for stats like total amount of exams, total amount of students and that kind of stuff
