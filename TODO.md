@@ -34,8 +34,6 @@ Also, the student list is stored in the exam_config
 
 # Tasks
 
- - make an endpoint for vigilantes (and the regent) to get all the information regarding the exam they will be overseeing. This includes the student list, state of the waiting room, students list (so it's easier to associate the students to the exams), exam list (ids of all the exams). Also, have fields for stats like total amount of exams, total amount of students and that kind of stuff
-
  - alter the endpoint student_to_exam to instead add an entry to the waiting room list
 
  - add an endpoint for the vigilantes (and regent) to request every like 5 seconds or something, where it asks for the number of associated exams, and the number of associated students. Just a metric to help the professors during the time for them to oversee the exam.

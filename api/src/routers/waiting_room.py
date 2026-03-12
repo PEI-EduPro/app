@@ -4,7 +4,7 @@ from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse
 import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
@@ -97,4 +97,31 @@ async def start_waiting_room(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to start waiting room: {str(e)}"
+        )
+
+@router.get("/{waiting_room_id}/info", response_model=WaitingRoomInfoResponse)
+async def get_waiting_room_info(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all information regarding the exam being overseen.
+    Includes student list, exam IDs, stats, and state.
+    """
+    # Verify permission - vigilant or regent
+    verify_permission(user_info, [f"/w{waiting_room_id}/vigilant", f"/w{waiting_room_id}/regent"])
+
+    try:
+        info = await waiting_room_service.get_waiting_room_info_service(session, waiting_room_id)
+        if not info:
+            raise HTTPException(status_code=404, detail="Waiting room or associated exam configuration not found.")
+        return info
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve waiting room info: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve waiting room info: {str(e)}"
         )

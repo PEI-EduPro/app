@@ -1,8 +1,11 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse
+from src.models.exam_config import ExamConfig
+from src.services.exam import get_exams_by_config_id
 from src.core.keycloak import keycloak_client
 from typing import Optional, List
+import json
 
 async def get_waiting_room(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoom]:
     stmt = select(WaitingRoom).where(WaitingRoom.id == waiting_room_id)
@@ -46,3 +49,33 @@ async def create_waiting_room_service(
         raise e
 
     return waiting_room
+
+async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoomInfoResponse]:
+    waiting_room = await get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        return None
+    
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        return None
+        
+    exams = await get_exams_by_config_id(session, waiting_room.exam_config_id)
+    exam_ids = [exam.id for exam in exams]
+    
+    student_list = {}
+    if exam_config.nmec_name_list:
+        try:
+            student_list = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            pass
+            
+    return WaitingRoomInfoResponse(
+        id=waiting_room.id,
+        exam_config_id=waiting_room.exam_config_id,
+        state=waiting_room.state,
+        associations=waiting_room.associations,
+        student_list=student_list,
+        exam_ids=exam_ids,
+        total_students=len(student_list),
+        total_exams=len(exam_ids)
+    )

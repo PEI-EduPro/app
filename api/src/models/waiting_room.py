@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Optional, List, Dict
 from sqlmodel import Field, SQLModel
 from pydantic import BaseModel
 from enum import Enum
@@ -28,3 +28,13 @@ class WaitingRoomResponse(BaseModel):
     state: WaitingRoomState
     associations: List[str]
     message: str
+
+class WaitingRoomInfoResponse(BaseModel):
+    id: int
+    exam_config_id: int
+    state: WaitingRoomState
+    associations: List[str]
+    student_list: Dict[str, str]
+    exam_ids: List[int]
+    total_students: int
+    total_exams: int
