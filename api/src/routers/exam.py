@@ -158,7 +158,7 @@ async def create_waiting_room(
             detail=f"Failed to create waiting room: {str(e)}"
         )
     
-@router.post("exam/{exam_config_id}/student_list")
+@router.post("/exam/{exam_config_id}/student_list")
 async def store_student_list(
     exam_config_id: int,
     file: UploadFile = File(...),
@@ -168,7 +168,7 @@ async def store_student_list(
     """
     Store information in csv file as a dict of nmec: student_name
     """
-    group_name = exam.get_subject_id_by_exam_config_id(exam_config_id,session)
+    group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
 
     verify_permission(user_info, [f"/s{group_name}/regent"])
 
@@ -203,25 +203,25 @@ async def store_student_list(
     
     return {"message": "Student list stored successfully."}
 
-@router.get("exam/{exam_config_id}/student_list",response_model=ExamConfigResponse)
+@router.get("/exam/{exam_config_id}/student_list",response_model=ExamConfigResponse)
 async def retrieve_student_list(
     exam_config_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     #correct to the waiting room id
-    group_name = exam.get_subject_id_by_exam_config_id(exam_config_id,session)
+    group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
 
     verify_permission(user_info, [f"/w{group_name}/vigilante", f"/w{group_name}/regent"])
 
-    exam_config = exam.get_exam_config_by_id(session,exam_config_id)
+    exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
 
     return ExamConfigResponse.model_validate(exam_config)
 
 
-@router.post("exam/{exam_config_id}/student_to_exam")
+@router.post("/exam/{exam_config_id}/student_to_exam")
 async def associate_students_to_exams(
     exam_config_id: int,
     qrcode_to_nmec: dict,
@@ -229,15 +229,13 @@ async def associate_students_to_exams(
     session: AsyncSession = Depends(get_session)
 ):
     #correct to the waiting room id
-    group_name = exam.get_subject_id_by_exam_config_id(exam_config_id,session)
+    group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
 
     verify_permission(user_info, [f"/w{group_name}/vigilante", f"/w{group_name}/regent"])
     #for now the qrcode is just the exam id
-    exams = exam.get_exams_by_config_id(session,exam_config_id)
+    exams = await exam.get_exams_by_config_id(session, exam_config_id)
 
     if not exams:
         raise HTTPException(status_code=404, detail="Exams not found.")
     
-    
-
-    return ExamConfigResponse.model_validate(exam_config)
+    return {"message": "Students associated to exams successfully."}
