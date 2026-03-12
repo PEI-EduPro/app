@@ -125,3 +125,46 @@ async def get_waiting_room_info(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve waiting room info: {str(e)}"
         )
+
+@router.post("/{waiting_room_id}/student_to_exam")
+async def associate_students_to_exams(
+    waiting_room_id: int,
+    qrcode_to_nmec: dict,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Associate a student to an exam by appending to the waiting room's association list.
+    Vigilantes and regents can perform this action.
+    The payload `qrcode_to_nmec` expects the key to be the exam ID and the value to be the student NMEC.
+    """
+    # Verify permission
+    verify_permission(user_info, [f"/w{waiting_room_id}/vigilant", f"/w{waiting_room_id}/regent"])
+
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        
+    if waiting_room.state != WaitingRoomState.RUNNING:
+        raise HTTPException(status_code=400, detail="Waiting room must be in running state to associate students.")
+
+    try:
+        # qrcode_to_nmec is a dict: { "exam_id": "student_nmec" }
+        for exam_id_str, student_nmec in qrcode_to_nmec.items():
+            exam_id = int(exam_id_str)
+            await waiting_room_service.associate_student_to_exam_service(
+                session=session,
+                waiting_room_id=waiting_room_id,
+                exam_id=exam_id,
+                student_nmec=str(student_nmec)
+            )
+
+        return {"message": "Students associated to exams successfully."}
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid exam ID format. Must be an integer.")
+    except Exception as e:
+        logger.error(f"Failed to associate students: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to associate students to exams: {str(e)}"
+        )

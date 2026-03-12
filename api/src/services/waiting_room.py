@@ -79,3 +79,30 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
         total_students=len(student_list),
         total_exams=len(exam_ids)
     )
+
+async def associate_student_to_exam_service(
+    session: AsyncSession,
+    waiting_room_id: int,
+    exam_id: int,
+    student_nmec: str
+) -> Optional[WaitingRoom]:
+    waiting_room = await get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        return None
+        
+    association_string = f"{exam_id}:{student_nmec}"
+    
+    # We allow adding it even if technically one side might exist according to the TODO rules
+    # It will be validated later.
+    
+    # ensure it's not a duplicate exactly
+    if association_string not in waiting_room.associations:
+        # Create a new list to ensure SQLAlchemy detects the change to the JSON column
+        new_associations = list(waiting_room.associations)
+        new_associations.append(association_string)
+        waiting_room.associations = new_associations
+        session.add(waiting_room)
+        await session.commit()
+        await session.refresh(waiting_room)
+        
+    return waiting_room
