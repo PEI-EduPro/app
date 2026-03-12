@@ -146,6 +146,8 @@ async def create_waiting_room(
         return WaitingRoomResponse(
             id=waiting_room.id,
             exam_config_id=waiting_room.exam_config_id,
+            state=waiting_room.state,
+            associations=waiting_room.associations,
             message="Waiting room created successfully."
         )
     except Exception as e:
