@@ -34,10 +34,6 @@ Also, the student list is stored in the exam_config
 
 # Tasks
 
- - expand the waiting_room model to have a field for the state
-
- - expand the waiting_room model to have the list of exams to students
-
  - make sure that the waiting room creation endpoint starts the waiting rooms in the preparation state
 
  - make an endpoint for the regent to start the waiting room (the exam starts)
