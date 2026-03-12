@@ -579,9 +579,10 @@ async def get_exams_by_config_id(
 ):
     statement = select(Exam).where(Exam.exam_config_id == exam_config_id)
     result = await session.exec(statement)
+    exams = result.all()
     
-    if not result:
-        raise ValueError("Exam configuration not found.")
+    if not exams:
+        raise ValueError("No exams found for this configuration.")
     
-    return result
+    return exams
 
