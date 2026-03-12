@@ -1,7 +1,8 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.models.waiting_room import WaitingRoom, WaitingRoomState
-from typing import Optional
+from src.core.keycloak import keycloak_client
+from typing import Optional, List
 
 async def get_waiting_room(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoom]:
     stmt = select(WaitingRoom).where(WaitingRoom.id == waiting_room_id)
@@ -17,4 +18,31 @@ async def update_waiting_room_state(session: AsyncSession, waiting_room_id: int,
     session.add(waiting_room)
     await session.commit()
     await session.refresh(waiting_room)
+    return waiting_room
+
+async def create_waiting_room_service(
+    session: AsyncSession,
+    exam_config_id: int,
+    regent_keycloak_id: str,
+    vigilant_keycloak_ids: List[str]
+) -> WaitingRoom:
+    # Create WaitingRoom in DB
+    waiting_room = WaitingRoom(exam_config_id=exam_config_id)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+
+    try:
+        # Create Keycloak groups and assign users
+        await keycloak_client.create_waiting_room_groups(
+            waiting_room_id=waiting_room.id,
+            regent_keycloak_id=regent_keycloak_id,
+            vigilant_ids=vigilant_keycloak_ids
+        )
+    except Exception as e:
+        # If keycloak fails, we should ideally rollback the DB creation
+        await session.delete(waiting_room)
+        await session.commit()
+        raise e
+
     return waiting_room

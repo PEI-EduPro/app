@@ -38,17 +38,11 @@ async def create_waiting_room(
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
     try:
-        # Create WaitingRoom in DB
-        waiting_room = WaitingRoom(exam_config_id=request.exam_config_id)
-        session.add(waiting_room)
-        await session.commit()
-        await session.refresh(waiting_room)
-
-        # Create Keycloak groups and assign users
-        await keycloak_client.create_waiting_room_groups(
-            waiting_room_id=waiting_room.id,
+        waiting_room = await waiting_room_service.create_waiting_room_service(
+            session=session,
+            exam_config_id=request.exam_config_id,
             regent_keycloak_id=user_info.user_id,
-            vigilant_ids=request.vigilant_keycloak_ids
+            vigilant_keycloak_ids=request.vigilant_keycloak_ids
         )
 
         return WaitingRoomResponse(
@@ -60,7 +54,6 @@ async def create_waiting_room(
         )
     except Exception as e:
         logger.error(f"Failed to create waiting room: {e}")
-        await session.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create waiting room: {str(e)}"
