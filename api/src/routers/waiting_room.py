@@ -4,7 +4,7 @@ from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse
 import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
@@ -167,4 +167,31 @@ async def associate_students_to_exams(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to associate students to exams: {str(e)}"
+        )
+
+@router.get("/{waiting_room_id}/metrics", response_model=WaitingRoomMetricsResponse)
+async def get_waiting_room_metrics(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Lightweight endpoint to get real-time metrics for an ongoing exam.
+    Returns the count of associated exams and associated students.
+    """
+    # Verify permission
+    verify_permission(user_info, [f"/w{waiting_room_id}/vigilant", f"/w{waiting_room_id}/regent"])
+
+    try:
+        metrics = await waiting_room_service.get_waiting_room_metrics_service(session, waiting_room_id)
+        if not metrics:
+            raise HTTPException(status_code=404, detail="Waiting room not found.")
+        return metrics
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve waiting room metrics: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve waiting room metrics: {str(e)}"
         )

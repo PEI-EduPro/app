@@ -1,6 +1,6 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse
 from src.models.exam_config import ExamConfig
 from src.services.exam import get_exams_by_config_id
 from src.core.keycloak import keycloak_client
@@ -106,3 +106,25 @@ async def associate_student_to_exam_service(
         await session.refresh(waiting_room)
         
     return waiting_room
+
+async def get_waiting_room_metrics_service(
+    session: AsyncSession,
+    waiting_room_id: int
+) -> Optional[WaitingRoomMetricsResponse]:
+    waiting_room = await get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        return None
+        
+    associated_exams = set()
+    associated_students = set()
+    
+    for assoc in waiting_room.associations:
+        if ":" in assoc:
+            exam_id, student_nmec = assoc.split(":", 1)
+            associated_exams.add(exam_id)
+            associated_students.add(student_nmec)
+            
+    return WaitingRoomMetricsResponse(
+        associated_exams_count=len(associated_exams),
+        associated_students_count=len(associated_students)
+    )
