@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
+import { apiClient } from "@/lib/api-client";
 
 interface XmlUploadButtonProps {
   subjectId: number;
@@ -31,20 +32,11 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
     try {
       const xmlContent = await file.text();
 
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/questions/${subjectId}/XML`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/xml",
-          },
-          body: xmlContent,
-        },
+      await apiClient.post(
+        `/questions/${subjectId}/XML`,
+        xmlContent,
+        { headers: { "Content-Type": "application/xml" } }
       );
-
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
 
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
       alert("Questões importadas com sucesso!");
