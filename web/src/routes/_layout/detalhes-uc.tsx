@@ -21,6 +21,7 @@ import { useState, useEffect } from "react";
 import { z } from "zod";
 import type { UserI } from "@/lib/types";
 import { decodeId } from "@/lib/id-encoder";
+import { useKeycloak } from "@/hooks/use-keycloak";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),
@@ -37,6 +38,11 @@ export const Route = createFileRoute("/_layout/detalhes-uc")({
 function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
+  const { keycloak } = useKeycloak();
+  const isManager =
+    (keycloak.tokenParsed?.realm_access?.roles || []).find(
+      (e) => e == "manager",
+    ) != undefined;
 
   const { data: ucData } = useGetUcById(realId);
   const { data: students = [], isLoading: loadingStudents } =
@@ -214,25 +220,29 @@ function RouteComponent() {
               </>
             ) : (
               <>
-                <Link to="/banco-questoes" search={{ ucId: ucId }}>
-                  <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                    <span className="w-fit font-medium text-[26px]">
-                      Banco de Perguntas
-                    </span>
-                    <FileQuestionMark className="size-12.5" />
-                  </Button>
-                </Link>
-                <Link
-                  to="/exames-uc"
-                  search={{ ucId: ucId, ucName: ucData?.name || "" }}
-                >
-                  <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                    <span className="w-fit font-medium text-[26px]">
-                      Exames
-                    </span>
-                    <ClipboardList className="size-12.5" />
-                  </Button>
-                </Link>
+                {!isManager && (
+                  <>
+                    <Link to="/banco-questoes" search={{ ucId: ucId }}>
+                      <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
+                        <span className="w-fit font-medium text-[26px]">
+                          Banco de Perguntas
+                        </span>
+                        <FileQuestionMark className="size-12.5" />
+                      </Button>
+                    </Link>
+                    <Link
+                      to="/exames-uc"
+                      search={{ ucId: ucId, ucName: ucData?.name || "" }}
+                    >
+                      <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
+                        <span className="w-fit font-medium text-[26px]">
+                          Exames
+                        </span>
+                        <ClipboardList className="size-12.5" />
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </>
             )}
           </div>

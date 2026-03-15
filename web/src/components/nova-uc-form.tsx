@@ -60,7 +60,15 @@ export function NovaUCForm() {
       student_keycloak_ids: formData.alunos,
       professor_keycloak_ids: formData.professores,
     });
-    if (isError) toast.error("An error occoured, please try again later");
+    if (isError) {
+      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    } else {
+      toast.success("Unidade curricular criada com sucesso", {
+        position: "top-right",
+      });
+    }
     setFormStep(0);
     reset();
   };

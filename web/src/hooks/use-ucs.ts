@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
 import { type NewUcI, type UcI, type UserI } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
+import { toast } from "sonner";
 
 const useGetUc = () =>
   useQuery<UcI[]>({
@@ -60,7 +61,15 @@ const useDeleteUcById = (ucId: number) => {
     mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}/`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["uc"] });
+      toast.success("Unidade curricular eliminada com sucesso", {
+        position: "top-right",
+      });
       navigate({ to: "/unidades-curriculares" });
+    },
+    onError: () => {
+      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
     },
   });
 };
@@ -80,6 +89,14 @@ const useUpdateUc = (ucId: number) => {
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "students"] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "professors"] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "regent"] });
+      toast.success("Unidade curricular editada com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
     },
   });
 };
