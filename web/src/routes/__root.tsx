@@ -1,7 +1,6 @@
 import type { KeycloakContextValue } from "@/lib/keycloak-provider";
 import { createRootRouteWithContext, Outlet } from "@tanstack/react-router";
 import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-
 interface RouterContext {
   auth: KeycloakContextValue;
 }

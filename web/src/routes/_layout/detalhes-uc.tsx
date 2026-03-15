@@ -12,7 +12,6 @@ import {
 import { useGetProfessors, useGetStudents } from "@/hooks/use-users";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
-  BookOpen,
   ClipboardList,
   FileQuestionMark,
   LoaderCircle,
@@ -215,15 +214,6 @@ function RouteComponent() {
               </>
             ) : (
               <>
-                {/* Ligar este botão "Manuais" quando estiver funcional */}
-                <Link to="/detalhes-uc" search={{ ucId: ucId }}>
-                  <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#41B5C0] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                    <span className="w-fit font-medium text-[26px]">
-                      Manuais
-                    </span>
-                    <BookOpen className="size-12.5" />
-                  </Button>
-                </Link>
                 <Link to="/banco-questoes" search={{ ucId: ucId }}>
                   <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
                     <span className="w-fit font-medium text-[26px]">
