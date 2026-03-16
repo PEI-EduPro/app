@@ -27,10 +27,13 @@ import {
 } from "./ui/collapsible";
 import { useGetUc } from "@/hooks/use-ucs";
 import { useKeycloak } from "@/hooks/use-keycloak.ts";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { encodeId } from "@/lib/id-encoder";
 
 export function AppSidebar() {
   const { data: ucs } = useGetUc();
   const { keycloak } = useKeycloak();
+  const isMobile = useIsMobile();
 
   const items = [
     {
@@ -39,7 +42,9 @@ export function AppSidebar() {
       subContent:
         ucs?.map((uc) => ({
           title: uc.name,
-          url: `/detalhes-uc?ucId=${uc.id}`,
+          url: isMobile
+            ? `/mobile_evaluate_tests`
+            : `/detalhes-uc?ucId=${encodeId(uc.id)}`,
         })) || [],
     },
   ];

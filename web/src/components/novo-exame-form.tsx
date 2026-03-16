@@ -50,7 +50,7 @@ export const NovoExameForm = (props: {
   ucID: number;
   ucName: string;
 }) => {
-  const { examData = null, ucID } = props;
+  const { examData = null, ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null,
@@ -175,20 +175,23 @@ export const NovoExameForm = (props: {
       }
     });
 
-    const loadingToast = toast.loading("A gerar exames...");
-
     mutate(novoExameData, {
       onSuccess: () => {
-        toast.dismiss(loadingToast);
-        toast.success("Exame criado com sucesso!");
+        // toast.dismiss(loadingToast);
+        toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
         reset();
-        navigate({ to: "/detalhes-uc", search: { ucId: encodeId(ucID) } });
+        navigate({
+          to: "/exames-uc",
+          search: { ucId: encodeId(ucID), ucName },
+        });
       },
       onError: (error) => {
-        toast.dismiss(loadingToast);
-        toast.error(`Erro ao gerar exame: ${error.message}`);
+        // toast.dismiss(loadingToast);
+        toast.error(`Erro ao gerar exame: ${error.message}`, {
+          position: "top-right",
+        });
       },
     });
   };

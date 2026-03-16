@@ -7,7 +7,7 @@ import { useGetUcById } from "@/hooks/use-ucs";
 import { decodeId } from "@/lib/id-encoder";
 import type { ExamConfigI } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pencil, Plus, Trash2, Download, type LucideIcon } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useCallback, useState } from "react";
 import { z } from "zod";
 
@@ -24,33 +24,8 @@ export const Route = createFileRoute("/_layout/exames-uc")({
   }),
 });
 
-const IconButton = ({
-  Icon,
-  label,
-  onClick,
-}: {
-  Icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) => (
-  <Button
-    variant="ghost"
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-    aria-label={label}
-    className="cursor-pointer rounded-full p-2 hover:bg-gray-200 transition-colors duration-150"
-  >
-    <Icon className="h-6.25! w-6.25!" />
-  </Button>
-);
-
 const ContentActionCard = ({
-  id,
   name,
-  ucId,
-  ucName,
   examConfig,
 }: {
   id: number;
@@ -59,49 +34,32 @@ const ContentActionCard = ({
   ucName: string;
   examConfig: ExamConfigI;
 }) => {
-  const navigate = Route.useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
-  const handleUpload = () => console.log("Action: Upload/Move clicked");
   const handleDelete = () => console.log("Action: Delete clicked");
 
   return (
     <>
       <Card
-        className="w-37.5 h-62.5  group relative cursor-pointer hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]"
+        className="w-37.5 h-62.5  group relative hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]"
         onClick={handleOpenModal}
       >
         <div className="absolute inset-0 bg-[#2E2B50] rounded-[14px] text-white p-4 transition-opacity duration-300 group-hover:opacity-0 z-10 flex items-end">
           <span className="text-xl font-semibold">{name}</span>
         </div>
-        <div className="absolute inset-0 bg-gray-100 text-gray-700 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex flex-col items-center justify-between z-20">
-          <div className="flex justify-center w-full">
-            <IconButton
-              Icon={Download}
-              label="Download file"
-              onClick={handleUpload}
-            />
-          </div>
-          <div className="grow"></div>
-          <div className="flex justify-around w-full">
-            <IconButton
-              Icon={Pencil}
-              label="Edit document"
-              onClick={() =>
-                navigate({
-                  to: "/novo-exame",
-                  search: { examId: id, ucId: ucId, ucName: ucName },
-                })
-              }
-            />
-            <IconButton
-              Icon={Trash2}
-              label="Delete document"
-              onClick={handleDelete}
-            />
-          </div>
+        <div className="absolute inset-0 bg-gray-100 text-gray-700 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex flex-col items-center justify-center z-20">
+          <Button
+            variant="ghost"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDelete();
+            }}
+            className="cursor-pointer rounded-full p-2 hover:text-red-500 transition-colors duration-150"
+          >
+            <Trash2 className="h-6.25! w-6.25!" />
+          </Button>
         </div>
       </Card>
       {isModalOpen && (

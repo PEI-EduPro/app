@@ -141,7 +141,9 @@ function RouteComponent() {
               }
               onClick={() => {
                 setCanAssociate(false);
-                toast.success("Exame associado com sucesso!");
+                toast.success("Exame associado com sucesso!", {
+                  position: "top-right",
+                });
                 setAlunosSelection(undefined);
               }}
             >

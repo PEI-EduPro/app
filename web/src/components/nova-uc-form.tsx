@@ -295,10 +295,10 @@ export function NovaUCForm() {
                             <div className="flex flex-col items-center space-y-3">
                               <Upload className="w-6 h-6 text-gray-400" />
                               <div className="text-sm text-gray-500">
-                                Clique{" "}
+                                Clique
                                 <span className="text-[#41B5C0] font-medium">
                                   aqui
-                                </span>{" "}
+                                </span>
                                 para selecionar um ficheiro
                               </div>
                             </div>
