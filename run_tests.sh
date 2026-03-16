@@ -21,14 +21,31 @@ echo -e "${GREEN}Starting Test Suite Setup...${NC}"
 echo -e "${GREEN}1. Starting ISOLATED Docker Services (DB:5433 & Keycloak:8081)...${NC}"
 
 # Define environment variables for the test run to ensure isolation
-export POSTGRES_PORT=5433 
+export POSTGRES_PORT=5433
 
 # Use a specific project name 'edupro-test' to namespace volumes and containers
 # This prevents conflict with 'edupro-dev' or 'edupro' project names.
 docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v
 
-# Start services
-docker compose -p edupro-test -f deployment/docker-compose.test.yml up -d
+# Start services with setup profile to configure Keycloak realm
+echo -e "${GREEN}Starting infrastructure with setup profile (configuring Keycloak realm)...${NC}"
+docker compose -p edupro-test --profile setup -f deployment/docker-compose.test.yml up -d
+
+# Wait for keycloak-config-cli to complete
+echo -e "${GREEN}Waiting for Keycloak configuration to complete...${NC}"
+timeout=180
+counter=0
+while ! docker ps -a --filter "name=edupro-test-keycloak-config-cli" --filter "status=exited" | grep -q "edupro-test-keycloak-config-cli"; do
+    sleep 2
+    ((counter+=2))
+    if [ $counter -ge $timeout ]; then
+        echo -e "${RED}Timeout waiting for Keycloak configuration!${NC}"
+        docker logs edupro-test-keycloak-config-cli 2>&1 || true
+        exit 1
+    fi
+    echo -n "."
+done
+echo -e "\n${GREEN}Keycloak configuration complete!${NC}"
 
 # Wait for DB (Port 5433)
 echo "Waiting for Test Database (port 5433)..."

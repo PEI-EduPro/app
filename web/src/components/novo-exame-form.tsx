@@ -26,6 +26,7 @@ import { ExamConfigCard } from "./exam-config-card";
 import { useAddExamConfig } from "@/hooks/use-exams";
 import type { NewExamConfigI } from "@/lib/types";
 import { useGetUCTopics } from "@/hooks/use-questions";
+import { encodeId } from "@/lib/id-encoder";
 
 type TopicSelection = {
   id: string;
@@ -183,7 +184,7 @@ export const NovoExameForm = (props: {
         setFormStep(0);
         setValidatedData(null);
         reset();
-        navigate({ to: "/detalhes-uc", search: { ucId: ucID } });
+        navigate({ to: "/detalhes-uc", search: { ucId: encodeId(ucID) } });
       },
       onError: (error) => {
         toast.dismiss(loadingToast);
@@ -306,7 +307,7 @@ export const NovoExameForm = (props: {
                         key={topic.id}
                         className="flex items-center gap-x-4"
                       >
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           {topic.nome} (max: {maxQuestions})
                         </FormLabel>
                         <FormControl className="flex-1">
@@ -416,7 +417,7 @@ export const NovoExameForm = (props: {
                       key={topic.id}
                       className="flex items-center gap-x-4"
                     >
-                      <FormLabel className="flex-shrink-0 w-140">
+                      <FormLabel className="shrink-0 w-140">
                         {topic.nome}
                       </FormLabel>
                       <FormControl>
@@ -566,7 +567,7 @@ export const NovoExameForm = (props: {
                     name="semester"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           Semestre
                         </FormLabel>
                         <Select
@@ -593,7 +594,7 @@ export const NovoExameForm = (props: {
                     name="academic_year"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           Ano letivo
                         </FormLabel>
                         <Select
@@ -622,7 +623,7 @@ export const NovoExameForm = (props: {
                     name="number_exams"
                     render={() => (
                       <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           Número de exames
                         </FormLabel>
                         <FormControl>
@@ -696,7 +697,7 @@ export const NovoExameForm = (props: {
                     name="fraction"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           Desconto (%)
                         </FormLabel>
                         <FormControl>

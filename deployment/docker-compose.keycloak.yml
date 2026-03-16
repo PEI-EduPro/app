@@ -48,6 +48,8 @@ services:
       - ./keycloak-config:/config
     depends_on:
       - keycloak
+    profiles:
+      - setup
 
 volumes:
   keycloak_db_data:

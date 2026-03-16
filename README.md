@@ -6,16 +6,22 @@ cd deployment
 ```
 
 ###
-On first deployment:
-1. Start services with realm.json present
-2. Wait for Keycloak to initialize
-3. Delete realm.json from the keycloak-config directory
-4. Restart services
-This is for persistent data(Works for now)
+On first setup (to configure Keycloak realm):
+1. Run the setup profile: `sudo docker compose --profile setup -f docker-compose.dev.yml up --build`
+2. Wait for Keycloak and keycloak-config-cli to complete the configuration
+3. Stop the services (Ctrl+C)
+4. Restart without the setup profile: `sudo docker compose -f docker-compose.dev.yml up`
+
+**Note:** The `setup` profile runs the keycloak-config-cli to import the realm configuration. On subsequent runs, use the normal command without `--profile setup` to preserve the configured data.
 
 ### Run Everything (Default)
 ```bash
 sudo docker compose -f docker-compose.dev.yml up --build
+```
+
+### Run with Setup Profile (First Time Only)
+```bash
+sudo docker compose --profile setup -f docker-compose.dev.yml up --build
 ```
 
 ### Run Specific Components
@@ -33,11 +39,17 @@ sudo docker compose -f docker-compose.db.yml -f docker-compose.api.yml up
 **Database + Keycloak:**
 ```bash
 sudo docker compose -f docker-compose.db.yml -f docker-compose.keycloak.yml up
+
+# Down with
+sudo docker compose down
 ```
 
 **Everything except frontend:**
 ```bash
 sudo docker compose -f docker-compose.db.yml -f docker-compose.keycloak.yml -f docker-compose.api.yml up
+
+# Down with
+sudo docker compose --profile setup down
 ```
 
 ### Docker Compose Structure

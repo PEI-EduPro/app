@@ -3,11 +3,12 @@ import {
   NovoExameForm,
   type NovoExameFormT,
 } from "@/components/novo-exame-form";
+import { decodeId } from "@/lib/id-encoder";
 import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";
 
 const NovoExameUCSearchSchema = z.object({
-  ucId: z.number(),
+  ucId: z.string(),
   ucName: z.string(),
   examId: z.number().optional(),
 });
@@ -15,11 +16,14 @@ const NovoExameUCSearchSchema = z.object({
 export const Route = createFileRoute("/_layout/novo-exame")({
   validateSearch: NovoExameUCSearchSchema,
   component: NovoExame,
+  beforeLoad: ({ search }) => ({
+    ucId: decodeId(search.ucId),
+  }),
 });
 
 function NovoExame() {
   const { ucId, ucName, examId } = Route.useSearch();
-
+  const realId = decodeId(ucId);
   // if examID exists, fetch exam data to edit
   // const { data: examData } = useGetExamById(examId)
 
@@ -70,10 +74,10 @@ function NovoExame() {
         {examId ? "Editar Exame" : "Novo Exame"}
       </div>
       <div className="flex flex-col items-center">
-        <div className="w-[700px] h-auto">
+        <div className="w-175 h-auto">
           <NovoExameForm
             examData={examId ? examConfgExample : undefined}
-            ucID={ucId}
+            ucID={realId}
             ucName={ucName}
           />
         </div>

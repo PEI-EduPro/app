@@ -59,6 +59,8 @@ services:
     depends_on:
       - keycloak
     restart: on-failure
+    profiles:
+      - setup
 
   api:
     build:
@@ -69,8 +71,6 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      keycloak-config-cli:
-        condition: service_completed_successfully
     restart: unless-stopped
     # TODO Healthcheck que verifica se a BD já está ligada
 
