@@ -4,6 +4,9 @@ import os
 import shutil
 import tempfile
 import subprocess
+import csv
+import io
+import json
 from typing import Tuple, List, Dict
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
@@ -525,6 +528,30 @@ async def get_exam_config_by_id(
     statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
     result = await session.exec(statement)
     return result.first()
+
+
+async def process_student_list_csv(
+    session: AsyncSession,
+    exam_config_id: int,
+    file_contents: bytes
+):
+    """
+    Parse the CSV file contents and store the student list.
+    """
+    csv_text = file_contents.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(csv_text))
+
+    nmec_dict = {}
+
+    for row in reader:
+        nmec = row.get("nmec")
+        name = row.get("name")
+        if nmec and name:
+            nmec_dict[nmec] = name
+
+    nmec_name_list = json.dumps(nmec_dict)
+
+    await store_student_list(session, exam_config_id, nmec_name_list)
 
 
 async def store_student_list(

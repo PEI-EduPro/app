@@ -1,5 +1,5 @@
 # src/models/exam_config.py
-from typing import Optional, List, Dict
+from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
 
