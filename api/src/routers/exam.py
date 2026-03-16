@@ -1,13 +1,15 @@
 # src/routers/exam.py
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
 from src.services import exam
 from src.core.db import get_session
 from src.models.user import User
-from src.models.exam_config import ExamConfigResponse
+from src.models.exam_config import ExamConfig, ExamConfigResponse
 from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
+from src.core.keycloak import keycloak_client
 import logging
 import traceback
 
@@ -46,7 +48,8 @@ async def get_subject_exam_configs(
             subject_id=config.subject_id,
             fraction=config.fraction,
             #creator_keycloak_id=config.creator_keycloak_id,
-            topic_configs=topic_configs_dto
+            topic_configs=topic_configs_dto,
+            nmec_name_list=config.nmec_name_list
         ))
         
     return response
@@ -97,3 +100,53 @@ async def generate_exams(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"An error occurred: {str(e)}"
         )
+
+@router.post("/exam/{exam_config_id}/student_list")
+async def store_student_list(
+    exam_config_id: int,
+    file: UploadFile = File(...),
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Store information in csv file as a dict of nmec: student_name
+    """
+    group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+
+    verify_permission(user_info, [f"/s{group_name}/regent"])
+
+    if file.content_type not in ("text/csv", "text/plain", "application/octet-stream"):
+        raise HTTPException(status_code=400, detail="Only CSV files are accepted.")
+    
+    # Read file contents asynchronously
+    contents = await file.read()
+
+    # Always release the file buffer when done
+    await file.close()
+
+    exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    await exam.process_student_list_csv(session, exam_config_id, contents)    
+    return {"message": "Student list stored successfully."}
+
+@router.get("/exam/{exam_config_id}/student_list",response_model=ExamConfigResponse)
+async def retrieve_student_list(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    #correct to the waiting room id
+    try:
+        group_name = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    verify_permission(user_info, [f"/w{group_name}/vigilante", f"/w{group_name}/regent"])
+
+    exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    return ExamConfigResponse.model_validate(exam_config)
