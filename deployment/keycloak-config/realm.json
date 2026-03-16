@@ -692,11 +692,13 @@
       "redirectUris": [
         "http://localhost:5173/*",
         "http://localhost/*",
+        "https://localhost/*",
         "https://mednat.ieeta.pt:9042/*"
       ],
       "webOrigins": [
         "http://localhost:5173",
         "http://localhost",
+        "https://localhost",
         "https://mednat.ieeta.pt:9042"
       ],
       "notBefore": 0,
