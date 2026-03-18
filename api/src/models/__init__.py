@@ -6,6 +6,7 @@ from src.models.subject import *
 from src.models.topic import *
 from src.models.workbook import *
 from src.models.warning import *
+from src.models.waiting_room import *
 
 
 __all__ = [
@@ -17,5 +18,6 @@ __all__ = [
     "Topic",
     "Workbook",
     "Warning",
-    "WarningType"
+    "WarningType",
+    "WaitingRoom"
 ]
