@@ -185,7 +185,7 @@ async def generate_exams_from_configs(
             _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
             # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num)
             session.add(new_exam)
             await session.commit()
             await session.refresh(new_exam)
