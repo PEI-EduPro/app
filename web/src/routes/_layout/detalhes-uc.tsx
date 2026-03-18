@@ -100,11 +100,11 @@ function RouteComponent() {
         ]}
       />
       <div className="w-262.5">
-        <div className="flex flex-row text-5xl mb-35">
-          <span className="font-rubik w-full flex justify-end">
+        <div className="relative flex flex-row text-5xl mb-35 items-center">
+          <span className="font-rubik w-full flex justify-center">
             {ucData?.name || "Carregando..."}
           </span>
-          <div className="w-full flex justify-end">
+          <div className="absolute right-0">
             <Button
               size="lg"
               className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"

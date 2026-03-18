@@ -1,6 +1,6 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Plus,
   ChevronDown,
@@ -236,7 +236,7 @@ function BancoQuestões() {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
-      <div className="shrink-0">
+      <div className="shrink-0 flex flex-col items-center">
         <AppBreadcrumb
           page="Banco de Questões"
           crumbs={[
@@ -247,16 +247,33 @@ function BancoQuestões() {
             },
           ]}
         />
-        <div className="flex justify-center mb-8">
-          <div className="text-center">
-            <div className="text-5xl">
-              {subjectData?.name || "UNIDADE CURRICULAR"}
+        <div className="w-262.5">
+          <div className="relative flex flex-col justify-start text-5xl mb-35 items-center">
+            <div className="text-center flex flex-col">
+              <div className="text-5xl">
+                {subjectData?.name || "UNIDADE CURRICULAR"}
+              </div>
+              <h1 className="text-3xl mt-4 text-[#3263A8]">
+                Banco de questões
+              </h1>
             </div>
-            <h1 className="text-3xl mt-4 text-[#3263A8]">Banco de questões</h1>
+            <div className="absolute right-0">
+              <Link
+                to="/exames-uc"
+                search={{ ucId: ucId, ucName: subjectData?.name || "" }}
+              >
+                <Button
+                  size="lg"
+                  className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                >
+                  Novo Exame
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
 
-        <div className="flex mb-6 justify-between">
+        <div className="flex mb-6 justify-between w-full">
           <XmlUploadButton subjectId={realId} />
 
           <Button
@@ -361,20 +378,22 @@ function BancoQuestões() {
               </div>
             )}
 
-            <div className="flex justify-center pb-6">
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeAllTopics();
-                  setSelectedTopicId(topic.id);
-                  setShowQuestionModal(true);
-                }}
-                className="h-10 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
-              >
-                <Plus className="h-5! w-5!" />
-                Adicionar Questão
-              </Button>
-            </div>
+            {topic.isOpen && (
+              <div className="flex justify-center pb-6">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeAllTopics();
+                    setSelectedTopicId(topic.id);
+                    setShowQuestionModal(true);
+                  }}
+                  className="h-10 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
+                >
+                  <Plus className="h-5! w-5!" />
+                  Adicionar Questão
+                </Button>
+              </div>
+            )}
           </Card>
         ))}
 
