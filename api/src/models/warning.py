@@ -11,6 +11,7 @@ class Warning(SQLModel, table=True):
     __tablename__ = "warning"
     
     id: Optional[int] = Field(default=None, primary_key=True)
+    exam_config_id: int = Field(foreign_key="exam_config.id")
     type: WarningType
     student_list: Optional[str] = Field(default=None, description="String with a tuple nmec:name")
     exam_list: List[int] = Field(default=[], sa_column=Column(JSON), description="IDs of the multiple exams")

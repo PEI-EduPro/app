@@ -190,6 +190,7 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
                 conflict_exams.add(e_id)
             
             warning = Warning(
+                exam_config_id=waiting_room.exam_config_id,
                 type=WarningType.multiple_exams_to_student,
                 student_list=get_nmec_name(student_nmec),
                 exam_list=list(exams)
@@ -205,6 +206,7 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
             
             students_str = "; ".join([get_nmec_name(s) for s in students])
             warning = Warning(
+                exam_config_id=waiting_room.exam_config_id,
                 type=WarningType.multiple_students_to_exam,
                 student_list=students_str,
                 exam_list=[exam_id]
