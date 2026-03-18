@@ -25,11 +25,12 @@ export POSTGRES_PORT=5433
 
 # Use a specific project name 'edupro-test' to namespace volumes and containers
 # This prevents conflict with 'edupro-dev' or 'edupro' project names.
-docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v
+docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v --remove-orphans
+docker network rm edupro-test_default 2>/dev/null || true
 
 # Start services with setup profile to configure Keycloak realm
 echo -e "${GREEN}Starting infrastructure with setup profile (configuring Keycloak realm)...${NC}"
-docker compose -p edupro-test --profile setup -f deployment/docker-compose.test.yml up -d
+docker compose -p edupro-test --profile setup -f deployment/docker-compose.test.yml up -d --force-recreate
 
 # Wait for keycloak-config-cli to complete
 echo -e "${GREEN}Waiting for Keycloak configuration to complete...${NC}"
