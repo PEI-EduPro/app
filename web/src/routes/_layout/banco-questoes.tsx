@@ -235,43 +235,45 @@ function BancoQuestões() {
   }
 
   return (
-    <div className="py-3.5 px-6 w-full">
-      <AppBreadcrumb
-        page="Banco de Questões"
-        crumbs={[
-          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-          {
-            name: subjectData?.name || "...",
-            link: `/detalhes-uc?ucId=${ucId}`,
-          },
-        ]}
-      />
-      <div className="flex justify-center mb-8">
-        <div className="text-center">
-          <div className="text-5xl">
-            {subjectData?.name || "UNIDADE CURRICULAR"}
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+      <div className="shrink-0">
+        <AppBreadcrumb
+          page="Banco de Questões"
+          crumbs={[
+            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+            {
+              name: subjectData?.name || "...",
+              link: `/detalhes-uc?ucId=${ucId}`,
+            },
+          ]}
+        />
+        <div className="flex justify-center mb-8">
+          <div className="text-center">
+            <div className="text-5xl">
+              {subjectData?.name || "UNIDADE CURRICULAR"}
+            </div>
+            <h1 className="text-3xl mt-4 text-[#3263A8]">Banco de questões</h1>
           </div>
-          <h1 className="text-3xl mt-4 text-[#3263A8]">Banco de questões</h1>
+        </div>
+
+        <div className="flex mb-6 justify-between">
+          <XmlUploadButton subjectId={realId} />
+
+          <Button
+            onClick={() => {
+              closeAllTopics();
+              setShowTopicModal(true);
+            }}
+            className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-10 cursor-pointer"
+          >
+            <Plus className="h-5! w-5!" />
+            Adicionar Tópico
+          </Button>
         </div>
       </div>
 
-      <div className="flex mb-6 justify-between">
-        <XmlUploadButton subjectId={realId} />
-
-        <Button
-          onClick={() => {
-            closeAllTopics();
-            setShowTopicModal(true);
-          }}
-          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-10 cursor-pointer"
-        >
-          <Plus className="h-5! w-5!" />
-          Adicionar Tópico
-        </Button>
-      </div>
-
       {/* Topics List - One per line */}
-      <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-4">
         {topics.map((topic) => (
           <Card key={topic.id} className="overflow-hidden p-0">
             {/* Topic Header */}

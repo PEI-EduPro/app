@@ -27,6 +27,9 @@ import { useAddExamConfig } from "@/hooks/use-exams";
 import type { NewExamConfigI } from "@/lib/types";
 import { useGetUCTopics } from "@/hooks/use-questions";
 import { encodeId } from "@/lib/id-encoder";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { format, toDate } from "date-fns";
 
 type TopicSelection = {
   id: string;
@@ -177,7 +180,6 @@ export const NovoExameForm = (props: {
 
     mutate(novoExameData, {
       onSuccess: () => {
-        // toast.dismiss(loadingToast);
         toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
@@ -188,7 +190,6 @@ export const NovoExameForm = (props: {
         });
       },
       onError: (error) => {
-        // toast.dismiss(loadingToast);
         toast.error(`Erro ao gerar exame: ${error.message}`, {
           position: "top-right",
         });
@@ -534,7 +535,7 @@ export const NovoExameForm = (props: {
                     name="exam_title"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           Título do exame
                         </FormLabel>
                         <FormControl>
@@ -554,11 +555,38 @@ export const NovoExameForm = (props: {
                     name="exam_date"
                     render={({ field }) => (
                       <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-140">
                           Data do exame
                         </FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                id="date-picker-simple"
+                                className="justify-start font-normal"
+                              >
+                                {field.value ? (
+                                  format(field.value, "dd/MM/yyyy")
+                                ) : (
+                                  <span>Escolha uma data</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={toDate(field.value)}
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </FormControl>
                       </FormItem>
                     )}
@@ -761,7 +789,7 @@ export const NovoExameForm = (props: {
                     <p className="text-sm text-amber-700">
                       Para cada questão errada, será descontado{" "}
                       <span className="font-bold">
-                        {getDisplayData().fraction || 0}%
+                        {watch("fraction") || 0}%
                       </span>{" "}
                       do valor da questão.<br></br>
                       Exemplo: Se uma questão vale 2 valores e o desconto é de

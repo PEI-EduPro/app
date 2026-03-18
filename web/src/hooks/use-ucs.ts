@@ -18,8 +18,8 @@ const useAddUc = () => {
     mutationKey: ["addUc"],
     mutationFn: (props: NewUcI) => apiClient.post("/subjects/", props),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["uc"] });
       navigate({ to: "/unidades-curriculares" });
+      queryClient.invalidateQueries({ queryKey: ["uc"] });
     },
   });
 };
@@ -81,12 +81,10 @@ const useUpdateUc = (ucId: number) => {
     mutationKey: ["updateUc", ucId],
     mutationFn: (data: {
       regent_keycloak_id: string;
-      student_keycloak_ids: string[];
       professor_keycloak_ids: string[];
     }) => apiClient.put(`/subjects/${ucId}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["uc", ucId] });
-      queryClient.invalidateQueries({ queryKey: ["uc", ucId, "students"] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "professors"] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "regent"] });
       toast.success("Unidade curricular editada com sucesso", {

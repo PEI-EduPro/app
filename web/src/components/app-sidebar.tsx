@@ -55,19 +55,19 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <a href="#">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                  <SquareUserRound className="size-4" />
+              <div className="h-auto">
+                <div className="flex aspect-square size-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <SquareUserRound className="size-8" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">
+                  <span className="text-xl font-semibold">
                     {keycloak.tokenParsed?.name || "Utilizador"}
                   </span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-xl text-muted-foreground">
                     {keycloak.tokenParsed?.email || "email não disponível"}
                   </span>
                 </div>
-              </a>
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -81,10 +81,10 @@ export function AppSidebar() {
                   <SidebarMenuItem key={el.title}>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton asChild>
-                        <div className="cursor-default">
+                        <div className="cursor-pointer">
                           <el.icon />
-                          <span>{el.title}</span>
-                          <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                          <span className="text-base">{el.title}</span>
+                          <ChevronDown className=" transition-transform group-data-[state=open]/collapsible:rotate-180" />
                         </div>
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
@@ -93,7 +93,7 @@ export function AppSidebar() {
                         {el.subContent?.map((sub) => (
                           <SidebarMenuSubItem key={sub.title}>
                             <SidebarMenuSubButton href={sub.url}>
-                              <span>{sub.title}</span>
+                              <span className="text-[16px]">{sub.title}</span>
                             </SidebarMenuSubButton>
                           </SidebarMenuSubItem>
                         ))}
@@ -106,7 +106,7 @@ export function AppSidebar() {
                 <SidebarMenuButton asChild>
                   <a href="#">
                     <Settings2 />
-                    <span>Definições</span>
+                    <span className="text-base">Definições</span>
                   </a>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -114,7 +114,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="border-t-2 border-gray-500">
         <SidebarMenuButton asChild>
           <div
             className="cursor-pointer"
@@ -122,8 +122,8 @@ export function AppSidebar() {
               keycloak.logout({ redirectUri: window.location.origin });
             }}
           >
-            <LogOutIcon />
-            <span>Sair</span>
+            <LogOutIcon className="" />
+            <span className="text-base">Sair</span>
           </div>
         </SidebarMenuButton>
       </SidebarFooter>

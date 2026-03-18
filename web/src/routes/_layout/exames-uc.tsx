@@ -87,25 +87,27 @@ function RouteComponent() {
   const { data: examConfigs } = useGetExamConfig(realId);
 
   return (
-    <div className="py-3.5 px-6 w-full">
-      <AppBreadcrumb
-        page="Exames"
-        crumbs={[
-          {
-            name: "Unidades Curriculares",
-            link: "/unidades-curriculares",
-          },
-          {
-            name: ucName,
-            link: `/detalhes-uc?ucId=${ucId}`,
-          },
-        ]}
-      />
-      <div className="flex flex-col gap-2.5 items-center justify-center mb-35">
-        <span className="font-rubik text-5xl">{ucData?.name}</span>
-        <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+      <div className="shrink-0">
+        <AppBreadcrumb
+          page="Exames"
+          crumbs={[
+            {
+              name: "Unidades Curriculares",
+              link: "/unidades-curriculares",
+            },
+            {
+              name: ucName,
+              link: `/detalhes-uc?ucId=${ucId}`,
+            },
+          ]}
+        />
+        <div className="flex flex-col gap-2.5 items-center justify-center mb-35">
+          <span className="font-rubik text-5xl">{ucData?.name}</span>
+          <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
+        </div>
       </div>
-      <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-17.5 gap-y-12.5">
+      <div className="flex-1 overflow-y-auto px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-17.5 gap-y-12.5">
         {examConfigs?.map((el, index) => (
           <ContentActionCard
             id={el.id}
@@ -117,8 +119,11 @@ function RouteComponent() {
           />
         ))}
         <Link to="/novo-exame" search={{ ucId: ucId, ucName: ucName }}>
-          <Card className="w-37.5 h-62.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
+          <Card className="w-37.5 h-62.5 flex-col justify-center items-center gap-0 bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
             <Plus className="stroke-[rgb(86,89,98)] h-10 w-10" />
+            <span className="text-xl font-medium text-[rgb(86,89,98)]">
+              Criar Exame
+            </span>
           </Card>
         </Link>
       </div>

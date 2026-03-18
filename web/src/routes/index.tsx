@@ -30,7 +30,7 @@ function Index() {
                 })
               }
             >
-              Log In
+              Entrar
             </Button>
           </Link>
 
