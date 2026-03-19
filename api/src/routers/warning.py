@@ -1,24 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import List, Optional
-from pydantic import BaseModel
+from typing import List
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
+from src.models.warning import ExamWarningResponse
 from src.core.deps import get_current_user_info, verify_permission
 from src.services.warning import get_warnings_by_exam_config_id
 
 router = APIRouter()
-
-class StudentWarningInfo(BaseModel):
-    nmec: int
-    name: str
-    email: str
-
-class ExamWarningResponse(BaseModel):
-    exam_id: int
-    batch_number: Optional[int] = None
-    students: List[StudentWarningInfo]
 
 @router.get("/exam_config/{exam_config_id}", response_model=List[ExamWarningResponse])
 async def get_exam_config_warnings(
