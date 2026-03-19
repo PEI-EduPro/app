@@ -10,7 +10,12 @@ import {
 } from "@/hooks/use-ucs";
 import { useGetProfessors } from "@/hooks/use-users";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ClipboardList, FileQuestionMark, LoaderCircle } from "lucide-react";
+import {
+  ClipboardList,
+  FileQuestionMark,
+  LoaderCircle,
+  Trash2Icon,
+} from "lucide-react";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import type { UserI } from "@/lib/types";
@@ -25,6 +30,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),
@@ -109,7 +126,7 @@ function RouteComponent() {
         ]}
       />
       <div className="w-262.5">
-        <div className="relative flex flex-row text-5xl mb-35 items-center">
+        <div className="relative flex flex-row text-5xl mb-25 items-center">
           {isEditing && (
             <div className="absolute left-0">
               <Button
@@ -204,7 +221,13 @@ function RouteComponent() {
                   <div>
                     <span className="text-[26px] font-medium">Professores</span>
                     <CustomTable
-                      data={isEditing ? allProfessorsData : professorsData}
+                      data={
+                        isEditing
+                          ? allProfessorsData.filter(
+                              (el) => el.id !== regentSelection?.id,
+                            )
+                          : professorsData
+                      }
                       isSelectable={isEditing}
                       rowSelection={profsSelection}
                       rowNumber={10}
@@ -222,14 +245,47 @@ function RouteComponent() {
               {isEditing ? (
                 <>
                   {isManager && (
-                    <Button
-                      className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
-                      size="lg"
-                      variant="destructive"
-                      onClick={() => deleteUc(realId)}
-                    >
-                      Apagar Unidade Curricular
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                          size="lg"
+                          variant="destructive"
+                        >
+                          Apagar Unidade Curricular
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                            <Trash2Icon />
+                          </AlertDialogMedia>
+                          <AlertDialogTitle className="font-medium text-2xl">
+                            Apagar Unidade Curricular
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="font-medium text-xl">
+                            {` Esta ação irá apagar permanentemente a unidade curricular ${ucData?.name}. Deseja continuar?`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                          <AlertDialogCancel
+                            variant="outline"
+                            className="cursor-pointer text-xl"
+                            size="lg"
+                          >
+                            Cancelar
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            size="lg"
+                            variant="destructive"
+                            className="cursor-pointer text-xl"
+                            onClick={() => deleteUc(realId)}
+                          >
+                            Apagar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   )}
                 </>
               ) : (

@@ -7,9 +7,21 @@ import { useGetUcById } from "@/hooks/use-ucs";
 import { decodeId } from "@/lib/id-encoder";
 import type { ExamConfigI } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { z } from "zod";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const examesUCSearchSchema = z.object({
   ucId: z.string(),
@@ -50,16 +62,49 @@ const ContentActionCard = ({
           <span className="text-xl font-semibold">{name}</span>
         </div>
         <div className="absolute inset-0 bg-gray-100 text-gray-700 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex flex-col items-center justify-center z-20">
-          <Button
-            variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDelete();
-            }}
-            className="cursor-pointer rounded-full p-2 hover:text-red-500 transition-colors duration-150"
-          >
-            <Trash2 className="h-6.25! w-6.25!" />
-          </Button>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="cursor-pointer rounded-full p-2 hover:text-red-500 transition-colors duration-150"
+              >
+                <Trash2Icon className="h-6.25! w-6.25!" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                  <Trash2Icon />
+                </AlertDialogMedia>
+                <AlertDialogTitle className="font-medium text-2xl">
+                  Apagar Configuração de Exame
+                </AlertDialogTitle>
+                <AlertDialogDescription className="font-medium text-xl">
+                  {` Esta ação irá apagar permanentemente a configuração de exame. Deseja continuar?`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                <AlertDialogCancel
+                  variant="outline"
+                  className="cursor-pointer text-xl"
+                  size="lg"
+                >
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  size="lg"
+                  variant="destructive"
+                  className="cursor-pointer text-xl"
+                  onClick={() => handleDelete()}
+                >
+                  Apagar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </Card>
       {isModalOpen && (
@@ -102,7 +147,7 @@ function RouteComponent() {
             },
           ]}
         />
-        <div className="flex flex-col gap-2.5 items-center justify-center mb-35">
+        <div className="flex flex-col gap-2.5 items-center justify-center mb-25">
           <span className="font-rubik text-5xl">{ucData?.name}</span>
           <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
         </div>

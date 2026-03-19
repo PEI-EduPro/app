@@ -71,7 +71,7 @@ export const NovoExameForm = (props: {
       relative_quotations: examData?.relative_quotations || {},
       number_exams: examData?.number_exams || 1,
       fraction: examData?.fraction || 0,
-      exam_title: examData?.exam_title || "Exame Época Normal",
+      exam_title: examData?.exam_title,
       exam_date: examData?.exam_date || new Date().toISOString().split("T")[0],
       semester: examData?.semester || "1",
       academic_year: examData?.academic_year || "2025/26",
@@ -183,9 +183,10 @@ export const NovoExameForm = (props: {
           finalData.relative_quotations[topic.id];
       }
     });
-
+    toast.loading("A gerar exame...", { position: "top-right" });
     mutate(novoExameData, {
       onSuccess: () => {
+        toast.dismiss();
         toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
@@ -249,12 +250,15 @@ export const NovoExameForm = (props: {
           {formStep === 0 && (
             // Selecionar tópicos
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
                 <FormField
                   control={control}
                   name="topics"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col flex-1 min-h-0 gap-y-4">
                       <FormLabel className="text-center block text-lg">
                         Tópicos
                       </FormLabel>
@@ -267,13 +271,14 @@ export const NovoExameForm = (props: {
                           }))}
                           onChange={field.onChange}
                           rowSelection={field.value}
+                          rowNumber={12}
                         />
                       )}
                     </FormItem>
                   )}
                 />
 
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
                     className="cursor-pointer"
                     variant="outline"
@@ -298,13 +303,16 @@ export const NovoExameForm = (props: {
           {formStep === 1 && (
             // Selecionar número de questões por módulo
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
                     Número de questões por tópico
                   </FormLabel>
 
-                  <div className="max-h-110 overflow-y-auto flex flex-col gap-1">
+                  <div className="min-h-0 overflow-y-auto flex flex-col gap-1 flex-1">
                     {watch("topics")?.map((topic) => {
                       const maxQuestions =
                         topics
@@ -399,7 +407,7 @@ export const NovoExameForm = (props: {
                     })}
                   </div>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
                     className="cursor-pointer"
                     variant="outline"
@@ -423,8 +431,11 @@ export const NovoExameForm = (props: {
           {formStep === 2 && (
             // Selecionar cotações relativas e número de exames
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
                     Cotações relativas por tópico
                   </FormLabel>
@@ -441,17 +452,19 @@ export const NovoExameForm = (props: {
                     </p>
                   </div>
 
-                  <div className="max-h-110 overflow-y-auto flex flex-col gap-1">
+                  <div className="overflow-y-auto min-h-0 flex flex-col gap-1 flex-1">
                     {watch("topics")?.map((topic) => (
                       <FormItem
                         key={topic.id}
                         className="flex items-center gap-x-4"
                       >
-                        <FormLabel className="shrink-0 w-140">
+                        <FormLabel className="shrink-0 w-fit">
                           {topic.nome}
                         </FormLabel>
-                        <FormControl>
+                        <div className="flex-1 border-b-2 border-dashed border-gray-300 mb-0.5" />
+                        <FormControl className="flex-1">
                           <Input
+                            className="max-w-22"
                             type="number"
                             min="1"
                             placeholder="1"
@@ -519,7 +532,7 @@ export const NovoExameForm = (props: {
                   </div>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
                     className="cursor-pointer"
                     variant="outline"
@@ -543,8 +556,11 @@ export const NovoExameForm = (props: {
           {formStep === 3 && (
             // Final step: Number of exams and discount
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-lg">
                     Configurações finais
                   </FormLabel>
@@ -554,14 +570,15 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="exam_title"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">
                           Título do exame
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="text"
                             placeholder="Ex: Teste Teórico 1"
+                            className="w-fit"
                             {...field}
                           />
                         </FormControl>
@@ -574,8 +591,8 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="exam_date"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">
                           Data do exame
                         </FormLabel>
                         <FormControl>
@@ -617,10 +634,8 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="semester"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
-                          Semestre
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Semestre</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -644,10 +659,8 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="academic_year"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
-                          Ano letivo
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Ano letivo</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -676,12 +689,13 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="number_exams"
                     render={() => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">
                           Número de exames
                         </FormLabel>
                         <FormControl>
                           <Input
+                            className="max-w-18.25"
                             type="number"
                             min="1"
                             placeholder="1"
@@ -750,12 +764,11 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="fraction"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
-                          Desconto (%)
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Desconto (%)</FormLabel>
                         <FormControl>
                           <Input
+                            className="w-fit"
                             type="number"
                             min="0"
                             max="100"
@@ -845,12 +858,17 @@ export const NovoExameForm = (props: {
 
           {formStep === 4 && (
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-6">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-2xl font-bold text-primary">
                     Resumo do Exame
                   </FormLabel>
-                  <ExamConfigCard examConfigData={getDisplayData()} />
+                  <div className="flex flex-col gap-1">
+                    <ExamConfigCard examConfigData={getDisplayData()} />
+                  </div>
                 </div>
 
                 <div className="flex justify-between pt-4">
@@ -865,10 +883,8 @@ export const NovoExameForm = (props: {
                   <Button
                     size="sm"
                     className="cursor-pointer"
+                    type="submit"
                     disabled={isPending}
-                    onClick={() => {
-                      handleSubmit(onSubmit)();
-                    }}
                   >
                     {isPending ? "A gerar..." : "Gerar Exame"}
                   </Button>

@@ -61,7 +61,7 @@ function UCS() {
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
       <div className="shrink-0">
         <AppBreadcrumb page="Unidades Curriculares" />
-        <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-35">
+        <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-25">
           Unidades Curriculares
         </div>
       </div>

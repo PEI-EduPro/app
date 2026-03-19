@@ -151,13 +151,15 @@ export function NovaUCForm() {
                         onValueChange={(e) => field.onChange(e)}
                         placeholder="Selecione varios docentes"
                         options={
-                          professors?.map((p) => ({
-                            value: p.id,
-                            label:
-                              p.firstName && p.lastName
-                                ? `${p.firstName} ${p.lastName}`
-                                : p.username || p.id,
-                          })) || []
+                          professors
+                            ?.map((p) => ({
+                              value: p.id,
+                              label:
+                                p.firstName && p.lastName
+                                  ? `${p.firstName} ${p.lastName}`
+                                  : p.username || p.id,
+                            }))
+                            .filter((e) => e.value !== watch("regente")) || []
                         }
                         popoverClassName="w-[402px]"
                       />

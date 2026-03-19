@@ -7,6 +7,7 @@ import {
   ChevronRight,
   SquarePen,
   Trash2,
+  Trash2Icon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import TopicModal from "@/components/topic-modal";
@@ -25,6 +26,18 @@ import {
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const bancoQuestoesSearchSchema = z.object({
   ucId: z.string(),
@@ -111,12 +124,6 @@ function BancoQuestões() {
     updateTopicMutation.mutate({ id, name });
   };
 
-  const handleDeleteTopic = (id: number) => {
-    if (confirm("Deseja apagar este tópico e todas as suas questões?")) {
-      deleteTopicMutation.mutate(id);
-    }
-  };
-
   // Question CRUD operations
   const handleCreateQuestion = (
     topicId: number,
@@ -174,12 +181,6 @@ function BancoQuestões() {
       toCreate,
       toDelete,
     });
-  };
-
-  const handleDeleteQuestion = (_topicId: number, questionId: number) => {
-    if (confirm("Deseja apagar esta questão?")) {
-      deleteQuestionMutation.mutate(questionId);
-    }
   };
 
   const toggleTopic = (topicId: number) => {
@@ -248,7 +249,7 @@ function BancoQuestões() {
           ]}
         />
         <div className="w-262.5">
-          <div className="relative flex flex-col justify-start text-5xl mb-35 items-center">
+          <div className="relative flex flex-col justify-start text-5xl mb-25 items-center">
             <div className="text-center flex flex-col">
               <div className="text-5xl">
                 {subjectData?.name || "UNIDADE CURRICULAR"}
@@ -330,17 +331,51 @@ function BancoQuestões() {
                 >
                   <SquarePen className="w-5 h-5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTopic(topic.id);
-                  }}
-                  className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
-                  title="Excluir tópico"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                      title="Excluir tópico"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                        <Trash2Icon />
+                      </AlertDialogMedia>
+                      <AlertDialogTitle className="font-medium text-2xl">
+                        Apagar Tópico
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="font-medium text-xl">
+                        Deseja apagar este tópico e todas as suas questões?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                      <AlertDialogCancel
+                        variant="outline"
+                        className="cursor-pointer text-xl"
+                        size="lg"
+                      >
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        size="lg"
+                        variant="destructive"
+                        className="cursor-pointer text-xl"
+                        onClick={() => deleteTopicMutation.mutate(topic.id)}
+                      >
+                        Apagar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
 
@@ -368,7 +403,7 @@ function BancoQuestões() {
                             setShowQuestionModal(true);
                           }}
                           onDelete={() =>
-                            handleDeleteQuestion(topic.id, question.id)
+                            deleteQuestionMutation.mutate(question.id)
                           }
                         />
                       ),
@@ -502,14 +537,48 @@ function QuestionItem({
         >
           <SquarePen className="w-4 h-4" />
         </Button>
-        <Button
-          variant="ghost"
-          onClick={onDelete}
-          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-          title="Excluir questão"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+              title="Excluir questão"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                <Trash2Icon />
+              </AlertDialogMedia>
+              <AlertDialogTitle className="font-medium text-2xl">
+                Apagar Questão
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-medium text-xl">
+                Deseja apagar esta questão?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+              <AlertDialogCancel
+                variant="outline"
+                className="cursor-pointer text-xl"
+                size="lg"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                size="lg"
+                variant="destructive"
+                className="cursor-pointer text-xl"
+                onClick={onDelete}
+              >
+                Apagar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );
