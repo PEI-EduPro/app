@@ -692,6 +692,69 @@ class KeycloakClient:
             # Returning empty list is safer than crashing, but denies access.
             return []
 
+    async def create_waiting_room_groups(
+        self,
+        waiting_room_id: int,
+        regent_keycloak_id: str,
+        vigilant_ids: list[str]
+    ) -> bool:
+        """
+        Creates the waiting room groups in Keycloak.
+        Creates w{id}/regent and w{id}/vigilant and assigns users.
+        """
+        logger.info(f"Creating groups for waiting room ID: {waiting_room_id}")
+
+        try:
+            loop = asyncio.get_event_loop()
+
+            base_group_name = f"w{waiting_room_id}"
+            subgroups = ["regent", "vigilant"]
+
+            subgroup_ids = {}
+            for sub_name in subgroups:
+                full_group_name = base_group_name + "/" + sub_name
+                logger.debug(f"Attempting to create subgroup: {full_group_name}")
+
+                subgroup_id = await loop.run_in_executor(
+                    None,
+                    lambda name=full_group_name: self.admin_client.create_group({"name": name})
+                )
+                logger.info(f"Created subgroup: {full_group_name} with ID: {subgroup_id}")
+                subgroup_ids[full_group_name] = subgroup_id
+
+            # Assign regent
+            regent_group_name = f"{base_group_name}/regent"
+            regent_group_id = subgroup_ids.get(regent_group_name)
+
+            if regent_group_id:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=regent_keycloak_id, gid=regent_group_id: self.admin_client.group_user_add(uid, gid)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to add regent {regent_keycloak_id} to waiting room {waiting_room_id}: {e}")
+
+            # Assign vigilants
+            vigilant_group_name = f"{base_group_name}/vigilant"
+            vigilant_group_id = subgroup_ids.get(vigilant_group_name)
+
+            if vigilant_group_id:
+                for v_id in vigilant_ids:
+                    try:
+                        await loop.run_in_executor(
+                            None,
+                            lambda uid=v_id, gid=vigilant_group_id: self.admin_client.group_user_add(uid, gid)
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to add vigilant {v_id} to waiting room {waiting_room_id}: {e}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Keycloak Admin API error during waiting room group creation: {e}")
+            raise e
+
 keycloak_client = KeycloakClient()
 
 """

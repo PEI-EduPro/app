@@ -5,6 +5,7 @@ from src.models.question import *
 from src.models.subject import *
 from src.models.topic import *
 from src.models.workbook import *
+from src.models.waiting_room import *
 
 
 __all__ = [
@@ -14,5 +15,6 @@ __all__ = [
     "Question",
     "Subject",
     "Topic",
-    "Workbook"
+    "Workbook",
+    "WaitingRoom"
 ]

@@ -72,15 +72,36 @@ async def get_subject(subject_id: int, session: AsyncSession = Depends(get_sessi
         raise HTTPException(status_code=404, detail="Subject not found")
     return subject
 
-@router.put("/{subject_id}", response_model=SubjectRead, dependencies=[Depends(require_manager)])
+@router.put("/{subject_id}", response_model=SubjectRead)
 async def update_subject(
     subject_id: int,
     subject_update: SubjectUpdate,
+    user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Update subject name or regent.
+    Update subject.
+    - Managers: Can update name, regent, students, and professors.
+    - Regents: Can only update students and professors for their subject.
     """
+    # Check if user is manager or regent of this subject
+    is_manager = "manager" in user_info.realm_roles
+    is_regent = f"/s{subject_id}/regent" in user_info.groups
+    
+    if not is_manager and not is_regent:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only managers or subject regents can update subjects"
+        )
+    
+    # Regents can only update students and professors, not name or regent
+    if not is_manager:
+        if subject_update.name is not None or subject_update.regent_keycloak_id is not None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only managers can update subject name or regent"
+            )
+    
     try:
         return await subject_service.update_subject_service(session, subject_id, subject_update)
     except ValueError:

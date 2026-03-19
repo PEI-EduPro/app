@@ -4,6 +4,9 @@ import os
 import shutil
 import tempfile
 import subprocess
+import csv
+import io
+import json
 from typing import Tuple, List, Dict
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
@@ -513,3 +516,100 @@ async def get_exam_configs_by_subject(
     )
     result = await session.exec(statement)
     return list(result.all())
+
+
+async def get_exam_config_by_id(
+    session: AsyncSession,
+    exam_config_id: int
+) -> ExamConfig | None:
+    """
+    Get a specific exam configuration by ID.
+    """
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    return result.first()
+
+
+async def process_student_list_csv(
+    session: AsyncSession,
+    exam_config_id: int,
+    file_contents: bytes
+):
+    """
+    Parse the CSV file contents and store the student list.
+    """
+    csv_text = file_contents.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(csv_text))
+
+    nmec_dict = {}
+
+    for row in reader:
+        nmec = row.get("nmec")
+        name = row.get("name")
+        if nmec and name:
+            nmec_dict[nmec] = name
+
+    nmec_name_list = json.dumps(nmec_dict)
+
+    await store_student_list(session, exam_config_id, nmec_name_list)
+
+
+async def store_student_list(
+    session: AsyncSession,
+    exam_config_id: int,
+    nmec_name_list: str
+):
+    """
+    Store the student list (nmec and names) for a given exam configuration.
+     This will be used to associate generated exams with students.
+     """
+    # This function would typically update the ExamConfig with the provided nmec_dict
+    # For example, you could add a new column to ExamConfig to store this information as JSON
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    exam_config.nmec_name_list = nmec_name_list
+    session.add(exam_config)
+    await session.commit()
+
+
+async def get_subject_id_by_exam_config_id(
+    exam_config_id:int,
+    session: AsyncSession
+):
+    """Get subject's id by exam config id"""
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    return exam_config.subject_id
+
+
+async def get_student_list(
+    session: AsyncSession,
+    exam_config_id: int
+):
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    return exam_config.nmec_name_list
+
+async def get_exams_by_config_id(
+    session: AsyncSession,
+    exam_config_id: int
+):
+    statement = select(Exam).where(Exam.exam_config_id == exam_config_id)
+    result = await session.exec(statement)
+    exams = result.all()
+    
+    if not exams:
+        raise ValueError("No exams found for this configuration.")
+    
+    return exams
+
