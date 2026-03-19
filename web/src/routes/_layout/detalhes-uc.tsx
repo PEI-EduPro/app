@@ -16,6 +16,15 @@ import { z } from "zod";
 import type { UserI } from "@/lib/types";
 import { decodeId } from "@/lib/id-encoder";
 import { useKeycloak } from "@/hooks/use-keycloak";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),
@@ -74,20 +83,20 @@ function RouteComponent() {
     { id: string; nome: string; email: string }[]
   >([]);
 
-  const [regentSelection, setRegentSelection] = useState<
-    { id: string; nome: string; email: string }[]
-  >([]);
+  const [regentSelection, setRegentSelection] = useState<{
+    id: string;
+    nome: string;
+    email: string;
+  }>();
 
   useEffect(() => {
     setProfsSelection(professorsData);
     if (regent) {
-      setRegentSelection([
-        {
-          id: regent.id,
-          nome: formatUserName(regent),
-          email: regent.email || "",
-        },
-      ]);
+      setRegentSelection({
+        id: regent.id,
+        nome: formatUserName(regent),
+        email: regent.email || "",
+      });
     }
   }, [professors, regent]);
 
@@ -111,9 +120,9 @@ function RouteComponent() {
               onClick={() => {
                 if (!isEditing) {
                   setIsEditing(true);
-                } else {
+                } else if (regentSelection) {
                   updateUc({
-                    regent_keycloak_id: regentSelection[0].id,
+                    regent_keycloak_id: regentSelection.id,
                     professor_keycloak_ids: profsSelection.map((a) => a.id),
                   });
                   setIsEditing(false);
@@ -136,24 +145,41 @@ function RouteComponent() {
                 <div className="w-full flex flex-1 flex-col gap-7.5">
                   <div>
                     <span className="text-[26px] font-medium">Regente</span>
-                    <CustomTable
-                      data={
-                        isEditing && isManager
-                          ? allProfessorsData
-                          : regent
-                            ? regentSelection
-                            : []
-                      }
-                      isSelectable={isEditing && isManager}
-                      rowSelection={regentSelection}
-                      onChange={(e) => {
-                        if (isEditing && e.length <= 1) {
-                          setRegentSelection(
-                            e as { id: string; nome: string; email: string }[],
-                          );
-                        }
-                      }}
-                    />
+
+                    {isEditing ? (
+                      <Select
+                        value={regentSelection?.id ?? ""}
+                        onValueChange={(e) => {
+                          const option = allProfessors.find((el) => el.id == e);
+                          if (option) {
+                            setRegentSelection({
+                              id: option.id,
+                              email: option.email || "",
+                              nome: `${option.firstName} ${option.lastName}`,
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="shadow-none w-full">
+                          <SelectValue placeholder="Selecione um docente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {allProfessorsData.map((prof) => (
+                              <SelectItem key={prof.id} value={prof.id}>
+                                {prof.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        readOnly
+                        className="shadow-none"
+                        value={regentSelection?.nome ?? ""}
+                      />
+                    )}
                   </div>
                 </div>
                 <div className="w-full flex-1 h-inherit">
