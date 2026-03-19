@@ -613,3 +613,20 @@ async def get_exams_by_config_id(
     
     return exams
 
+
+async def delete_exam_config(
+    session: AsyncSession,
+    exam_config_id: int
+) -> bool:
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    
+    if not exam_config:
+        return False
+        
+    await session.delete(exam_config)
+    await session.commit()
+    return True
+
+
