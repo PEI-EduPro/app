@@ -146,6 +146,7 @@ export function NovaUCForm() {
                     <FormLabel>Professores</FormLabel>
                     <FormControl>
                       <MultiSelect
+                        emptyIndicator="Nenhum resultado encontrado"
                         value={field.value}
                         onValueChange={(e) => field.onChange(e)}
                         placeholder="Selecione varios docentes"
@@ -174,7 +175,7 @@ export function NovaUCForm() {
                   }
                   type="submit"
                   size="sm"
-                  className="font-medium"
+                  className="font-medium cursor-pointer"
                 >
                   Criar
                 </Button>

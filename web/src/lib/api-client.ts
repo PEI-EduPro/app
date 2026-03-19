@@ -67,7 +67,7 @@ class ApiClient {
     return response.json();
   }
 
-  async delete<T>(endpoint: string): Promise<T> {
+  async delete<T>(endpoint: string): Promise<T | null> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "DELETE",
       headers: this.getHeaders(),
@@ -76,7 +76,9 @@ class ApiClient {
     if (!response.ok) {
       throw new Error(`Error deleting ${endpoint}: ${response.statusText}`);
     }
-    return response.json();
+
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
   }
 
   async download(endpoint: string, data: unknown): Promise<Blob> {

@@ -94,7 +94,7 @@ function UCS() {
               <Card className="w-80 h-57.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
                 <Plus className="stroke-[rgb(86,89,98)] h-10 w-10" />
                 <span className="text-xl font-medium text-[rgb(86,89,98)]">
-                  Criar Exame
+                  Criar Unidade Curricular
                 </span>
               </Card>
             </Link>

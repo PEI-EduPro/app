@@ -98,7 +98,7 @@ function RouteComponent() {
         email: regent.email || "",
       });
     }
-  }, [professors, regent]);
+  }, [professors, regent, isEditing]);
 
   return (
     <div className="py-3.5 px-6 w-full flex flex-col items-center">
@@ -110,6 +110,20 @@ function RouteComponent() {
       />
       <div className="w-262.5">
         <div className="relative flex flex-row text-5xl mb-35 items-center">
+          {isEditing && (
+            <div className="absolute left-0">
+              <Button
+                size="lg"
+                className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                variant="secondary"
+                onClick={() => {
+                  setIsEditing(false);
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          )}
           <span className="font-rubik w-full flex justify-center">
             {ucData?.name || "Carregando..."}
           </span>
@@ -146,9 +160,11 @@ function RouteComponent() {
                   <div>
                     <span className="text-[26px] font-medium">Regente</span>
 
-                    {isEditing ? (
+                    {isEditing && isManager ? (
                       <Select
-                        value={regentSelection?.id ?? ""}
+                        value={
+                          regentSelection?.id ?? "Nenhum resultado encontrado"
+                        }
                         onValueChange={(e) => {
                           const option = allProfessors.find((el) => el.id == e);
                           if (option) {
@@ -177,7 +193,9 @@ function RouteComponent() {
                       <Input
                         readOnly
                         className="shadow-none"
-                        value={regentSelection?.nome ?? ""}
+                        value={
+                          regentSelection?.nome ?? "Nenhum resultado encontrado"
+                        }
                       />
                     )}
                   </div>
