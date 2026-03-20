@@ -89,7 +89,7 @@ def _compute_normalized_weights(topic_configs: List[TopicConfig]) -> Dict[int, f
     norm = 20.0 / total_mass
     return {tc.topic_id: tc.relative_weight * norm for tc in topic_configs}
 
-
+# put the exam batch number rendered in the LaTeX
 async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
@@ -185,7 +185,7 @@ async def generate_exams_from_configs(
             _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
             # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num)
             session.add(new_exam)
             await session.commit()
             await session.refresh(new_exam)
