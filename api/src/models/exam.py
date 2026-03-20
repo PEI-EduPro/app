@@ -6,7 +6,7 @@ from enum import Enum
 # Exam model
 class Exam(SQLModel, table=True):
     __tablename__ = "exam"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     exam_config_id: int = Field(foreign_key="exam_config.id")
     exam_xml: Optional[str] = Field(default=None)
@@ -15,7 +15,7 @@ class Exam(SQLModel, table=True):
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
-    
+
     # Relationships
     exam_config: "ExamConfig" = Relationship(back_populates="exams")
 

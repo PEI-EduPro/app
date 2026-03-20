@@ -205,7 +205,7 @@ async def close_waiting_room(
     """
     Close a waiting room. Checks for association conflicts (e.g. one student to multiple exams).
     If conflicts exist, stops at the CLOSED state and raises an error.
-    If no conflicts exist, maps the students to exams and transitions to FINISHED.
+    If no conflicts exist, maps the students to exams and keeps the room in the CLOSED state.
     Only the regent of the subject can perform this action.
     """
     waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
