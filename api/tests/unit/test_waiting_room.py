@@ -105,7 +105,7 @@ async def test_associate_student_to_exam(client, mock_auth_user, setup_data, ses
     
     response = await client.post(
         f"/api/waiting-rooms/{waiting_room.id}/student_to_exam",
-        json={"qr": str(exam_ids[0]), "nmec": "12345"}
+        json={"qr": str(exam_ids[0]), "nmec": 12345}
     )
     
     assert response.status_code == 200

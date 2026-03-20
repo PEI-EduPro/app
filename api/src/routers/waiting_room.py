@@ -9,9 +9,13 @@ import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
 import logging
+from typing import TypedDict
+
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
 
 @router.post("/", response_model=WaitingRoomResponse, status_code=status.HTTP_201_CREATED)
 async def create_waiting_room(
@@ -126,10 +130,14 @@ async def get_waiting_room_info(
             detail=f"Failed to retrieve waiting room info: {str(e)}"
         )
 
+class QRCodeToNMEC(TypedDict):
+    qr: str
+    nmec: int
+
 @router.post("/{waiting_room_id}/student_to_exam")
 async def associate_students_to_exams(
     waiting_room_id: int,
-    qrcode_to_nmec: dict,
+    qrcode_to_nmec: QRCodeToNMEC,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
