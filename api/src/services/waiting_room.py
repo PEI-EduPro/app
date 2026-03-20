@@ -1,11 +1,12 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse
+from src.models.warning import Warning, WarningType
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
 from src.services.exam import get_exams_by_config_id
 from src.core.keycloak import keycloak_client
-from typing import Optional, List
+from typing import Optional, List, Set, Dict
 import json
 
 async def get_waiting_room(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoom]:
@@ -144,52 +145,88 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
     await session.commit()
     await session.refresh(waiting_room)
 
-    # 2. Check for conflicts
-    student_to_exams = {}
-    exam_to_students = {}
-    errors = []
-
+    # 2. Parse associations
+    student_to_exams: Dict[str, Set[int]] = {}
+    exam_to_students: Dict[int, Set[str]] = {}
+    
     for assoc in waiting_room.associations:
         if ":" in assoc:
-            exam_id_str, student_nmec = assoc.split(":", 1)
-            exam_id = int(exam_id_str)
-            
-            if student_nmec not in student_to_exams:
-                student_to_exams[student_nmec] = []
-            student_to_exams[student_nmec].append(exam_id)
-            
-            if exam_id not in exam_to_students:
-                exam_to_students[exam_id] = []
-            exam_to_students[exam_id].append(student_nmec)
+            try:
+                exam_id_str, student_nmec = assoc.split(":", 1)
+                exam_id = int(exam_id_str)
+                
+                if student_nmec not in student_to_exams:
+                    student_to_exams[student_nmec] = set()
+                student_to_exams[student_nmec].add(exam_id)
+                
+                if exam_id not in exam_to_students:
+                    exam_to_students[exam_id] = set()
+                exam_to_students[exam_id].add(student_nmec)
+            except (ValueError, TypeError):
+                continue
 
+    # 3. Load nmec-name mapping for warnings
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    nmec_to_name = {}
+    if exam_config and exam_config.nmec_name_list:
+        try:
+            nmec_to_name = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            pass
+
+    def get_nmec_name(nmec_str: str) -> str:
+        name = nmec_to_name.get(nmec_str, "Unknown")
+        return f"{nmec_str}:{name}"
+
+    # 4. Identify conflicts and create warnings
+    conflict_students: Set[str] = set()
+    conflict_exams: Set[int] = set()
+
+    # Check for multiple exams per student
     for student_nmec, exams in student_to_exams.items():
-        if len(set(exams)) > 1:
-            errors.append(f"Student {student_nmec} is associated with multiple exams: {list(set(exams))}")
+        if len(exams) > 1:
+            conflict_students.add(student_nmec)
+            for e_id in exams:
+                conflict_exams.add(e_id)
+            
+            warning = Warning(
+                exam_config_id=waiting_room.exam_config_id,
+                type=WarningType.multiple_exams_to_student,
+                student_list=get_nmec_name(student_nmec),
+                exam_list=list(exams)
+            )
+            session.add(warning)
 
+    # Check for multiple students per exam
     for exam_id, students in exam_to_students.items():
-        if len(set(students)) > 1:
-            errors.append(f"Exam {exam_id} is associated with multiple students: {list(set(students))}")
+        if len(students) > 1:
+            conflict_exams.add(exam_id)
+            for s_nmec in students:
+                conflict_students.add(s_nmec)
+            
+            students_str = "; ".join([get_nmec_name(s) for s in students])
+            warning = Warning(
+                exam_config_id=waiting_room.exam_config_id,
+                type=WarningType.multiple_students_to_exam,
+                student_list=students_str,
+                exam_list=[exam_id]
+            )
+            session.add(warning)
 
-    if errors:
-        # =====================================================================
-        # TODO: A UI or robust mechanism needs to be implemented to allow the 
-        # regent to resolve these conflicts. Currently we just raise an error
-        # and stop the workflow so they don't corrupt the final database mapping.
-        # =====================================================================
-        raise ValueError(f"Conflicts detected: {'; '.join(errors)}")
-
-    # 3. No errors, map the associations
+    # 5. Map clean associations (1:1 with no conflicts)
     for exam_id, students in exam_to_students.items():
-        # Using a set check ensured there's only one unique student nmec per exam here
-        student_nmec = students[0]
-        exam = await session.get(Exam, exam_id)
-        if exam:
-            exam.nmec = int(student_nmec)
-            session.add(exam)
+        # Only process if this exam has exactly one student AND that student is not involved in any other conflict
+        if len(students) == 1:
+            student_nmec = list(students)[0]
+            if student_nmec not in conflict_students and exam_id not in conflict_exams:
+                exam = await session.get(Exam, exam_id)
+                if exam:
+                    try:
+                        exam.nmec = int(student_nmec)
+                        session.add(exam)
+                    except (ValueError, TypeError):
+                        pass
 
-    # 4. Change state to FINISHED
-    waiting_room.state = WaitingRoomState.FINISHED
-    session.add(waiting_room)
     await session.commit()
     await session.refresh(waiting_room)
 

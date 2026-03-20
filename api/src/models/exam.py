@@ -6,7 +6,7 @@ from enum import Enum
 # Exam model
 class Exam(SQLModel, table=True):
     __tablename__ = "exam"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     exam_config_id: int = Field(foreign_key="exam_config.id")
     exam_xml: Optional[str] = Field(default=None)
@@ -14,7 +14,8 @@ class Exam(SQLModel, table=True):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
-    
+    batch_number: Optional[int] = Field(default=None)
+
     # Relationships
     exam_config: "ExamConfig" = Relationship(back_populates="exams")
 
@@ -23,6 +24,7 @@ class ExamCreate(SQLModel):
     """Schema for creating a new exam"""
     exam_config_id: int
     exam_xml: Optional[str] = None
+    batch_number: Optional[int] = Field(default=None)
 
 class ExamUpdate(SQLModel):
     """Schema for updating exam data"""
@@ -32,6 +34,7 @@ class ExamUpdate(SQLModel):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
+    batch_number: Optional[int] = Field(default=None)
 
 class ExamRead(SQLModel):
     """Schema for reading exam data"""
@@ -41,6 +44,7 @@ class ExamRead(SQLModel):
     nmec: Optional[int] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
+    batch_number: Optional[int] = Field(default=None)
 
 class ExamPublic(SQLModel):
     """Schema for public exam data (no answers exposed)"""
@@ -49,3 +53,4 @@ class ExamPublic(SQLModel):
     nmec: Optional[int] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
+    batch_number: Optional[int] = Field(default=None)
