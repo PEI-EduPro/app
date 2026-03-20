@@ -148,18 +148,22 @@ async def associate_students_to_exams(
     if waiting_room.state != WaitingRoomState.RUNNING:
         raise HTTPException(status_code=400, detail="Waiting room must be in running state to associate students.")
 
-    try:
-        # qrcode_to_nmec is a dict: { "exam_id": "student_nmec" }
-        for exam_id_str, student_nmec in qrcode_to_nmec.items():
-            exam_id = int(exam_id_str)
-            await waiting_room_service.associate_student_to_exam_service(
-                session=session,
-                waiting_room_id=waiting_room_id,
-                exam_id=exam_id,
-                student_nmec=str(student_nmec)
-            )
+    # qrcode_to_nmec format
+    # {qr: string,
+    #  nmec: number}
 
-        return {"message": "Students associated to exams successfully."}
+    try:
+        # qrcode_to_nmec is a dict -> {qr: string, nmec: number}
+        exam_id = int(qrcode_to_nmec["qr"])
+        student_nmec = qrcode_to_nmec["nmec"]
+        await waiting_room_service.associate_student_to_exam_service(
+            session=session,
+            waiting_room_id=waiting_room_id,
+            exam_id=exam_id,
+            student_nmec=str(student_nmec)
+        )
+
+        return {"message": "Student associated to exams successfully."}
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid exam ID format. Must be an integer.")
     except Exception as e:

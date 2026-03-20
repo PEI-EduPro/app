@@ -12,7 +12,7 @@ class ExamConfig(SQLModel, table=True):
     #creator_keycloak_id: str = Field(max_length=255)
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
-    nmec_name_list: Optional[str] #dict{nmec : nome}
+    nmec_name_list: Optional[str] #dict{nmec : nome} json
     
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
