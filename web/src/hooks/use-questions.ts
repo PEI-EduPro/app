@@ -36,7 +36,7 @@ export function useCreateTopic(subjectId: number) {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
@@ -55,7 +55,7 @@ export function useUpdateTopic(subjectId: number) {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
@@ -73,7 +73,7 @@ export function useDeleteTopic(subjectId: number) {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
@@ -104,7 +104,7 @@ export function useCreateQuestion(subjectId: number) {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
@@ -160,7 +160,7 @@ export function useUpdateQuestion(subjectId: number) {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
@@ -178,7 +178,7 @@ export function useDeleteQuestion(subjectId: number) {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },

@@ -42,7 +42,7 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
         position: "top-right",
       });
     } catch {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     } finally {

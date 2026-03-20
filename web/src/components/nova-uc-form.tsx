@@ -50,7 +50,7 @@ export function NovaUCForm() {
       professor_keycloak_ids: formData.professores,
     });
     if (isError) {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     } else {

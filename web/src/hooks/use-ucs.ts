@@ -65,7 +65,7 @@ const useDeleteUcById = (ucId: number) => {
       navigate({ to: "/unidades-curriculares" });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
@@ -90,7 +90,7 @@ const useUpdateUc = (ucId: number) => {
       });
     },
     onError: () => {
-      toast.error("Ocurreu um erro, tente novamente mais tarde", {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
         position: "top-right",
       });
     },
