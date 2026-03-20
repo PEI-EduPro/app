@@ -55,7 +55,7 @@ class KeycloakClient:
             )
             
             # Manual issuer verification
-            expected_issuer = f"{settings.KEYCLOAK_ISSUER_URL}/keycloak/realms/{settings.KEYCLOAK_REALM}"
+            expected_issuer = f"{settings.KEYCLOAK_ISSUER_URL}/realms/{settings.KEYCLOAK_REALM}"
             actual_issuer = token_info.get('iss', '')
             
             if actual_issuer != expected_issuer:
