@@ -3,6 +3,7 @@ import { Upload } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "./ui/button";
 import { apiClient } from "@/lib/api-client";
+import { toast } from "sonner";
 
 interface XmlUploadButtonProps {
   subjectId: number;
@@ -32,17 +33,18 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
     try {
       const xmlContent = await file.text();
 
-      await apiClient.post(
-        `/questions/${subjectId}/XML`,
-        xmlContent,
-        { headers: { "Content-Type": "application/xml" } }
-      );
+      await apiClient.post(`/questions/${subjectId}/XML`, xmlContent, {
+        headers: { "Content-Type": "application/xml" },
+      });
 
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      alert("Questões importadas com sucesso!");
-    } catch (error) {
-      console.error("Error uploading XML:", error);
-      alert("Erro ao importar questões. Verifique o formato do arquivo.");
+      toast.success("Questões importadas com sucesso", {
+        position: "top-right",
+      });
+    } catch {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
     } finally {
       setIsUploading(false);
       if (fileInputRef.current) {

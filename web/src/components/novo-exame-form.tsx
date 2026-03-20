@@ -27,6 +27,9 @@ import { useAddExamConfig } from "@/hooks/use-exams";
 import type { NewExamConfigI } from "@/lib/types";
 import { useGetUCTopics } from "@/hooks/use-questions";
 import { encodeId } from "@/lib/id-encoder";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { format, toDate } from "date-fns";
 
 type TopicSelection = {
   id: string;
@@ -50,7 +53,7 @@ export const NovoExameForm = (props: {
   ucID: number;
   ucName: string;
 }) => {
-  const { examData = null, ucID } = props;
+  const { examData = null, ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null,
@@ -68,12 +71,18 @@ export const NovoExameForm = (props: {
       relative_quotations: examData?.relative_quotations || {},
       number_exams: examData?.number_exams || 1,
       fraction: examData?.fraction || 0,
-      exam_title: examData?.exam_title || "Exame Época Normal",
+      exam_title: examData?.exam_title,
       exam_date: examData?.exam_date || new Date().toISOString().split("T")[0],
       semester: examData?.semester || "1",
       academic_year: examData?.academic_year || "2025/26",
     },
   });
+
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [
+    `${currentYear - 1}/${String(currentYear).slice(-2)}`,
+    `${currentYear}/${String(currentYear + 1).slice(-2)}`,
+  ];
 
   const { handleSubmit, control, reset, watch, setValue, getValues } = form;
 
@@ -174,21 +183,23 @@ export const NovoExameForm = (props: {
           finalData.relative_quotations[topic.id];
       }
     });
-
-    const loadingToast = toast.loading("A gerar exames...");
-
+    toast.loading("A gerar exame...", { position: "top-right" });
     mutate(novoExameData, {
       onSuccess: () => {
-        toast.dismiss(loadingToast);
-        toast.success("Exame criado com sucesso!");
+        toast.dismiss();
+        toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
         reset();
-        navigate({ to: "/detalhes-uc", search: { ucId: encodeId(ucID) } });
+        navigate({
+          to: "/exames-uc",
+          search: { ucId: encodeId(ucID), ucName },
+        });
       },
       onError: (error) => {
-        toast.dismiss(loadingToast);
-        toast.error(`Erro ao gerar exame: ${error.message}`);
+        toast.error(`Erro ao gerar exame: ${error.message}`, {
+          position: "top-right",
+        });
       },
     });
   };
@@ -239,12 +250,15 @@ export const NovoExameForm = (props: {
           {formStep === 0 && (
             // Selecionar tópicos
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
                 <FormField
                   control={control}
                   name="topics"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex flex-col flex-1 min-h-0 gap-y-4">
                       <FormLabel className="text-center block text-lg">
                         Tópicos
                       </FormLabel>
@@ -257,13 +271,14 @@ export const NovoExameForm = (props: {
                           }))}
                           onChange={field.onChange}
                           rowSelection={field.value}
+                          rowNumber={12}
                         />
                       )}
                     </FormItem>
                   )}
                 />
 
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
                     className="cursor-pointer"
                     variant="outline"
@@ -288,52 +303,190 @@ export const NovoExameForm = (props: {
           {formStep === 1 && (
             // Selecionar número de questões por módulo
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
                     Número de questões por tópico
                   </FormLabel>
 
-                  {watch("topics")?.map((topic) => {
-                    const maxQuestions =
-                      topics
-                        ?.map((t) =>
-                          t[0].id.toString() === topic.id ? t[1] : 0,
-                        )
-                        .filter((n) => n !== 0)[0] || 1;
+                  <div className="min-h-0 overflow-y-auto flex flex-col gap-1 flex-1">
+                    {watch("topics")?.map((topic) => {
+                      const maxQuestions =
+                        topics
+                          ?.map((t) =>
+                            t[0].id.toString() === topic.id ? t[1] : 0,
+                          )
+                          .filter((n) => n !== 0)[0] || 1;
 
-                    return (
+                      return (
+                        <FormItem
+                          key={topic.id}
+                          className="flex items-center gap-x-4"
+                        >
+                          <FormLabel className="shrink-0 w-fit">
+                            {topic.nome} (max: {maxQuestions})
+                          </FormLabel>
+                          <div className="flex-1 border-b-2 border-dashed border-gray-300 mb-0.5" />
+                          <FormControl className="flex-1">
+                            <Input
+                              className="max-w-22"
+                              type="number"
+                              min="1"
+                              max={maxQuestions}
+                              placeholder="1"
+                              value={
+                                watch(`number_questions.${topic.id}`) || ""
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
+
+                                // Allow empty value for backspacing
+                                if (value === "") {
+                                  setValue(`number_questions.${topic.id}`, NaN);
+                                  return;
+                                }
+
+                                const numValue = parseInt(value);
+                                const clampedValue = Math.min(
+                                  Math.max(isNaN(numValue) ? 1 : numValue, 1),
+                                  maxQuestions,
+                                );
+                                setValue(
+                                  `number_questions.${topic.id}`,
+                                  clampedValue,
+                                );
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value;
+
+                                // Only validate and set to 1 on blur if empty
+                                if (value === "") {
+                                  setValue(`number_questions.${topic.id}`, 1);
+                                  return;
+                                }
+
+                                const numValue = parseInt(value);
+                                const clampedValue = Math.min(
+                                  Math.max(isNaN(numValue) ? 1 : numValue, 1),
+                                  maxQuestions,
+                                );
+                                setValue(
+                                  `number_questions.${topic.id}`,
+                                  clampedValue,
+                                );
+                              }}
+                              onKeyDown={(e) => {
+                                if (
+                                  !/[0-9]/.test(e.key) &&
+                                  ![
+                                    "Backspace",
+                                    "Delete",
+                                    "Tab",
+                                    "Escape",
+                                    "Enter",
+                                    "ArrowLeft",
+                                    "ArrowRight",
+                                    "ArrowUp",
+                                    "ArrowDown",
+                                    "Home",
+                                    "End",
+                                  ].includes(e.key) &&
+                                  !e.ctrlKey &&
+                                  !e.metaKey
+                                ) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div className="flex justify-between mt-4">
+                  <Button
+                    className="cursor-pointer"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousStep}
+                  >
+                    Retroceder
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="cursor-pointer"
+                    onClick={handleNextStep}
+                  >
+                    Próximo
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+
+          {formStep === 2 && (
+            // Selecionar cotações relativas e número de exames
+            <Form {...form}>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
+                  <FormLabel className="text-center block text-lg">
+                    Cotações relativas por tópico
+                  </FormLabel>
+
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-semibold text-blue-800 mb-2">
+                      Como funcionam as cotações relativas?
+                    </h4>
+                    <p className="text-sm text-blue-700">
+                      As <span className="font-medium">cotações relativas</span>{" "}
+                      determinam o peso de cada tópico no exame.<br></br>
+                      Quanto maior a cotação de um tópico, maior será a sua
+                      importância na nota final.
+                    </p>
+                  </div>
+
+                  <div className="overflow-y-auto min-h-0 flex flex-col gap-1 flex-1">
+                    {watch("topics")?.map((topic) => (
                       <FormItem
                         key={topic.id}
                         className="flex items-center gap-x-4"
                       >
-                        <FormLabel className="shrink-0 w-140">
-                          {topic.nome} (max: {maxQuestions})
+                        <FormLabel className="shrink-0 w-fit">
+                          {topic.nome}
                         </FormLabel>
+                        <div className="flex-1 border-b-2 border-dashed border-gray-300 mb-0.5" />
                         <FormControl className="flex-1">
                           <Input
+                            className="max-w-22"
                             type="number"
                             min="1"
-                            max={maxQuestions}
                             placeholder="1"
-                            value={watch(`number_questions.${topic.id}`) || ""}
+                            value={
+                              watch(`relative_quotations.${topic.id}`) || ""
+                            }
                             onChange={(e) => {
                               const value = e.target.value;
 
                               // Allow empty value for backspacing
                               if (value === "") {
-                                setValue(`number_questions.${topic.id}`, NaN);
+                                setValue(
+                                  `relative_quotations.${topic.id}`,
+                                  NaN,
+                                );
                                 return;
                               }
 
                               const numValue = parseInt(value);
-                              const clampedValue = Math.min(
-                                Math.max(isNaN(numValue) ? 1 : numValue, 1),
-                                maxQuestions,
-                              );
                               setValue(
-                                `number_questions.${topic.id}`,
-                                clampedValue,
+                                `relative_quotations.${topic.id}`,
+                                isNaN(numValue) || numValue < 1 ? 1 : numValue,
                               );
                             }}
                             onBlur={(e) => {
@@ -341,19 +494,14 @@ export const NovoExameForm = (props: {
 
                               // Only validate and set to 1 on blur if empty
                               if (value === "") {
-                                setValue(`number_questions.${topic.id}`, 1);
+                                setValue(`relative_quotations.${topic.id}`, 1);
                                 return;
                               }
 
                               const numValue = parseInt(value);
-                              const clampedValue = Math.min(
-                                Math.max(isNaN(numValue) ? 1 : numValue, 1),
-                                maxQuestions,
-                              );
-                              setValue(
-                                `number_questions.${topic.id}`,
-                                clampedValue,
-                              );
+                              if (isNaN(numValue) || numValue < 1) {
+                                setValue(`relative_quotations.${topic.id}`, 1);
+                              }
                             }}
                             onKeyDown={(e) => {
                               if (
@@ -380,122 +528,11 @@ export const NovoExameForm = (props: {
                           />
                         </FormControl>
                       </FormItem>
-                    );
-                  })}
-                </div>
-                <div className="flex justify-between">
-                  <Button
-                    className="cursor-pointer"
-                    variant="outline"
-                    size="sm"
-                    onClick={handlePreviousStep}
-                  >
-                    Retroceder
-                  </Button>
-                  <Button
-                    size="sm"
-                    className="cursor-pointer"
-                    onClick={handleNextStep}
-                  >
-                    Próximo
-                  </Button>
-                </div>
-              </form>
-            </Form>
-          )}
-
-          {formStep === 2 && (
-            // Selecionar cotações relativas e número de exames
-            <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
-                  <FormLabel className="text-center block text-lg">
-                    Cotações relativas por tópico
-                  </FormLabel>
-                  {watch("topics")?.map((topic) => (
-                    <FormItem
-                      key={topic.id}
-                      className="flex items-center gap-x-4"
-                    >
-                      <FormLabel className="shrink-0 w-140">
-                        {topic.nome}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="1"
-                          value={watch(`relative_quotations.${topic.id}`) || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-
-                            // Allow empty value for backspacing
-                            if (value === "") {
-                              setValue(`relative_quotations.${topic.id}`, NaN);
-                              return;
-                            }
-
-                            const numValue = parseInt(value);
-                            setValue(
-                              `relative_quotations.${topic.id}`,
-                              isNaN(numValue) || numValue < 1 ? 1 : numValue,
-                            );
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
-
-                            // Only validate and set to 1 on blur if empty
-                            if (value === "") {
-                              setValue(`relative_quotations.${topic.id}`, 1);
-                              return;
-                            }
-
-                            const numValue = parseInt(value);
-                            if (isNaN(numValue) || numValue < 1) {
-                              setValue(`relative_quotations.${topic.id}`, 1);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              !/[0-9]/.test(e.key) &&
-                              ![
-                                "Backspace",
-                                "Delete",
-                                "Tab",
-                                "Escape",
-                                "Enter",
-                                "ArrowLeft",
-                                "ArrowRight",
-                                "ArrowUp",
-                                "ArrowDown",
-                                "Home",
-                                "End",
-                              ].includes(e.key) &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  ))}
-
-                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                    <h4 className="font-semibold text-blue-800 mb-2">
-                      Como funcionam as cotações relativas?
-                    </h4>
-                    <p className="text-sm text-blue-700">
-                      As <span className="font-medium">cotações relativas</span>{" "}
-                      determinam o peso de cada tópico no exame.<br></br>
-                      Quanto maior a cotação de um tópico, maior será a sua
-                      importância na nota final.
-                    </p>
+                    ))}
                   </div>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
                     className="cursor-pointer"
                     variant="outline"
@@ -519,8 +556,11 @@ export const NovoExameForm = (props: {
           {formStep === 3 && (
             // Final step: Number of exams and discount
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-lg">
                     Configurações finais
                   </FormLabel>
@@ -530,14 +570,15 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="exam_title"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">
                           Título do exame
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="text"
                             placeholder="Ex: Teste Teórico 1"
+                            className="w-fit"
                             {...field}
                           />
                         </FormControl>
@@ -550,12 +591,39 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="exam_date"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">
                           Data do exame
                         </FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                id="date-picker-simple"
+                                className="justify-start font-normal"
+                              >
+                                {field.value ? (
+                                  format(field.value, "dd/MM/yyyy")
+                                ) : (
+                                  <span>Escolha uma data</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={toDate(field.value)}
+                                onSelect={(date) => {
+                                  field.onChange(date);
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </FormControl>
                       </FormItem>
                     )}
@@ -566,10 +634,8 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="semester"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
-                          Semestre
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Semestre</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -593,10 +659,8 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="academic_year"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
-                          Ano letivo
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Ano letivo</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -607,8 +671,11 @@ export const NovoExameForm = (props: {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="2024/25">2024/25</SelectItem>
-                            <SelectItem value="2025/26">2025/26</SelectItem>
+                            {yearOptions.map((year) => (
+                              <SelectItem key={year} value={year}>
+                                {year}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </FormItem>
@@ -622,12 +689,13 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="number_exams"
                     render={() => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">
                           Número de exames
                         </FormLabel>
                         <FormControl>
                           <Input
+                            className="max-w-18.25"
                             type="number"
                             min="1"
                             placeholder="1"
@@ -696,12 +764,11 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="fraction"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="shrink-0 w-140">
-                          Desconto (%)
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Desconto (%)</FormLabel>
                         <FormControl>
                           <Input
+                            className="w-fit"
                             type="number"
                             min="0"
                             max="100"
@@ -758,7 +825,7 @@ export const NovoExameForm = (props: {
                     <p className="text-sm text-amber-700">
                       Para cada questão errada, será descontado{" "}
                       <span className="font-bold">
-                        {getDisplayData().fraction || 0}%
+                        {watch("fraction") || 0}%
                       </span>{" "}
                       do valor da questão.<br></br>
                       Exemplo: Se uma questão vale 2 valores e o desconto é de
@@ -791,12 +858,17 @@ export const NovoExameForm = (props: {
 
           {formStep === 4 && (
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-6">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-2xl font-bold text-primary">
                     Resumo do Exame
                   </FormLabel>
-                  <ExamConfigCard examConfigData={getDisplayData()} />
+                  <div className="flex flex-col gap-1">
+                    <ExamConfigCard examConfigData={getDisplayData()} />
+                  </div>
                 </div>
 
                 <div className="flex justify-between pt-4">
@@ -811,10 +883,8 @@ export const NovoExameForm = (props: {
                   <Button
                     size="sm"
                     className="cursor-pointer"
+                    type="submit"
                     disabled={isPending}
-                    onClick={() => {
-                      handleSubmit(onSubmit)();
-                    }}
                   >
                     {isPending ? "A gerar..." : "Gerar Exame"}
                   </Button>

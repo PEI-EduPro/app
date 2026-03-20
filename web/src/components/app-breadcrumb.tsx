@@ -10,31 +10,32 @@ import { Link } from "@tanstack/react-router";
 
 export interface BreadcrumbProps {
   page: string;
-  crumbs?: 
-    {
-      name: string;
-      link: string;
-    }[];
+  crumbs?: {
+    name: string;
+    link: string;
+  }[];
 }
 
 export function AppBreadcrumb(props: BreadcrumbProps) {
   const { crumbs, page } = props;
   return (
-    <Breadcrumb>
+    <Breadcrumb className="w-full mb-3.75 md:mb-7.5">
       <BreadcrumbList>
         {crumbs &&
           crumbs.map((el, index) => (
             <div key={index} className="flex items-center gap-1.5">
               <BreadcrumbItem>
                 <BreadcrumbLink asChild>
-                  <Link to={el.link}>{el.name}</Link>
+                  <Link to={el.link} className="md:text-2xl">
+                    {el.name}
+                  </Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
-              <BreadcrumbSeparator />
+              <BreadcrumbSeparator className="md:[&>svg]:size-6" />
             </div>
           ))}
         <BreadcrumbItem>
-          <BreadcrumbPage>{page}</BreadcrumbPage>
+          <BreadcrumbPage className="md:text-2xl">{page}</BreadcrumbPage>
         </BreadcrumbItem>
       </BreadcrumbList>
     </Breadcrumb>

@@ -7,9 +7,21 @@ import { useGetUcById } from "@/hooks/use-ucs";
 import { decodeId } from "@/lib/id-encoder";
 import type { ExamConfigI } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Pencil, Plus, Trash2, Download, type LucideIcon } from "lucide-react";
+import { Plus, Trash2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import { z } from "zod";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const examesUCSearchSchema = z.object({
   ucId: z.string(),
@@ -24,33 +36,8 @@ export const Route = createFileRoute("/_layout/exames-uc")({
   }),
 });
 
-const IconButton = ({
-  Icon,
-  label,
-  onClick,
-}: {
-  Icon: LucideIcon;
-  label: string;
-  onClick: () => void;
-}) => (
-  <Button
-    variant="ghost"
-    onClick={(e) => {
-      e.stopPropagation();
-      onClick();
-    }}
-    aria-label={label}
-    className="cursor-pointer rounded-full p-2 hover:bg-gray-200 transition-colors duration-150"
-  >
-    <Icon className="h-6.25! w-6.25!" />
-  </Button>
-);
-
 const ContentActionCard = ({
-  id,
   name,
-  ucId,
-  ucName,
   examConfig,
 }: {
   id: number;
@@ -59,49 +46,65 @@ const ContentActionCard = ({
   ucName: string;
   examConfig: ExamConfigI;
 }) => {
-  const navigate = Route.useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
 
-  const handleUpload = () => console.log("Action: Upload/Move clicked");
   const handleDelete = () => console.log("Action: Delete clicked");
 
   return (
     <>
       <Card
-        className="w-37.5 h-62.5  group relative cursor-pointer hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]"
+        className="w-37.5 h-62.5  group relative hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]"
         onClick={handleOpenModal}
       >
         <div className="absolute inset-0 bg-[#2E2B50] rounded-[14px] text-white p-4 transition-opacity duration-300 group-hover:opacity-0 z-10 flex items-end">
           <span className="text-xl font-semibold">{name}</span>
         </div>
-        <div className="absolute inset-0 bg-gray-100 text-gray-700 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex flex-col items-center justify-between z-20">
-          <div className="flex justify-center w-full">
-            <IconButton
-              Icon={Download}
-              label="Download file"
-              onClick={handleUpload}
-            />
-          </div>
-          <div className="grow"></div>
-          <div className="flex justify-around w-full">
-            <IconButton
-              Icon={Pencil}
-              label="Edit document"
-              onClick={() =>
-                navigate({
-                  to: "/novo-exame",
-                  search: { examId: id, ucId: ucId, ucName: ucName },
-                })
-              }
-            />
-            <IconButton
-              Icon={Trash2}
-              label="Delete document"
-              onClick={handleDelete}
-            />
-          </div>
+        <div className="absolute inset-0 bg-gray-100 text-gray-700 p-4 opacity-0 transition-opacity duration-300 group-hover:opacity-100 flex flex-col items-center justify-center z-20">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                onClick={(e) => {
+                  e.stopPropagation();
+                }}
+                className="cursor-pointer rounded-full p-2 hover:text-red-500 transition-colors duration-150"
+              >
+                <Trash2Icon className="h-6.25! w-6.25!" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                  <Trash2Icon />
+                </AlertDialogMedia>
+                <AlertDialogTitle className="font-medium text-2xl">
+                  Apagar Configuração de Exame
+                </AlertDialogTitle>
+                <AlertDialogDescription className="font-medium text-xl">
+                  {` Esta ação irá apagar permanentemente a configuração de exame. Deseja continuar?`}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                <AlertDialogCancel
+                  variant="outline"
+                  className="cursor-pointer text-xl"
+                  size="lg"
+                >
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  size="lg"
+                  variant="destructive"
+                  className="cursor-pointer text-xl"
+                  onClick={() => handleDelete()}
+                >
+                  Apagar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </Card>
       {isModalOpen && (
@@ -129,25 +132,27 @@ function RouteComponent() {
   const { data: examConfigs } = useGetExamConfig(realId);
 
   return (
-    <div className="py-3.5 px-6 w-full">
-      <AppBreadcrumb
-        page="Exames"
-        crumbs={[
-          {
-            name: "Unidades Curriculares",
-            link: "/unidades-curriculares",
-          },
-          {
-            name: ucName,
-            link: `/detalhes-uc?ucId=${ucId}`,
-          },
-        ]}
-      />
-      <div className="flex flex-col gap-2.5 items-center justify-center mb-35">
-        <span className="font-rubik text-5xl">{ucData?.name}</span>
-        <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+      <div className="shrink-0">
+        <AppBreadcrumb
+          page="Exames"
+          crumbs={[
+            {
+              name: "Unidades Curriculares",
+              link: "/unidades-curriculares",
+            },
+            {
+              name: ucName,
+              link: `/detalhes-uc?ucId=${ucId}`,
+            },
+          ]}
+        />
+        <div className="flex flex-col gap-2.5 items-center justify-center mb-25">
+          <span className="font-rubik text-5xl">{ucData?.name}</span>
+          <span className="font-rubik text-4xl text-[#2E2B50]">Exames</span>
+        </div>
       </div>
-      <div className="px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-17.5 gap-y-12.5">
+      <div className="flex-1 overflow-y-auto px-47.5 grid grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-x-17.5 gap-y-12.5">
         {examConfigs?.map((el, index) => (
           <ContentActionCard
             id={el.id}
@@ -159,8 +164,11 @@ function RouteComponent() {
           />
         ))}
         <Link to="/novo-exame" search={{ ucId: ucId, ucName: ucName }}>
-          <Card className="w-37.5 h-62.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
+          <Card className="w-37.5 h-62.5 flex-col justify-center items-center gap-0 bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
             <Plus className="stroke-[rgb(86,89,98)] h-10 w-10" />
+            <span className="text-xl font-medium text-[rgb(86,89,98)]">
+              Criar Exame
+            </span>
           </Card>
         </Link>
       </div>

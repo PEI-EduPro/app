@@ -1,12 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "@/lib/api-client";
 import type { GetTopicI } from "@/lib/types";
+import { toast } from "sonner";
 
 export function useSubject(subjectId: number) {
   return useQuery({
     queryKey: ["subject", subjectId],
     queryFn: async () => {
-      const data = await apiClient.get<{ subject_name: string }>(`/subjects/${subjectId}/all-questions`);
+      const data = await apiClient.get<{ subject_name: string }>(
+        `/subjects/${subjectId}/all-questions`,
+      );
       return { name: data.subject_name };
     },
     enabled: !!subjectId,
@@ -26,8 +29,17 @@ export function useCreateTopic(subjectId: number) {
   return useMutation({
     mutationFn: (name: string) =>
       apiClient.post("/topics/", { name, subject_id: subjectId }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Tópico criado com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    },
   });
 }
 
@@ -36,8 +48,17 @@ export function useUpdateTopic(subjectId: number) {
   return useMutation({
     mutationFn: ({ id, name }: { id: number; name: string }) =>
       apiClient.put(`/topics/${id}`, { name, subject_id: subjectId }),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Tópico editado com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    },
   });
 }
 
@@ -45,8 +66,17 @@ export function useDeleteTopic(subjectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/topics/${id}`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Tópico eliminado com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    },
   });
 }
 
@@ -56,7 +86,7 @@ export function useCreateQuestion(subjectId: number) {
     mutationFn: async (data: { questions: any[]; options: any[] }) => {
       const questions: any[] = await apiClient.post(
         "/questions/",
-        data.questions
+        data.questions,
       );
       if (data.options.length > 0 && questions.length > 0) {
         const optionsWithQuestionId = data.options.map((opt) => ({
@@ -67,8 +97,17 @@ export function useCreateQuestion(subjectId: number) {
       }
       return questions;
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Questão adicionada com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    },
   });
 }
 
@@ -99,8 +138,8 @@ export function useUpdateQuestion(subjectId: number) {
             apiClient.put(`/question-options/${opt.id}`, {
               option_text: opt.option_text,
               value: opt.value,
-            })
-          )
+            }),
+          ),
         );
       }
       if (toCreate?.length) {
@@ -109,13 +148,22 @@ export function useUpdateQuestion(subjectId: number) {
       if (toDelete?.length) {
         await Promise.all(
           toDelete.map((optId) =>
-            apiClient.delete(`/question-options/${optId}`)
-          )
+            apiClient.delete(`/question-options/${optId}`),
+          ),
         );
       }
     },
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Questão editada com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    },
   });
 }
 
@@ -123,8 +171,17 @@ export function useDeleteQuestion(subjectId: number) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => apiClient.delete(`/questions/${id}`),
-    onSuccess: () =>
-      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Questão eliminada com sucesso", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("ocorreu um erro, tente novamente mais tarde", {
+        position: "top-right",
+      });
+    },
   });
 }
 
@@ -133,7 +190,7 @@ export function useGetUCTopics(ucId: number) {
     queryKey: ["ucTopics", ucId],
     queryFn: async () => {
       const response = await apiClient.get<GetTopicI[]>(
-        `/subjects/${ucId}/topics`
+        `/subjects/${ucId}/topics`,
       );
       return response;
     },

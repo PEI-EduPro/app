@@ -60,7 +60,7 @@ function RouteComponent() {
           { name: "Unidades Curriculares", link: "/unidades-curriculares" },
         ]}
       />
-      <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-35">
+      <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-25">
         <span className="font-rubik">{ucData?.name || "Carregando..."}</span>
       </div>
 
@@ -141,7 +141,9 @@ function RouteComponent() {
               }
               onClick={() => {
                 setCanAssociate(false);
-                toast.success("Exame associado com sucesso!");
+                toast.success("Exame associado com sucesso!", {
+                  position: "top-right",
+                });
                 setAlunosSelection(undefined);
               }}
             >
