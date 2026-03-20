@@ -16,21 +16,21 @@ function Index() {
       </h1>
 
       <div className="flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-24 w-full max-w-6xl md:h-90">
-        <div className="flex flex-col items-center md:items-start justify-between text-center h-full space-y-4 md:space-y-0">
+        <div className="flex flex-col items-center justify-between text-center h-full space-y-4 md:space-y-0">
           <p className="text-lg md:text-2xl text-gray-700 leading-snug">
             Um sistema que gera e avalia <br /> unidades curriculares
           </p>
 
           <Link to="/unidades-curriculares">
             <Button
-              className="py-3 md:py-5 px-6 md:px-21 text-xl md:text-4xl h-auto"
+              className="py-3 md:py-5 px-6 md:px-21 text-xl md:text-4xl h-auto cursor-pointer"
               onClick={() =>
                 keycloak.login({
                   redirectUri: `${window.location.origin}/unidades-curriculares`,
                 })
               }
             >
-              Log In
+              Entrar
             </Button>
           </Link>
 

@@ -133,7 +133,9 @@ function RouteComponent() {
           className="w-full cursor-pointer h-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
           onClick={() => {
             if (capturedImage) {
-              toast.success("Exame adicionado com sucesso!");
+              toast.success("Exame adicionado com sucesso!", {
+                position: "top-right",
+              });
               setCapturedImage(null);
             }
           }}

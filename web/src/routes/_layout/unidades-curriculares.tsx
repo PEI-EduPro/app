@@ -58,17 +58,19 @@ function UCS() {
   const isMobile = useIsMobile();
 
   return (
-    <div className="py-3.5 px-6 w-full">
-      <AppBreadcrumb page="Unidades Curriculares" />
-      <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-35">
-        Unidades Curriculares
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+      <div className="shrink-0">
+        <AppBreadcrumb page="Unidades Curriculares" />
+        <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-25">
+          Unidades Curriculares
+        </div>
       </div>
       {isLoading ? (
         <div className="flex justify-center items-center w-full h-40">
           <LoaderCircle className="animate-spin size-16" />
         </div>
       ) : (
-        <div className="md:px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
+        <div className="flex-1 overflow-y-auto md:px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
           {data &&
             (data.length === 0 && !isManager ? (
               <div className="col-span-full flex flex-col items-center gap-4">
@@ -86,10 +88,14 @@ function UCS() {
                 />
               ))
             ))}
+
           {isManager && !isLoading && !isMobile && (
             <Link to="/nova-uc" className="w-fit">
               <Card className="w-80 h-57.5 flex-row justify-center items-center bg-[rgba(139,145,160,0.5)] hover:shadow-[4px_4px_4px_0px_rgba(174,174,174,0.25)]">
                 <Plus className="stroke-[rgb(86,89,98)] h-10 w-10" />
+                <span className="text-xl font-medium text-[rgb(86,89,98)]">
+                  Criar Unidade Curricular
+                </span>
               </Card>
             </Link>
           )}

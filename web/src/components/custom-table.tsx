@@ -213,7 +213,7 @@ export function CustomTable(props: CustomTableProps) {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Nenhum resultado encontrado
                 </TableCell>
               </TableRow>
             )}
@@ -224,6 +224,7 @@ export function CustomTable(props: CustomTableProps) {
         <div className="flex flex-row justify-between w-full">
           <Button
             className="cursor-pointer"
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
@@ -233,9 +234,12 @@ export function CustomTable(props: CustomTableProps) {
           </Button>
           <Button
             className="cursor-pointer"
+            type="button"
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
+            onClick={() => {
+              table.nextPage();
+            }}
             disabled={!table.getCanNextPage()}
           >
             Próximo

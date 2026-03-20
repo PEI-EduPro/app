@@ -185,7 +185,7 @@ async def generate_exams_from_configs(
             _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
             # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num)
             session.add(new_exam)
             await session.commit()
             await session.refresh(new_exam)
@@ -612,4 +612,21 @@ async def get_exams_by_config_id(
         raise ValueError("No exams found for this configuration.")
     
     return exams
+
+
+async def delete_exam_config(
+    session: AsyncSession,
+    exam_config_id: int
+) -> bool:
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    
+    if not exam_config:
+        return False
+        
+    await session.delete(exam_config)
+    await session.commit()
+    return True
+
 
