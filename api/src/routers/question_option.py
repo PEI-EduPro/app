@@ -41,6 +41,8 @@ async def create_question_options(
     except ValueError as ve:
         logger.warning(f"Failed to create question options: {ve}")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to create question options: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while creating question options.")

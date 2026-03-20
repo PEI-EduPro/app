@@ -92,7 +92,12 @@ def mock_keycloak():
         mock.update_subject_regent = AsyncMock(return_value=True)
         mock.delete_subject_groups = AsyncMock(return_value=True)
         mock.get_subject_students = AsyncMock(return_value=[])
+        mock.get_subject_professors = AsyncMock(return_value=[])
+        mock.get_subject_regent = AsyncMock(return_value={})
         mock.add_students_to_subject = AsyncMock(return_value=None)
+        mock.replace_subject_students = AsyncMock(return_value=None)
+        mock.replace_subject_professors = AsyncMock(return_value=None)
+        mock.add_professors_to_subject = AsyncMock(return_value=None)
         mock.manage_professor_permissions = AsyncMock(return_value=True)
         mock.remove_professor_from_subject = AsyncMock(return_value=True)
         yield mock
