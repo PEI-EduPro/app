@@ -8,7 +8,6 @@ class WaitingRoomState(str, Enum):
     PREPARATION = "preparation"
     RUNNING = "running"
     CLOSED = "closed"
-    FINISHED = "finished"
 
 class WaitingRoom(SQLModel, table=True):
     __tablename__ = "waiting_room"

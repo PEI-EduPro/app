@@ -3,6 +3,7 @@ from src.core.deps import get_current_user_info
 from src.main import app
 from src.models.user import User
 from src.models.waiting_room import WaitingRoomState, WaitingRoom
+from src.models.warning import Warning, WarningType
 from src.models.subject import Subject
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
@@ -178,7 +179,7 @@ async def test_close_waiting_room_success(client, mock_auth_user, setup_data, se
     
     assert response.status_code == 200
     data = response.json()
-    assert data["state"] == WaitingRoomState.FINISHED
+    assert data["state"] == WaitingRoomState.CLOSED
     
     exam1 = await session.get(Exam, exam_ids[0])
     exam2 = await session.get(Exam, exam_ids[1])
@@ -202,8 +203,14 @@ async def test_close_waiting_room_conflict(client, mock_auth_user, setup_data, s
     
     response = await client.patch(f"/api/waiting-rooms/{waiting_room.id}/close")
     
-    assert response.status_code == 400
-    assert "Conflicts detected" in response.json()["detail"]
+    assert response.status_code == 200
     
     updated_room = await session.get(WaitingRoom, waiting_room.id)
-    assert updated_room.state == WaitingRoomState.CLOSED # Stops at closed
+    assert updated_room.state == WaitingRoomState.CLOSED
+    
+    # Check that a Warning was created
+    from sqlmodel import select
+    result = await session.exec(select(Warning).where(Warning.exam_config_id == exam_config_id))
+    warnings = result.all()
+    assert len(warnings) == 1
+    assert warnings[0].type == WarningType.multiple_exams_to_student

@@ -150,3 +150,27 @@ async def retrieve_student_list(
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
 
     return ExamConfigResponse.model_validate(exam_config)
+
+
+@router.delete("/config/{exam_config_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_exam_config(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Remove an exam configuration. Only the regent of the subject can do this.
+    """
+    try:
+        subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    success = await exam.delete_exam_config(session, exam_config_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+    
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+

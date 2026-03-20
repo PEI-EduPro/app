@@ -27,7 +27,12 @@ export function KeycloakProvider({
 
     authClient
       .init(initOptions ?? {})
-      .then(() => setInitialized(true))
+      .then(() => {
+        setInitialized(true);
+        setInterval(() => {
+          authClient.updateToken(60).catch(() => authClient.login());
+        }, 30000);
+      })
       .catch((err) => {
         console.error("Keycloak initialization failed", err);
         setInitialized(true);

@@ -1,12 +1,13 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Plus,
   ChevronDown,
   ChevronRight,
   SquarePen,
   Trash2,
+  Trash2Icon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import TopicModal from "@/components/topic-modal";
@@ -25,6 +26,18 @@ import {
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const bancoQuestoesSearchSchema = z.object({
   ucId: z.string(),
@@ -111,12 +124,6 @@ function BancoQuestões() {
     updateTopicMutation.mutate({ id, name });
   };
 
-  const handleDeleteTopic = (id: number) => {
-    if (confirm("Deseja apagar este tópico e todas as suas questões?")) {
-      deleteTopicMutation.mutate(id);
-    }
-  };
-
   // Question CRUD operations
   const handleCreateQuestion = (
     topicId: number,
@@ -176,12 +183,6 @@ function BancoQuestões() {
     });
   };
 
-  const handleDeleteQuestion = (_topicId: number, questionId: number) => {
-    if (confirm("Deseja apagar esta questão?")) {
-      deleteQuestionMutation.mutate(questionId);
-    }
-  };
-
   const toggleTopic = (topicId: number) => {
     setTopics(
       topics.map((topic) =>
@@ -235,43 +236,62 @@ function BancoQuestões() {
   }
 
   return (
-    <div className="py-3.5 px-6 w-full">
-      <AppBreadcrumb
-        page="Banco de Questões"
-        crumbs={[
-          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-          {
-            name: subjectData?.name || "...",
-            link: `/detalhes-uc?ucId=${ucId}`,
-          },
-        ]}
-      />
-      <div className="flex justify-center mb-8">
-        <div className="text-center">
-          <div className="text-5xl">
-            {subjectData?.name || "UNIDADE CURRICULAR"}
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+      <div className="shrink-0 flex flex-col items-center">
+        <AppBreadcrumb
+          page="Banco de Questões"
+          crumbs={[
+            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+            {
+              name: subjectData?.name || "...",
+              link: `/detalhes-uc?ucId=${ucId}`,
+            },
+          ]}
+        />
+        <div className="w-262.5">
+          <div className="relative flex flex-col justify-start text-5xl mb-25 items-center">
+            <div className="text-center flex flex-col">
+              <div className="text-5xl">
+                {subjectData?.name || "UNIDADE CURRICULAR"}
+              </div>
+              <h1 className="text-3xl mt-4 text-[#3263A8]">
+                Banco de questões
+              </h1>
+            </div>
+            <div className="absolute right-0">
+              <Link
+                to="/exames-uc"
+                search={{ ucId: ucId, ucName: subjectData?.name || "" }}
+              >
+                <Button
+                  size="lg"
+                  className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                >
+                  Novo Exame
+                </Button>
+              </Link>
+            </div>
           </div>
-          <h1 className="text-3xl mt-4 text-[#3263A8]">Banco de questões</h1>
+        </div>
+
+        <div className="flex mb-6 justify-between w-full">
+          <XmlUploadButton subjectId={realId} />
+
+          <Button
+            onClick={() => {
+              closeAllTopics();
+              setShowTopicModal(true);
+            }}
+            className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-10 cursor-pointer"
+          >
+            <Plus className="h-5! w-5!" />
+            Adicionar Tópico
+          </Button>
         </div>
       </div>
 
-      <div className="flex mb-6 justify-between">
-        <XmlUploadButton subjectId={realId} />
-
-        <Button
-          onClick={() => {
-            closeAllTopics();
-            setShowTopicModal(true);
-          }}
-          className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-10 cursor-pointer"
-        >
-          <Plus className="h-5! w-5!" />
-          Adicionar Tópico
-        </Button>
-      </div>
-
       {/* Topics List - One per line */}
-      <div className="space-y-4">
+      <div className="flex-1 overflow-y-auto space-y-4">
         {topics.map((topic) => (
           <Card key={topic.id} className="overflow-hidden p-0">
             {/* Topic Header */}
@@ -311,17 +331,51 @@ function BancoQuestões() {
                 >
                   <SquarePen className="w-5 h-5" />
                 </Button>
-                <Button
-                  variant="ghost"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDeleteTopic(topic.id);
-                  }}
-                  className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
-                  title="Excluir tópico"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </Button>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                      }}
+                      className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                      title="Excluir tópico"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                        <Trash2Icon />
+                      </AlertDialogMedia>
+                      <AlertDialogTitle className="font-medium text-2xl">
+                        Apagar Tópico
+                      </AlertDialogTitle>
+                      <AlertDialogDescription className="font-medium text-xl">
+                        Deseja apagar este tópico e todas as suas questões?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                      <AlertDialogCancel
+                        variant="outline"
+                        className="cursor-pointer text-xl"
+                        size="lg"
+                      >
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        size="lg"
+                        variant="destructive"
+                        className="cursor-pointer text-xl"
+                        onClick={() => deleteTopicMutation.mutate(topic.id)}
+                      >
+                        Apagar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             </div>
 
@@ -349,7 +403,7 @@ function BancoQuestões() {
                             setShowQuestionModal(true);
                           }}
                           onDelete={() =>
-                            handleDeleteQuestion(topic.id, question.id)
+                            deleteQuestionMutation.mutate(question.id)
                           }
                         />
                       ),
@@ -359,20 +413,22 @@ function BancoQuestões() {
               </div>
             )}
 
-            <div className="flex justify-center pb-6">
-              <Button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  closeAllTopics();
-                  setSelectedTopicId(topic.id);
-                  setShowQuestionModal(true);
-                }}
-                className="h-10 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
-              >
-                <Plus className="h-5! w-5!" />
-                Adicionar Questão
-              </Button>
-            </div>
+            {topic.isOpen && (
+              <div className="flex justify-center pb-6">
+                <Button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeAllTopics();
+                    setSelectedTopicId(topic.id);
+                    setShowQuestionModal(true);
+                  }}
+                  className="h-10 flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-[#2e2e2e] transition-colors cursor-pointer"
+                >
+                  <Plus className="h-5! w-5!" />
+                  Adicionar Questão
+                </Button>
+              </div>
+            )}
           </Card>
         ))}
 
@@ -481,14 +537,48 @@ function QuestionItem({
         >
           <SquarePen className="w-4 h-4" />
         </Button>
-        <Button
-          variant="ghost"
-          onClick={onDelete}
-          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-          title="Excluir questão"
-        >
-          <Trash2 className="w-4 h-4" />
-        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+              title="Excluir questão"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                <Trash2Icon />
+              </AlertDialogMedia>
+              <AlertDialogTitle className="font-medium text-2xl">
+                Apagar Questão
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-medium text-xl">
+                Deseja apagar esta questão?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+              <AlertDialogCancel
+                variant="outline"
+                className="cursor-pointer text-xl"
+                size="lg"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                size="lg"
+                variant="destructive"
+                className="cursor-pointer text-xl"
+                onClick={onDelete}
+              >
+                Apagar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

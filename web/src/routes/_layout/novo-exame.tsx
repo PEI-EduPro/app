@@ -70,7 +70,7 @@ function NovoExame() {
           },
         ]}
       />
-      <div className="flex justify-center text-5xl mb-35">
+      <div className="flex justify-center text-5xl mb-25">
         {examId ? "Editar Exame" : "Novo Exame"}
       </div>
       <div className="flex flex-col items-center">
