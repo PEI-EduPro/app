@@ -6,6 +6,7 @@ from src.models.topic import Topic
 from src.models.exam_config import ExamConfig
 from src.models.topic_config import TopicConfig
 from src.models.exam import Exam
+from src.models.question import Question
 
 
 @pytest.mark.asyncio
@@ -194,3 +195,197 @@ async def test_store_student_list_nonexistent_config(session):
     
     with pytest.raises(ValueError, match="Exam configuration not found"):
         await exam.store_student_list(session, 99999, student_data)
+
+
+@pytest.mark.asyncio
+async def test_create_configs_with_student_tuples(session):
+    """Test create_configs function with student tuples"""
+    # Setup test data
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
+    
+    topic = Topic(name="Test Topic", subject_id=subject.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+    
+    # Add questions to the topic
+    for i in range(5):
+        question = Question(topic_id=topic.id, question_text=f"Question {i+1}")
+        session.add(question)
+    await session.commit()
+    
+    # Test data
+    exam_specs = {
+        "subject_id": subject.id,
+        "fraction": 75,
+        "topics": ["Test Topic"],
+        "number_questions": {"Test Topic": 5},
+        "relative_quotations": {"Test Topic": 2.0}
+    }
+    
+    student_tuples = [
+        (12345, "John Doe", "john@example.com"),
+        (67890, "Jane Smith", "jane@example.com")
+    ]
+    
+    # Test the function
+    exam_config, topic_configs = await exam.create_configs(session, exam_specs, student_tuples)
+    
+    # Verify exam config was created with student data
+    assert exam_config.subject_id == subject.id
+    assert exam_config.fraction == 75
+    assert exam_config.nmec_name_list is not None
+    
+    # Verify student data was stored correctly
+    student_data = json.loads(exam_config.nmec_name_list)
+    assert "12345" in student_data
+    assert student_data["12345"]["name"] == "John Doe"
+    assert student_data["12345"]["email"] == "john@example.com"
+    assert "67890" in student_data
+    assert student_data["67890"]["name"] == "Jane Smith"
+    assert student_data["67890"]["email"] == "jane@example.com"
+    
+    # Verify topic configs
+    assert len(topic_configs) == 1
+    assert topic_configs[0].topic_id == topic.id
+
+
+@pytest.mark.asyncio
+async def test_create_configs_without_student_tuples(session):
+    """Test create_configs function without student tuples"""
+    # Setup test data
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
+    
+    topic = Topic(name="Test Topic", subject_id=subject.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+    
+    # Add questions to the topic
+    for i in range(3):
+        question = Question(topic_id=topic.id, question_text=f"Question {i+1}")
+        session.add(question)
+    await session.commit()
+    
+    exam_specs = {
+        "subject_id": subject.id,
+        "fraction": 50,
+        "topics": ["Test Topic"],
+        "number_questions": {"Test Topic": 3},
+        "relative_quotations": {"Test Topic": 1.5}
+    }
+    
+    # Test the function without student tuples
+    exam_config, topic_configs = await exam.create_configs(session, exam_specs)
+    
+    # Verify exam config was created without student data
+    assert exam_config.subject_id == subject.id
+    assert exam_config.fraction == 50
+    assert exam_config.nmec_name_list is None
+
+
+@pytest.mark.asyncio
+async def test_get_latest_exam_config_id(session):
+    """Test get_latest_exam_config_id function"""
+    # Setup test data
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
+    
+    # Create multiple exam configs
+    config1 = ExamConfig(subject_id=subject.id, fraction=50)
+    config2 = ExamConfig(subject_id=subject.id, fraction=75)
+    session.add_all([config1, config2])
+    await session.commit()
+    await session.refresh(config1)
+    await session.refresh(config2)
+    
+    # Test the function
+    latest_id = await exam.get_latest_exam_config_id(session, subject.id)
+    
+    # Should return the ID of the most recently created config
+    assert latest_id == config2.id
+    
+    # Test with non-existent subject
+    with pytest.raises(ValueError, match="No exam config found for subject"):
+        await exam.get_latest_exam_config_id(session, 99999)
+
+
+@pytest.mark.asyncio
+async def test_create_configs_with_empty_student_tuples(session):
+    """Test create_configs function with empty student tuples list"""
+    # Setup test data
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
+    
+    topic = Topic(name="Test Topic", subject_id=subject.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+    
+    # Add questions to the topic
+    for i in range(4):
+        question = Question(topic_id=topic.id, question_text=f"Question {i+1}")
+        session.add(question)
+    await session.commit()
+    
+    exam_specs = {
+        "subject_id": subject.id,
+        "fraction": 60,
+        "topics": ["Test Topic"],
+        "number_questions": {"Test Topic": 4},
+        "relative_quotations": {"Test Topic": 1.8}
+    }
+    
+    # Test with empty list
+    exam_config, topic_configs = await exam.create_configs(session, exam_specs, [])
+    
+    # Should behave same as None
+    assert exam_config.nmec_name_list is None
+
+
+@pytest.mark.asyncio
+async def test_create_configs_with_malformed_student_tuples(session):
+    """Test create_configs function handles malformed student tuples gracefully"""
+    # Setup test data
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
+    
+    topic = Topic(name="Test Topic", subject_id=subject.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+    
+    # Add questions to the topic
+    for i in range(2):
+        question = Question(topic_id=topic.id, question_text=f"Question {i+1}")
+        session.add(question)
+    await session.commit()
+    
+    exam_specs = {
+        "subject_id": subject.id,
+        "fraction": 80,
+        "topics": ["Test Topic"],
+        "number_questions": {"Test Topic": 2},
+        "relative_quotations": {"Test Topic": 1.0}
+    }
+    
+    # Test with malformed tuples - should raise ValueError
+    malformed_tuples = [
+        (12345, "John Doe"),  # Missing email
+    ]
+    
+    # This should raise a ValueError due to unpacking mismatch
+    with pytest.raises(ValueError, match="not enough values to unpack"):
+        await exam.create_configs(session, exam_specs, malformed_tuples)

@@ -71,13 +71,30 @@ async def generate_exams(
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     try:
         num_variations = exam_specs.get("num_variations", 1)
+        professors = exam_specs.get("professors", [])
+        student_tuples = exam_specs.get("student_tuples", [])  # List of (nmec, name, email)
+        vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
 
         zip_bytes = await exam.create_configs_and_exams(
             session, 
             exam_specs, 
-            #current_user, 
-            num_variations
+            num_variations,
+            student_tuples
         )
+
+        # Create waiting room if vigilant_keycloak_ids provided
+        if vigilant_keycloak_ids:
+            from src.services import waiting_room as waiting_room_service
+            
+            # Get the created exam_config_id from the service
+            exam_config_id = await exam.get_latest_exam_config_id(session, subject_id)
+            
+            await waiting_room_service.create_waiting_room_service(
+                session=session,
+                exam_config_id=exam_config_id,
+                regent_keycloak_id=user_info.user_id,
+                vigilant_keycloak_ids=vigilant_keycloak_ids
+            )
 
         logger.info(f"Successfully generated {num_variations} exam variations.")
 
