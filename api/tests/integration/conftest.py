@@ -95,7 +95,9 @@ async def integration_client(real_db_session, edupro_admin, setup_keycloak):
             "preferred_username": setup_keycloak["manager_username"],
             "email": "manager@integration.test",
             "realm_access": {"roles": ["manager"]},
-            "groups": []
+            "groups": [],
+            "iss": f"{settings.KEYCLOAK_ISSUER_URL}/realms/{settings.KEYCLOAK_REALM}",
+            "aud": ["account", settings.KEYCLOAK_CLIENT_ID]
         }
     
     mock_kc.verify_token = mock_verify

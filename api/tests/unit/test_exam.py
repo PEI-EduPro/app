@@ -267,3 +267,141 @@ async def test_retrieve_student_list_nonexistent_config(client, mock_auth, sessi
     assert response.status_code == 404
     data = response.json()
     assert "Exam configuration not found" in data["detail"]
+
+
+@pytest.mark.asyncio
+async def test_generate_exam_with_student_tuples(client, mock_auth, session):
+    """Test generate exam endpoint with student tuples"""
+    app.dependency_overrides[get_current_user_info] = mock_auth
+
+    from src.models.subject import Subject
+    from src.models.topic import Topic
+    from src.models.question import QuestionCreate
+    from src.services.question import create_question
+
+    # Setup test data
+    sub = Subject(name="Exam Subject")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    topic = Topic(name="Exam Topic", subject_id=sub.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+
+    # Add questions
+    q_data = []
+    for i in range(5):
+        q_data.append(QuestionCreate(
+            topic_id=topic.id,
+            question_text=f"Q{i}",
+            question_options=[{"option_text": "A", "value": True}]
+        ))
+    await create_question(session, q_data)
+
+    with patch("src.services.exam.shutil.which", return_value="/usr/bin/pdflatex"), \
+         patch("src.services.exam._compile_latex", return_value=b"%PDF-1.4 dummy"), \
+         patch("src.services.exam._write_blank_answers"), \
+         patch("src.services.exam._write_all_solutions"), \
+         patch("src.services.exam._update_rules"):
+
+        payload = {
+            "subject_id": sub.id,
+            "fraction": 0,
+            "exam_title": "Test Exam",
+            "topics": ["Exam Topic"],
+            "number_questions": {"Exam Topic": 2},
+            "relative_quotations": {"Exam Topic": 1.0},
+            "num_variations": 1,
+            "professors": ["Prof A", "Prof B"],
+            "student_tuples": [
+                [12345, "John Doe", "john@example.com"],
+                [67890, "Jane Smith", "jane@example.com"]
+            ]
+        }
+
+        response = await client.post("/api/exams/generate", json=payload)
+        
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/zip"
+        
+        # Verify student data was stored in exam config
+        from src.services.exam import get_latest_exam_config_id, get_exam_config_by_id
+        config_id = await get_latest_exam_config_id(session, sub.id)
+        exam_config = await get_exam_config_by_id(session, config_id)
+        
+        assert exam_config.nmec_name_list is not None
+        student_data = json.loads(exam_config.nmec_name_list)
+        assert "12345" in student_data
+        assert student_data["12345"]["name"] == "John Doe"
+        assert student_data["12345"]["email"] == "john@example.com"
+
+
+@pytest.mark.asyncio
+async def test_generate_exam_with_waiting_room(client, mock_auth, session):
+    """Test generate exam endpoint with waiting room creation"""
+    app.dependency_overrides[get_current_user_info] = mock_auth
+
+    from src.models.subject import Subject
+    from src.models.topic import Topic
+    from src.models.question import QuestionCreate
+    from src.services.question import create_question
+
+    # Setup test data
+    sub = Subject(name="Exam Subject")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    topic = Topic(name="Exam Topic", subject_id=sub.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+
+    # Add questions
+    q_data = []
+    for i in range(5):
+        q_data.append(QuestionCreate(
+            topic_id=topic.id,
+            question_text=f"Q{i}",
+            question_options=[{"option_text": "A", "value": True}]
+        ))
+    await create_question(session, q_data)
+
+    with patch("src.services.exam.shutil.which", return_value="/usr/bin/pdflatex"), \
+         patch("src.services.exam._compile_latex", return_value=b"%PDF-1.4 dummy"), \
+         patch("src.services.exam._write_blank_answers"), \
+         patch("src.services.exam._write_all_solutions"), \
+         patch("src.services.exam._update_rules"), \
+         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock):
+
+        payload = {
+            "subject_id": sub.id,
+            "fraction": 0,
+            "exam_title": "Test Exam",
+            "topics": ["Exam Topic"],
+            "number_questions": {"Exam Topic": 2},
+            "relative_quotations": {"Exam Topic": 1.0},
+            "num_variations": 1,
+            "vigilant_keycloak_ids": ["vigilant1", "vigilant2"]
+        }
+
+        response = await client.post("/api/exams/generate", json=payload)
+        
+        assert response.status_code == 200
+        assert response.headers["content-type"] == "application/zip"
+        
+        # Verify waiting room was created
+        from src.services.exam import get_latest_exam_config_id
+        from src.services.waiting_room import get_waiting_room
+        from sqlmodel import select
+        from src.models.waiting_room import WaitingRoom
+        
+        config_id = await get_latest_exam_config_id(session, sub.id)
+        stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == config_id)
+        result = await session.exec(stmt)
+        waiting_room = result.first()
+        
+        assert waiting_room is not None
+        assert waiting_room.exam_config_id == config_id

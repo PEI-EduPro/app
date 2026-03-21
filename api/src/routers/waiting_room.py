@@ -16,7 +16,8 @@ from typing import TypedDict
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-
+################################################################
+#############################################33
 @router.post("/", response_model=WaitingRoomResponse, status_code=status.HTTP_201_CREATED)
 async def create_waiting_room(
     request: WaitingRoomCreateRequest,
