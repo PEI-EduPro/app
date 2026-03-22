@@ -643,7 +643,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                                 mode="single"
                                 selected={toDate(field.value)}
                                 onSelect={(date) => {
-                                  field.onChange(date);
+                                  field.onChange(date ? format(date, "yyyy-MM-dd") : "");
                                 }}
                               />
                             </PopoverContent>
