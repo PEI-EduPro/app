@@ -55,3 +55,11 @@ export interface TopicI {
 }
 
 export type GetTopicI = [TopicI, number];
+
+export interface GetWaitingRoomI {
+  subject_id: number;
+  subject_name: string;
+  waiting_room_id: number;
+  state: "preparation" | "running" | "closed";
+  role: "regent" | "vigilant";
+}

@@ -2,7 +2,7 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useGetUc } from "@/hooks/use-ucs";
+import { useGetUc, useGetWaitingRooms } from "@/hooks/use-ucs";
 import { encodeId } from "@/lib/id-encoder";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircle, Plus } from "lucide-react";
@@ -50,6 +50,8 @@ function UCCard({ label, srcImage, id }: UCCArdProps) {
 
 function UCS() {
   const { data, isLoading } = useGetUc();
+  const { data: waitingRooms = [], isLoading: waitingRoomsLoading } =
+    useGetWaitingRooms();
   const { keycloak } = useKeycloak();
   const isManager =
     (keycloak.tokenParsed?.realm_access?.roles || []).find(
@@ -65,29 +67,47 @@ function UCS() {
           Unidades Curriculares
         </div>
       </div>
-      {isLoading ? (
+      {isLoading || waitingRoomsLoading ? (
         <div className="flex justify-center items-center w-full h-40">
           <LoaderCircle className="animate-spin size-16" />
         </div>
       ) : (
         <div className="flex-1 overflow-y-auto md:px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
-          {data &&
-            (data.length === 0 && !isManager ? (
-              <div className="col-span-full flex flex-col items-center gap-4">
-                <span className="text-2xl text-gray-500">
-                  Nenhuma unidade curricular encontrada.
-                </span>
-              </div>
-            ) : (
-              data?.map((el, index) => (
-                <UCCard
-                  label={el.name}
-                  srcImage={"/card-image.png"}
-                  id={el.id}
-                  key={index}
-                />
+          {isMobile
+            ? waitingRooms &&
+              (waitingRooms.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center gap-4">
+                  <span className="text-s text-gray-500">
+                    Nenhuma unidade curricular encontrada.
+                  </span>
+                </div>
+              ) : (
+                waitingRooms?.map((el, index) => (
+                  <UCCard
+                    label={el.subject_name}
+                    srcImage={"/card-image.png"}
+                    id={el.subject_id}
+                    key={index}
+                  />
+                ))
               ))
-            ))}
+            : data &&
+              (data.length === 0 && !isManager ? (
+                <div className="col-span-full flex flex-col items-center gap-4">
+                  <span className="text-2xl text-gray-500">
+                    Nenhuma unidade curricular encontrada.
+                  </span>
+                </div>
+              ) : (
+                data?.map((el, index) => (
+                  <UCCard
+                    label={el.name}
+                    srcImage={"/card-image.png"}
+                    id={el.id}
+                    key={index}
+                  />
+                ))
+              ))}
 
           {isManager && !isLoading && !isMobile && (
             <Link to="/nova-uc" className="w-fit">

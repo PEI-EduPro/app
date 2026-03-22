@@ -1,6 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
-import { type NewUcI, type UcI, type UserI } from "@/lib/types";
+import {
+  type GetWaitingRoomI,
+  type NewUcI,
+  type UcI,
+  type UserI,
+} from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -97,6 +102,12 @@ const useUpdateUc = (ucId: number) => {
   });
 };
 
+const useGetWaitingRooms = () =>
+  useQuery<GetWaitingRoomI[]>({
+    queryKey: ["waitingRooms"],
+    queryFn: () => apiClient.get("/waiting-rooms/professor/my-waiting-rooms"),
+  });
+
 export {
   useGetUc,
   useAddUc,
@@ -106,4 +117,5 @@ export {
   useGetUcProfessors,
   useGetUcRegent,
   useUpdateUc,
+  useGetWaitingRooms,
 };
