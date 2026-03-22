@@ -95,7 +95,7 @@ async def setup_waiting_rooms(session):
 
 @pytest.mark.asyncio
 async def test_get_professor_waiting_rooms_success(client, professor_user, setup_waiting_rooms, session):
-    """Test professor can retrieve their waiting rooms grouped by subject."""
+    """Test professor can retrieve their waiting rooms as a flat list."""
     app.dependency_overrides[get_current_user_info] = lambda: professor_user
     
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
@@ -106,38 +106,41 @@ async def test_get_professor_waiting_rooms_success(client, professor_user, setup
     assert "waiting_rooms" in data
     waiting_rooms = data["waiting_rooms"]
     
-    # Should have entries for both subjects
-    assert str(setup_waiting_rooms["subject1_id"]) in waiting_rooms
-    assert str(setup_waiting_rooms["subject2_id"]) in waiting_rooms
+    # Should be a list with 3 waiting rooms
+    assert isinstance(waiting_rooms, list)
+    assert len(waiting_rooms) == 3
     
-    # Subject 1 should have 2 waiting rooms (wr1 and wr2)
-    subject1_rooms = waiting_rooms[str(setup_waiting_rooms["subject1_id"])]
-    assert str(setup_waiting_rooms["wr1_id"]) in subject1_rooms
-    assert str(setup_waiting_rooms["wr2_id"]) in subject1_rooms
+    # Create a lookup by waiting_room_id for easier assertions
+    wr_lookup = {wr["waiting_room_id"]: wr for wr in waiting_rooms}
     
     # Check wr1 (regent, preparation)
-    wr1_data = subject1_rooms[str(setup_waiting_rooms["wr1_id"])]
-    assert wr1_data["state"] == "preparation"
-    assert wr1_data["role"] == "regent"
+    wr1 = wr_lookup[setup_waiting_rooms["wr1_id"]]
+    assert wr1["subject_id"] == setup_waiting_rooms["subject1_id"]
+    assert wr1["subject_name"] == "Subject 1"
+    assert wr1["waiting_room_id"] == setup_waiting_rooms["wr1_id"]
+    assert wr1["state"] == "preparation"
+    assert wr1["role"] == "regent"
     
     # Check wr2 (vigilant, running)
-    wr2_data = subject1_rooms[str(setup_waiting_rooms["wr2_id"])]
-    assert wr2_data["state"] == "running"
-    assert wr2_data["role"] == "vigilant"
-    
-    # Subject 2 should have 1 waiting room (wr3)
-    subject2_rooms = waiting_rooms[str(setup_waiting_rooms["subject2_id"])]
-    assert str(setup_waiting_rooms["wr3_id"]) in subject2_rooms
+    wr2 = wr_lookup[setup_waiting_rooms["wr2_id"]]
+    assert wr2["subject_id"] == setup_waiting_rooms["subject1_id"]
+    assert wr2["subject_name"] == "Subject 1"
+    assert wr2["waiting_room_id"] == setup_waiting_rooms["wr2_id"]
+    assert wr2["state"] == "running"
+    assert wr2["role"] == "vigilant"
     
     # Check wr3 (regent, closed)
-    wr3_data = subject2_rooms[str(setup_waiting_rooms["wr3_id"])]
-    assert wr3_data["state"] == "closed"
-    assert wr3_data["role"] == "regent"
+    wr3 = wr_lookup[setup_waiting_rooms["wr3_id"]]
+    assert wr3["subject_id"] == setup_waiting_rooms["subject2_id"]
+    assert wr3["subject_name"] == "Subject 2"
+    assert wr3["waiting_room_id"] == setup_waiting_rooms["wr3_id"]
+    assert wr3["state"] == "closed"
+    assert wr3["role"] == "regent"
 
 
 @pytest.mark.asyncio
 async def test_get_professor_waiting_rooms_empty(client, professor_user_no_waiting_rooms, session):
-    """Test professor with no waiting room groups gets empty response."""
+    """Test professor with no waiting room groups gets empty list."""
     app.dependency_overrides[get_current_user_info] = lambda: professor_user_no_waiting_rooms
     
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
@@ -146,7 +149,7 @@ async def test_get_professor_waiting_rooms_empty(client, professor_user_no_waiti
     data = response.json()
     
     assert "waiting_rooms" in data
-    assert data["waiting_rooms"] == {}
+    assert data["waiting_rooms"] == []
 
 
 @pytest.mark.asyncio
@@ -197,15 +200,14 @@ async def test_get_professor_waiting_rooms_partial_groups(client, session):
     assert "waiting_rooms" in data
     waiting_rooms = data["waiting_rooms"]
     
-    # Should have only one subject
+    # Should be a list with one item
+    assert isinstance(waiting_rooms, list)
     assert len(waiting_rooms) == 1
-    assert str(subject.id) in waiting_rooms
     
-    # Should have only one waiting room
-    assert len(waiting_rooms[str(subject.id)]) == 1
-    assert str(wr.id) in waiting_rooms[str(subject.id)]
-    
-    wr_data = waiting_rooms[str(subject.id)][str(wr.id)]
+    wr_data = waiting_rooms[0]
+    assert wr_data["subject_id"] == subject.id
+    assert wr_data["subject_name"] == "Test Subject"
+    assert wr_data["waiting_room_id"] == wr.id
     assert wr_data["state"] == "running"
     assert wr_data["role"] == "regent"
 
@@ -254,8 +256,9 @@ async def test_get_professor_waiting_rooms_invalid_group_format(client, session)
     waiting_rooms = data["waiting_rooms"]
     
     # Should have only the valid waiting room that exists
-    assert str(subject.id) in waiting_rooms
-    assert str(wr.id) in waiting_rooms[str(subject.id)]
+    assert isinstance(waiting_rooms, list)
+    assert len(waiting_rooms) == 1
+    assert waiting_rooms[0]["waiting_room_id"] == wr.id
 
 
 @pytest.mark.asyncio
@@ -277,59 +280,48 @@ async def test_get_professor_waiting_rooms_non_existent_waiting_room(client, ses
     assert response.status_code == 200
     data = response.json()
     
-    # Should return empty since the waiting room doesn't exist
-    assert data["waiting_rooms"] == {}
+    # Should return empty list since the waiting room doesn't exist
+    assert data["waiting_rooms"] == []
 
 
 @pytest.mark.asyncio
 async def test_get_professor_waiting_rooms_multiple_subjects(client, professor_user, setup_waiting_rooms, session):
     """Test professor with waiting rooms across multiple subjects."""
     app.dependency_overrides[get_current_user_info] = lambda: professor_user
-    
+
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     waiting_rooms = data["waiting_rooms"]
-    
-    # Verify structure: should have 2 subjects
-    assert len(waiting_rooms) == 2
-    
-    # Verify each subject has correct waiting rooms
-    subject1_rooms = waiting_rooms[str(setup_waiting_rooms["subject1_id"])]
-    assert len(subject1_rooms) == 2  # wr1 and wr2
-    
-    subject2_rooms = waiting_rooms[str(setup_waiting_rooms["subject2_id"])]
-    assert len(subject2_rooms) == 1  # wr3 only
+
+    # Should be a list with 3 waiting rooms
+    assert isinstance(waiting_rooms, list)
+    assert len(waiting_rooms) == 3
 
 
 @pytest.mark.asyncio
 async def test_get_professor_waiting_rooms_all_states(client, professor_user, setup_waiting_rooms, session):
     """Test that all waiting room states are correctly returned."""
     app.dependency_overrides[get_current_user_info] = lambda: professor_user
-    
+
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
-    
+
     assert response.status_code == 200
     data = response.json()
-    
+
     waiting_rooms = data["waiting_rooms"]
-    
-    # Collect all states
-    states_found = set()
-    roles_found = set()
-    
-    for subject_id, rooms in waiting_rooms.items():
-        for wr_id, wr_data in rooms.items():
-            states_found.add(wr_data["state"])
-            roles_found.add(wr_data["role"])
-    
+
+    # Collect all states and roles
+    states_found = set(wr["state"] for wr in waiting_rooms)
+    roles_found = set(wr["role"] for wr in waiting_rooms)
+
     # Should have all three states
     assert "preparation" in states_found
     assert "running" in states_found
     assert "closed" in states_found
-    
+
     # Should have both roles
     assert "regent" in roles_found
     assert "vigilant" in roles_found

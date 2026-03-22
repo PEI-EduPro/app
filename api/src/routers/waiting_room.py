@@ -218,16 +218,17 @@ async def get_professor_waiting_rooms(
     """
     Get all waiting rooms where the professor is either a regent or vigilant.
     
-    Returns a nested structure grouped by subject_id:
+    Returns a flat list of waiting rooms with subject information:
     {
-        "waiting_rooms": {
-            "subject_id": {
-                "waiting_room_id": {
-                    "state": "preparation" | "running" | "closed",
-                    "role": "regent" | "vigilant"
-                }
+        "waiting_rooms": [
+            {
+                "subject_id": 1,
+                "subject_name": "Mathematics",
+                "waiting_room_id": 5,
+                "state": "preparation" | "running" | "closed",
+                "role": "regent" | "vigilant"
             }
-        }
+        ]
     }
     
     Only accessible by users with the professor role.
