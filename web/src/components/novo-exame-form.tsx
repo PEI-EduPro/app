@@ -54,12 +54,8 @@ export type NovoExameFormT = {
   students_csv: File | null;
 };
 
-export const NovoExameForm = (props: {
-  examData?: NovoExameFormT;
-  ucID: number;
-  ucName: string;
-}) => {
-  const { examData = null, ucID, ucName } = props;
+export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
+  const { ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null,
@@ -75,18 +71,6 @@ export const NovoExameForm = (props: {
 
   const form = useForm<NovoExameFormT>({
     mode: "onChange",
-    defaultValues: {
-      topics: examData?.topics || [],
-      number_questions: examData?.number_questions || {},
-      relative_quotations: examData?.relative_quotations || {},
-      number_exams: examData?.number_exams || 1,
-      fraction: examData?.fraction || 0,
-      exam_title: examData?.exam_title,
-      exam_date: examData?.exam_date || new Date().toISOString().split("T")[0],
-      semester: examData?.semester || "1",
-      academic_year: examData?.academic_year || "2025/26",
-      students_csv: (examData?.students_csv ?? null) as File | null,
-    },
   });
 
   const currentYear = new Date().getFullYear();
