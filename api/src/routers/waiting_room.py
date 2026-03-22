@@ -4,7 +4,7 @@ from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomsResponse
 import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
@@ -208,6 +208,52 @@ async def get_waiting_room_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve waiting room metrics: {str(e)}"
         )
+
+
+@router.get("/professor/my-waiting-rooms", response_model=ProfessorWaitingRoomsResponse)
+async def get_professor_waiting_rooms(
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all waiting rooms where the professor is either a regent or vigilant.
+    
+    Returns a flat list of waiting rooms with subject information:
+    {
+        "waiting_rooms": [
+            {
+                "subject_id": 1,
+                "subject_name": "Mathematics",
+                "waiting_room_id": 5,
+                "state": "preparation" | "running" | "closed",
+                "role": "regent" | "vigilant"
+            }
+        ]
+    }
+    
+    Only accessible by users with the professor role.
+    """
+    # Verify professor role
+    if "professor" not in user_info.realm_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint requires the professor role."
+        )
+
+    try:
+        waiting_rooms = await waiting_room_service.get_professor_waiting_rooms(
+            session=session,
+            professor_keycloak_id=user_info.user_id,
+            professor_groups=user_info.groups
+        )
+        return {"waiting_rooms": waiting_rooms}
+    except Exception as e:
+        logger.error(f"Failed to retrieve professor waiting rooms: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve waiting rooms: {str(e)}"
+        )
+
 
 @router.patch("/{waiting_room_id}/close", response_model=WaitingRoomResponse)
 async def close_waiting_room(
