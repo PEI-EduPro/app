@@ -41,3 +41,14 @@ class WaitingRoomInfoResponse(BaseModel):
 class WaitingRoomMetricsResponse(BaseModel):
     associated_exams_count: int
     associated_students_count: int
+
+
+class ProfessorWaitingRoomInfo(BaseModel):
+    """Information about a single waiting room for a professor."""
+    state: str
+    role: str
+
+
+class ProfessorWaitingRoomsResponse(BaseModel):
+    """Response model for professor's waiting rooms grouped by subject."""
+    waiting_rooms: dict[str, dict[str, ProfessorWaitingRoomInfo]]
