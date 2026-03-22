@@ -41,16 +41,16 @@ type TopicSelection = {
 };
 
 export type NovoExameFormT = {
+  fraction: number;
+  exam_title: string;
   topics: TopicSelection[];
   number_questions: Record<string, number>;
   relative_quotations: Record<string, number>;
   number_exams: number;
-  fraction: number;
-  exam_title: string;
+  vigilantes: string[];
   exam_date: string;
   semester: string;
   academic_year: string;
-  vigilantes: string[];
   students_csv: File | null;
 };
 
@@ -85,7 +85,7 @@ export const NovoExameForm = (props: {
       exam_date: examData?.exam_date || new Date().toISOString().split("T")[0],
       semester: examData?.semester || "1",
       academic_year: examData?.academic_year || "2025/26",
-      students_csv: examData?.students_csv || null,
+      students_csv: (examData?.students_csv ?? null) as File | null,
     },
   });
 
@@ -105,6 +105,15 @@ export const NovoExameForm = (props: {
     formState,
   } = form;
 
+  async function parseStudentsCsv(file: File): Promise<string[][]> {
+    const text = await file.text();
+    return text
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((line) => line.split(",").map((v) => v.trim()));
+  }
+
   const validateAndNormalizeData = (
     formData: NovoExameFormT,
   ): NovoExameFormT => {
@@ -122,6 +131,8 @@ export const NovoExameForm = (props: {
           : 0,
       number_questions: { ...formData.number_questions },
       relative_quotations: { ...formData.relative_quotations },
+      students_csv: formData.students_csv,
+      vigilantes: [...formData.vigilantes],
     };
 
     formData.topics?.forEach((topic) => {
@@ -178,7 +189,7 @@ export const NovoExameForm = (props: {
   };
 
   const onSubmit = async (formData: NovoExameFormT) => {
-    const finalData = validatedData || validateAndNormalizeData(formData);
+    const finalData = validateAndNormalizeData(formData);
 
     const novoExameData: NewExamConfigI = {
       subject_id: ucID,
@@ -191,7 +202,13 @@ export const NovoExameForm = (props: {
       exam_date: finalData.exam_date,
       semester: finalData.semester,
       academic_year: finalData.academic_year,
+      student_tuples: finalData.students_csv
+        ? await parseStudentsCsv(finalData.students_csv)
+        : [],
+      vigilant_keycloak_ids: finalData.vigilantes,
     };
+
+    console.log(novoExameData);
 
     finalData.topics.forEach((topic) => {
       const topicNome = topic.nome;
@@ -936,7 +953,9 @@ export const NovoExameForm = (props: {
                             <MultiSelect
                               emptyIndicator="Nenhum resultado encontrado"
                               value={field.value}
-                              onValueChange={(e) => field.onChange(e)}
+                              onValueChange={(e) => {
+                                field.onChange(e);
+                              }}
                               placeholder="Selecione varios docentes"
                               options={
                                 professors
