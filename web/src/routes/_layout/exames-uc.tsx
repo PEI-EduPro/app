@@ -2,7 +2,7 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { ExamConfigCard } from "@/components/exam-config-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useGetExamConfig } from "@/hooks/use-exams";
+import { useDeleteExamConfig, useGetExamConfig } from "@/hooks/use-exams";
 import { useGetUcById } from "@/hooks/use-ucs";
 import { decodeId } from "@/lib/id-encoder";
 import type { ExamConfigI } from "@/lib/types";
@@ -39,18 +39,22 @@ export const Route = createFileRoute("/_layout/exames-uc")({
 const ContentActionCard = ({
   name,
   examConfig,
+  ucId,
+  id,
 }: {
   id: number;
   name: string;
   ucId: string;
-  ucName: string;
   examConfig: ExamConfigI;
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  const deleteMutation = useDeleteExamConfig(decodeId(ucId));
 
-  const handleDelete = () => console.log("Action: Delete clicked");
+  const handleDelete = () => {
+    deleteMutation.mutate(id);
+  };
 
   return (
     <>
@@ -158,7 +162,6 @@ function RouteComponent() {
             id={el.id}
             name={`Exame ${index + 1}`}
             ucId={ucId}
-            ucName={ucName}
             key={index}
             examConfig={el}
           />

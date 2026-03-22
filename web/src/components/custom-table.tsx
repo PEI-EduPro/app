@@ -56,7 +56,7 @@ interface CustomTableProps {
 }
 
 export function CustomTable(props: CustomTableProps) {
-  const { isSelectable, data, rowNumber = 10, rowSelection, onChange } = props;
+  const { isSelectable, data, rowNumber = 10, rowSelection = [], onChange } = props;
   const [sorting, setSorting] = useState<SortingState>([]);
 
   const keys = data[0]

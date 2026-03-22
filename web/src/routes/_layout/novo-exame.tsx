@@ -1,8 +1,5 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import {
-  NovoExameForm,
-  type NovoExameFormT,
-} from "@/components/novo-exame-form";
+import { NovoExameForm } from "@/components/novo-exame-form";
 import { decodeId } from "@/lib/id-encoder";
 import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";
@@ -24,32 +21,6 @@ export const Route = createFileRoute("/_layout/novo-exame")({
 function NovoExame() {
   const { ucId, ucName, examId } = Route.useSearch();
   const realId = decodeId(ucId);
-  // if examID exists, fetch exam data to edit
-  // const { data: examData } = useGetExamById(examId)
-
-  const examConfgExample: NovoExameFormT = {
-    topics: [
-      { id: "1", nome: "Arquiteturas" },
-      { id: "2", nome: "Definição de requisitos avançada" },
-      { id: "3", nome: "Introdução à tomada de decisão" },
-    ],
-    number_questions: {
-      "1": 5,
-      "2": 3,
-      "3": 2,
-    },
-    relative_quotations: {
-      "1": 50,
-      "2": 30,
-      "3": 20,
-    },
-    number_exams: 1,
-    fraction: 0,
-    exam_title: "",
-    exam_date: "",
-    semester: "",
-    academic_year: "",
-  };
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -75,11 +46,7 @@ function NovoExame() {
       </div>
       <div className="flex flex-col items-center">
         <div className="w-175 h-auto">
-          <NovoExameForm
-            examData={examId ? examConfgExample : undefined}
-            ucID={realId}
-            ucName={ucName}
-          />
+          <NovoExameForm ucID={realId} ucName={ucName} />
         </div>
       </div>
     </div>

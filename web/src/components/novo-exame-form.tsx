@@ -30,6 +30,10 @@ import { encodeId } from "@/lib/id-encoder";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { format, toDate } from "date-fns";
+import { useGetProfessors } from "@/hooks/use-users";
+import { useKeycloak } from "@/hooks/use-keycloak";
+import { MultiSelect } from "./multi-select";
+import { Upload } from "lucide-react";
 
 type TopicSelection = {
   id: string;
@@ -37,45 +41,36 @@ type TopicSelection = {
 };
 
 export type NovoExameFormT = {
+  fraction: number;
+  exam_title: string;
   topics: TopicSelection[];
   number_questions: Record<string, number>;
   relative_quotations: Record<string, number>;
   number_exams: number;
-  fraction: number;
-  exam_title: string;
+  vigilantes: string[];
   exam_date: string;
   semester: string;
   academic_year: string;
+  students_csv: File | null;
 };
 
-export const NovoExameForm = (props: {
-  examData?: NovoExameFormT;
-  ucID: number;
-  ucName: string;
-}) => {
-  const { examData = null, ucID, ucName } = props;
+export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
+  const { ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
     null,
   );
-  const totalSteps = 5;
+  const totalSteps = 6;
   const navigate = useNavigate();
 
   const { mutate, isPending } = useAddExamConfig();
   const { data: topics } = useGetUCTopics(ucID);
+  const { data: professors } = useGetProfessors();
+
+  const keycloack = useKeycloak();
 
   const form = useForm<NovoExameFormT>({
-    defaultValues: {
-      topics: examData?.topics || [],
-      number_questions: examData?.number_questions || {},
-      relative_quotations: examData?.relative_quotations || {},
-      number_exams: examData?.number_exams || 1,
-      fraction: examData?.fraction || 0,
-      exam_title: examData?.exam_title,
-      exam_date: examData?.exam_date || new Date().toISOString().split("T")[0],
-      semester: examData?.semester || "1",
-      academic_year: examData?.academic_year || "2025/26",
-    },
+    mode: "onChange",
   });
 
   const currentYear = new Date().getFullYear();
@@ -84,7 +79,24 @@ export const NovoExameForm = (props: {
     `${currentYear}/${String(currentYear + 1).slice(-2)}`,
   ];
 
-  const { handleSubmit, control, reset, watch, setValue, getValues } = form;
+  const {
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    setValue,
+    getValues,
+    formState,
+  } = form;
+
+  async function parseStudentsCsv(file: File): Promise<string[][]> {
+    const text = await file.text();
+    return text
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((line) => line.split(",").map((v) => v.trim()));
+  }
 
   const validateAndNormalizeData = (
     formData: NovoExameFormT,
@@ -103,6 +115,8 @@ export const NovoExameForm = (props: {
           : 0,
       number_questions: { ...formData.number_questions },
       relative_quotations: { ...formData.relative_quotations },
+      students_csv: formData.students_csv,
+      vigilantes: [...(formData.vigilantes ?? [])],
     };
 
     formData.topics?.forEach((topic) => {
@@ -159,7 +173,7 @@ export const NovoExameForm = (props: {
   };
 
   const onSubmit = async (formData: NovoExameFormT) => {
-    const finalData = validatedData || validateAndNormalizeData(formData);
+    const finalData = validateAndNormalizeData(formData);
 
     const novoExameData: NewExamConfigI = {
       subject_id: ucID,
@@ -172,7 +186,13 @@ export const NovoExameForm = (props: {
       exam_date: finalData.exam_date,
       semester: finalData.semester,
       academic_year: finalData.academic_year,
+      student_tuples: finalData.students_csv
+        ? await parseStudentsCsv(finalData.students_csv)
+        : [],
+      vigilant_keycloak_ids: finalData.vigilantes,
     };
+
+    console.log(novoExameData);
 
     finalData.topics.forEach((topic) => {
       const topicNome = topic.nome;
@@ -196,10 +216,14 @@ export const NovoExameForm = (props: {
           search: { ucId: encodeId(ucID), ucName },
         });
       },
-      onError: (error) => {
-        toast.error(`Erro ao gerar exame: ${error.message}`, {
-          position: "top-right",
-        });
+      onError: () => {
+        toast.dismiss();
+        toast.error(
+          "Um erro ocorreu ao gerar exame, tente novamente mais tarde",
+          {
+            position: "top-right",
+          },
+        );
       },
     });
   };
@@ -270,7 +294,7 @@ export const NovoExameForm = (props: {
                             nome: topic[0].name,
                           }))}
                           onChange={field.onChange}
-                          rowSelection={field.value}
+                          rowSelection={field.value ?? []}
                           rowNumber={12}
                         />
                       )}
@@ -863,12 +887,176 @@ export const NovoExameForm = (props: {
                 className="flex flex-col h-180"
               >
                 <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
-                  <FormLabel className="text-center block text-2xl font-bold text-primary">
+                  <FormLabel className="text-center block text-lg">
                     Resumo do Exame
                   </FormLabel>
                   <div className="flex flex-col gap-1">
                     <ExamConfigCard examConfigData={getDisplayData()} />
                   </div>
+                </div>
+                <div className="flex justify-between pt-4">
+                  <Button
+                    className="cursor-pointer"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousStep}
+                  >
+                    Retroceder
+                  </Button>
+                  <Button
+                    className="cursor-pointer"
+                    size="sm"
+                    onClick={handleNextStep}
+                  >
+                    Próximo
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+
+          {formStep === 5 && (
+            <Form {...form}>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col h-180"
+              >
+                <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
+                  <FormLabel className="text-center block text-lg">
+                    Vigilantes e Alunos
+                  </FormLabel>
+                  <div className="flex flex-col gap-1">
+                    <FormField
+                      key="LKad71ZM"
+                      control={control}
+                      name="vigilantes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Professores Vigilantes</FormLabel>
+                          <FormControl>
+                            <MultiSelect
+                              emptyIndicator="Nenhum resultado encontrado"
+                              value={field.value}
+                              onValueChange={(e) => {
+                                field.onChange(e);
+                              }}
+                              placeholder="Selecione varios docentes"
+                              options={
+                                professors
+                                  ?.map((p) => ({
+                                    value: p.id,
+                                    label:
+                                      p.firstName && p.lastName
+                                        ? `${p.firstName} ${p.lastName}`
+                                        : p.username || p.id,
+                                  }))
+                                  .filter(
+                                    (e) =>
+                                      e.value !==
+                                      keycloack.keycloak.tokenParsed?.sub,
+                                  ) || []
+                              }
+                              popoverClassName="w-[650px]"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={control}
+                    name="students_csv"
+                    rules={{
+                      validate: (file) => {
+                        if (!file) return true;
+                        return new Promise((resolve) => {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const text = ev.target?.result as string;
+                            const lines = text
+                              .split("\n")
+                              .filter((l) => l.trim());
+                            for (let i = 0; i < lines.length; i++) {
+                              const cols = lines[i].split(",");
+                              if (
+                                cols.length < 3 ||
+                                cols.some((c) => !c.trim())
+                              ) {
+                                resolve(
+                                  `Linha ${i + 1} inválida. Formato esperado: nmec, nome, email`,
+                                );
+                                return;
+                              }
+                            }
+                            resolve(true);
+                          };
+                          reader.readAsText(file as File);
+                        });
+                      },
+                    }}
+                    render={({
+                      field: { onChange, value },
+                      fieldState: { error },
+                    }) => (
+                      <FormItem>
+                        <FormLabel>Alunos (CSV)</FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Formato esperado: <code>nmec, nome, email</code> (uma
+                          linha por aluno)
+                        </p>
+                        <FormControl>
+                          <div
+                            className="relative border border-[#e5e5e5] rounded-lg p-8 text-center cursor-pointer"
+                            onClick={() => {
+                              const el = document?.getElementById(
+                                "file-upload-yI1i8RdV",
+                              ) as HTMLInputElement | null;
+                              el?.click();
+                            }}
+                          >
+                            <input
+                              multiple
+                              type="file"
+                              id="file-upload-yI1i8RdV"
+                              onChange={(e) =>
+                                onChange(e.target.files?.[0] ?? null)
+                              }
+                              accept=".csv"
+                              className="hidden"
+                            />
+
+                            {!value ? (
+                              <div className="flex flex-col items-center space-y-3">
+                                <Upload className="w-6 h-6 text-gray-400" />
+                                <div className="text-sm text-gray-500">
+                                  Clique{" "}
+                                  <span className="text-[#41B5C0] font-medium">
+                                    aqui
+                                  </span>{" "}
+                                  para selecionar um ficheiro
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1">
+                                <span>{value.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        {error && (
+                          <p className="text-sm text-destructive">
+                            {error.message}
+                          </p>
+                        )}
+                        {value && !error && (
+                          <p className="text-sm text-green-600">
+                            {(value as File).name} carregado com sucesso.
+                          </p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
                 </div>
 
                 <div className="flex justify-between pt-4">
@@ -884,7 +1072,12 @@ export const NovoExameForm = (props: {
                     size="sm"
                     className="cursor-pointer"
                     type="submit"
-                    disabled={isPending}
+                    disabled={
+                      isPending ||
+                      !formState.isValid ||
+                      !watch("students_csv") ||
+                      watch("vigilantes").length == 0
+                    }
                   >
                     {isPending ? "A gerar..." : "Gerar Exame"}
                   </Button>
