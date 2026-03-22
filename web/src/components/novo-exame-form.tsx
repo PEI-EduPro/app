@@ -116,7 +116,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       number_questions: { ...formData.number_questions },
       relative_quotations: { ...formData.relative_quotations },
       students_csv: formData.students_csv,
-      vigilantes: [...formData.vigilantes],
+      vigilantes: [...(formData.vigilantes ?? [])],
     };
 
     formData.topics?.forEach((topic) => {
@@ -294,7 +294,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                             nome: topic[0].name,
                           }))}
                           onChange={field.onChange}
-                          rowSelection={field.value}
+                          rowSelection={field.value ?? []}
                           rowNumber={12}
                         />
                       )}
