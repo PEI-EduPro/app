@@ -38,11 +38,11 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Questões importadas com sucesso", {
+      toast.success("Questões importadas com sucesso!", {
         position: "top-right",
       });
     } catch {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     } finally {

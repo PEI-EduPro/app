@@ -31,12 +31,12 @@ export function useCreateTopic(subjectId: number) {
       apiClient.post("/topics/", { name, subject_id: subjectId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Tópico criado com sucesso", {
+      toast.success("Tópico criado com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
@@ -50,12 +50,12 @@ export function useUpdateTopic(subjectId: number) {
       apiClient.put(`/topics/${id}`, { name, subject_id: subjectId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Tópico editado com sucesso", {
+      toast.success("Tópico editado com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
@@ -68,12 +68,12 @@ export function useDeleteTopic(subjectId: number) {
     mutationFn: (id: number) => apiClient.delete(`/topics/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Tópico eliminado com sucesso", {
+      toast.success("Tópico eliminado com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
@@ -99,12 +99,12 @@ export function useCreateQuestion(subjectId: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Questão adicionada com sucesso", {
+      toast.success("Questão adicionada com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
@@ -155,12 +155,12 @@ export function useUpdateQuestion(subjectId: number) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Questão editada com sucesso", {
+      toast.success("Questão editada com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
@@ -173,12 +173,12 @@ export function useDeleteQuestion(subjectId: number) {
     mutationFn: (id: number) => apiClient.delete(`/questions/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
-      toast.success("Questão eliminada com sucesso", {
+      toast.success("Questão eliminada com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },

@@ -3,7 +3,9 @@ import { Card } from "@/components/ui/card";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGetUc } from "@/hooks/use-ucs";
+import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 import { encodeId } from "@/lib/id-encoder";
+import type { WaitingRoomStatusT } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircle, Plus } from "lucide-react";
 
@@ -15,13 +17,20 @@ interface UCCArdProps {
   srcImage?: string;
   label: string;
   id: number;
+  waitingRoomStatus?: WaitingRoomStatusT;
 }
-function UCCard({ label, srcImage, id }: UCCArdProps) {
+function UCCard({ label, srcImage, id, waitingRoomStatus }: UCCArdProps) {
   const isMobile = useIsMobile();
 
   return (
     <Link
-      to={isMobile ? `/mobile_evaluate_tests` : `/detalhes-uc`}
+      to={
+        isMobile
+          ? waitingRoomStatus !== "closed"
+            ? "/mobile_scan_teste"
+            : `/mobile_evaluate_tests`
+          : `/detalhes-uc`
+      }
       search={{ ucId: encodeId(id) }}
       className="w-fit"
     >
@@ -49,13 +58,15 @@ function UCCard({ label, srcImage, id }: UCCArdProps) {
 }
 
 function UCS() {
-  const { data, isLoading } = useGetUc();
+  const isMobile = useIsMobile();
+  const { data, isLoading } = useGetUc({ enabled: !isMobile });
+  const { data: waitingRooms = [], isLoading: waitingRoomsLoading } =
+    useGetWaitingRooms({ enabled: isMobile });
   const { keycloak } = useKeycloak();
   const isManager =
     (keycloak.tokenParsed?.realm_access?.roles || []).find(
       (e) => e == "manager",
     ) != undefined;
-  const isMobile = useIsMobile();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
@@ -65,29 +76,48 @@ function UCS() {
           Unidades Curriculares
         </div>
       </div>
-      {isLoading ? (
+      {isLoading || waitingRoomsLoading ? (
         <div className="flex justify-center items-center w-full h-40">
           <LoaderCircle className="animate-spin size-16" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto md:px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
-          {data &&
-            (data.length === 0 && !isManager ? (
-              <div className="col-span-full flex flex-col items-center gap-4">
-                <span className="text-2xl text-gray-500">
-                  Nenhuma unidade curricular encontrada.
-                </span>
-              </div>
-            ) : (
-              data?.map((el, index) => (
-                <UCCard
-                  label={el.name}
-                  srcImage={"/card-image.png"}
-                  id={el.id}
-                  key={index}
-                />
+        <div className="flex-1 overflow-y-auto flex flex-col  md:px-47.5 md:grid md:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
+          {isMobile
+            ? waitingRooms &&
+              (waitingRooms.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center gap-4">
+                  <span className="text-s text-gray-500">
+                    Nenhum exame disponivel.
+                  </span>
+                </div>
+              ) : (
+                waitingRooms?.map((el, index) => (
+                  <UCCard
+                    waitingRoomStatus={el.state}
+                    label={el.subject_name}
+                    srcImage={"/card-image.png"}
+                    id={el.waiting_room_id}
+                    key={index}
+                  />
+                ))
               ))
-            ))}
+            : data &&
+              (data.length === 0 && !isManager ? (
+                <div className="col-span-full flex flex-col items-center gap-4">
+                  <span className="text-2xl text-gray-500">
+                    Nenhuma unidade curricular encontrada.
+                  </span>
+                </div>
+              ) : (
+                data?.map((el, index) => (
+                  <UCCard
+                    label={el.name}
+                    srcImage={"/card-image.png"}
+                    id={el.id}
+                    key={index}
+                  />
+                ))
+              ))}
 
           {isManager && !isLoading && !isMobile && (
             <Link to="/nova-uc" className="w-fit">

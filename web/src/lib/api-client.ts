@@ -67,6 +67,19 @@ class ApiClient {
     return response.json();
   }
 
+  async patch<T>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error patching ${endpoint}: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
   async delete<T>(endpoint: string): Promise<T | null> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: "DELETE",

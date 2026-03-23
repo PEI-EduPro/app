@@ -192,8 +192,6 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       vigilant_keycloak_ids: finalData.vigilantes,
     };
 
-    console.log(novoExameData);
-
     finalData.topics.forEach((topic) => {
       const topicNome = topic.nome;
       if (topicNome) {
@@ -219,7 +217,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       onError: () => {
         toast.dismiss();
         toast.error(
-          "Um erro ocorreu ao gerar exame, tente novamente mais tarde",
+          "Um erro Ocorreu ao gerar exame, tente novamente mais tarde.",
           {
             position: "top-right",
           },
@@ -643,7 +641,9 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                                 mode="single"
                                 selected={toDate(field.value)}
                                 onSelect={(date) => {
-                                  field.onChange(date);
+                                  field.onChange(
+                                    date ? format(date, "yyyy-MM-dd") : "",
+                                  );
                                 }}
                               />
                             </PopoverContent>
@@ -1076,6 +1076,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                       isPending ||
                       !formState.isValid ||
                       !watch("students_csv") ||
+                      !watch("vigilantes") ||
                       watch("vigilantes").length == 0
                     }
                   >

@@ -50,11 +50,11 @@ export function NovaUCForm() {
       professor_keycloak_ids: formData.professores,
     });
     if (isError) {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     } else {
-      toast.success("Unidade curricular criada com sucesso", {
+      toast.success("Unidade curricular criada com sucesso!", {
         position: "top-right",
       });
     }

@@ -1,5 +1,4 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { useGetUcById } from "@/hooks/use-ucs";
 import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -8,6 +7,7 @@ import { RefreshCw, X } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import Webcam from "react-webcam";
 import { toast } from "sonner";
+import { useGetWaitingRoomById } from "@/hooks/use-waiting-rooms";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),
@@ -101,13 +101,14 @@ function CameraCapture({
 function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
-  const { data: ucData } = useGetUcById(realId);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
+
+  const { data: roomDetails } = useGetWaitingRoomById(realId);
 
   return (
     <div className="py-3.5 px-6 w-full min-h-screen flex flex-col">
       <AppBreadcrumb
-        page={ucData?.name || "Detalhes"}
+        page={roomDetails?.subject_name || "Detalhes"}
         crumbs={[
           { name: "Unidades Curriculares", link: "/unidades-curriculares" },
         ]}
@@ -115,10 +116,14 @@ function RouteComponent() {
 
       <div className="flex flex-col items-center flex-1">
         <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7">
-          <span className="font-rubik">{ucData?.name || "Carregando..."}</span>
+          <span className="font-rubik">
+            {roomDetails?.subject_name || "Carregando..."}
+          </span>
         </div>
 
-        <span className="text-sm font-medium mb-6">0/200</span>
+        <span className="text-sm font-medium mb-6">
+          0/{roomDetails?.total_exams}
+        </span>
 
         <div className="flex flex-col items-center justify-center flex-1 w-full">
           <CameraCapture

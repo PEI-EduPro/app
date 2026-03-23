@@ -55,3 +55,35 @@ export interface TopicI {
 }
 
 export type GetTopicI = [TopicI, number];
+
+export interface GetWaitingRoomI {
+  subject_id: number;
+  subject_name: string;
+  waiting_room_id: number;
+  state: WaitingRoomStatusT;
+  role: "regent" | "vigilant";
+}
+
+export type WaitingRoomStatusT = "preparation" | "running" | "closed";
+
+export interface GetWaintingRoomByIdI {
+  id: number;
+  exam_config_id: number;
+  state: WaitingRoomStatusT;
+  student_list: { name: string; nmec: number }[];
+  exam_ids: number[];
+  total_students: number;
+  total_exams: number;
+  subject_name: string;
+  role: "regent" | "vigilant";
+}
+
+export interface GetWaitingRoomMetricsI {
+  associated_exams_count: number;
+  associated_students_count: number;
+}
+
+export interface PostExamStudentI {
+  qr: string;
+  nmec: number;
+}
