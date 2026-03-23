@@ -17,7 +17,7 @@ const useGetWaitingRooms = ({ enabled = true }: { enabled: boolean }) =>
 
 const useGetWaitingRoomById = (roomId: number) =>
   useQuery<GetWaintingRoomByIdI>({
-    queryKey: ["waitingRooms", roomId],
+    queryKey: ["waitingRoom", roomId],
     queryFn: () => apiClient.get(`/waiting-rooms/${roomId}/info`),
   });
 
@@ -38,7 +38,7 @@ const usePostPairExamStudent = (roomId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["student_to_exam", roomId],
+    mutationKey: ["student_to_exam"],
     mutationFn: (props: PostExamStudentI) =>
       apiClient.post(`/waiting-rooms/${roomId}/student_to_exam`, props),
     onSuccess: () => {
@@ -59,18 +59,14 @@ const useStartWaitingRoom = (roomId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["start_waiting_room", roomId],
-    mutationFn: () => apiClient.get(`/waiting-rooms/${roomId}/start`),
+    mutationKey: ["start_waiting_room"],
+    mutationFn: () => apiClient.patch(`/waiting-rooms/${roomId}/start`, {}),
     onSuccess: () => {
       toast.success("Exame foi inicializado com sucesso!", {
         position: "top-right",
       });
-      queryClient.invalidateQueries({
-        queryKey: [
-          ["metrics", roomId],
-          ["waitingRooms", roomId],
-        ],
-      });
+      queryClient.invalidateQueries({ queryKey: ["metrics", roomId] });
+      queryClient.invalidateQueries({ queryKey: ["waitingRoom", roomId] });
     },
     onError: () => {
       toast.error("Ocorreu um erro, tente novamente mais tarde.", {
@@ -84,18 +80,14 @@ const useCloseWaitingRoom = (roomId: number) => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["close_waiting_room", roomId],
-    mutationFn: () => apiClient.get(`/waiting-rooms/${roomId}/close`),
+    mutationKey: ["close_waiting_room"],
+    mutationFn: () => apiClient.patch(`/waiting-rooms/${roomId}/close`, {}),
     onSuccess: () => {
       toast.success("Exame foi terminado com sucesso!", {
         position: "top-right",
       });
-      queryClient.invalidateQueries({
-        queryKey: [
-          ["metrics", roomId],
-          ["waitingRooms", roomId],
-        ],
-      });
+      queryClient.invalidateQueries({ queryKey: ["metrics", roomId] });
+      queryClient.invalidateQueries({ queryKey: ["waitingRoom", roomId] });
     },
     onError: () => {
       toast.error("Ocorreu um erro, tente novamente mais tarde.", {

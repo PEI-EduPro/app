@@ -4,10 +4,11 @@ import { type NewUcI, type UcI, type UserI } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
-const useGetUc = () =>
+const useGetUc = ({ enabled = true }: { enabled?: boolean } = {}) =>
   useQuery<UcI[]>({
     queryKey: ["uc"],
     queryFn: () => apiClient.get("/subjects/"),
+    enabled,
   });
 
 const useAddUc = () => {

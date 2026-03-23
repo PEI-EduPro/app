@@ -75,6 +75,7 @@ export interface GetWaintingRoomByIdI {
   total_students: number;
   total_exams: number;
   subject_name: string;
+  role: "regent" | "vigilant";
 }
 
 export interface GetWaitingRoomMetricsI {
