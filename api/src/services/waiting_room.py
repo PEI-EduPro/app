@@ -331,6 +331,11 @@ async def get_professor_waiting_rooms(
         role = waiting_room_ids_with_roles.get(wr.id)
         if not role:
             continue
+
+        # Filtering logic.
+        # If the user is a vigilant, they only see it if it is running
+        if role == "vigilant" and wr.state.value != "running":
+            continue
         
         # Get ExamConfig to find subject_id
         exam_config = await session.get(ExamConfig, wr.exam_config_id)
