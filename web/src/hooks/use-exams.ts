@@ -46,12 +46,12 @@ const useDeleteExamConfig = (ucId: number) => {
     mutationFn: (id: number) => apiClient.delete(`/exams/config/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["examConfig", ucId] });
-      toast.success("Configuração de exame eliminada com sucesso", {
+      toast.success("Configuração de exame eliminada com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },

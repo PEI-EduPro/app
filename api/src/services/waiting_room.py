@@ -1,6 +1,6 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
 from src.models.warning import Warning, WarningType
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
@@ -56,7 +56,7 @@ async def create_waiting_room_service(
 
     return waiting_room
 
-async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoomInfoResponse]:
+async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: int, user_groups: List[str]) -> Optional[WaitingRoomInfoResponse]:
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
         return None
@@ -64,26 +64,59 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
         return None
+
+    # Get Subject to get the name
+    subject = await session.get(Subject, exam_config.subject_id)
+    if not subject:
+        logger.warning(f"Subject not found for exam config {wr.exam_config_id}")
+        return None
         
     exams = await get_exams_by_config_id(session, waiting_room.exam_config_id)
     exam_ids = [exam.id for exam in exams]
     
-    student_list = {}
+    formatted_students = []
     if exam_config.nmec_name_list:
         try:
-            student_list = json.loads(exam_config.nmec_name_list)
+            raw_students = json.loads(exam_config.nmec_name_list)
+
+            for nmec_key, student_data in raw_students.items():
+                formatted_students.append(
+                    StudentInfo(
+                        nmec = str(nmec_key),
+                        name = student_data.get("name", "Unknown")
+                    )
+                )
         except json.JSONDecodeError:
             pass
+
+    # Role extraction logic
+    user_role = "Unknown"
+    target_prefix = f"w{waiting_room_id}/"
+    for raw_group in user_groups:
+        group = raw_group.lstrip("/")
+        # Check if the group is for THIS specific waiting room
+        if group.startswith(target_prefix):
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                extracted_role = parts[1]
+                if extracted_role in ["regent", "vigilant"]:
+                    user_role = extracted_role
+                    break  # Found the role, we can stop checking groups
+    # ---------
+
             
     return WaitingRoomInfoResponse(
         id=waiting_room.id,
+        subject_id=subject.id,
+        subject_name=subject.name,
         exam_config_id=waiting_room.exam_config_id,
         state=waiting_room.state,
         associations=waiting_room.associations,
-        student_list=student_list,
+        student_list=formatted_students,
         exam_ids=exam_ids,
-        total_students=len(student_list),
-        total_exams=len(exam_ids)
+        total_students=len(formatted_students),
+        total_exams=len(exam_ids),
+        role = user_role
     )
 
 async def associate_student_to_exam_service(
@@ -264,6 +297,9 @@ async def get_professor_waiting_rooms(
     waiting_room_ids_with_roles: Dict[int, str] = {}
     
     for group in professor_groups:
+        # Keycloak groups often have a leading slash (/w1/regent for example). Remove it.
+        group = group.lstrip("/")
+
         # Check for waiting room groups (pattern: w{id}/role)
         if group.startswith("w") and "/" in group:
             parts = group.split("/", 1)
@@ -278,6 +314,7 @@ async def get_professor_waiting_rooms(
                         continue
     
     if not waiting_room_ids_with_roles:
+        logger.debug("Returning early. No waiting_room_ids were found.")
         return []
     
     # Fetch all waiting rooms at once
@@ -293,6 +330,11 @@ async def get_professor_waiting_rooms(
     for wr in waiting_rooms:
         role = waiting_room_ids_with_roles.get(wr.id)
         if not role:
+            continue
+
+        # Filtering logic.
+        # If the user is a vigilant, they only see it if it is running
+        if role == "vigilant" and wr.state.value != "running":
             continue
         
         # Get ExamConfig to find subject_id

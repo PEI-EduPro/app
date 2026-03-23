@@ -28,15 +28,22 @@ class WaitingRoomResponse(BaseModel):
     associations: List[str]
     message: str
 
+class StudentInfo(BaseModel):
+    name: str
+    nmec: str
+
 class WaitingRoomInfoResponse(BaseModel):
     id: int
+    subject_id: int
+    subject_name: str
     exam_config_id: int
     state: WaitingRoomState
     associations: List[str]
-    student_list: Dict[str, str]
+    student_list: List[StudentInfo]
     exam_ids: List[int]
     total_students: int
     total_exams: int
+    role: str
 
 class WaitingRoomMetricsResponse(BaseModel):
     associated_exams_count: int
@@ -50,8 +57,3 @@ class ProfessorWaitingRoomItem(BaseModel):
     waiting_room_id: int
     state: str
     role: str
-
-
-class ProfessorWaitingRoomsResponse(BaseModel):
-    """Response model for professor's waiting rooms as a flat list."""
-    waiting_rooms: list[ProfessorWaitingRoomItem]

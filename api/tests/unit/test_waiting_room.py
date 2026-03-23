@@ -32,13 +32,17 @@ async def setup_data(session):
     session.add(subject)
     await session.commit()
     await session.refresh(subject)
-    
-    nmec_dict = {"12345": "John Doe", "67890": "Jane Doe"}
+
+    # nmec_name_list now expects dict with name and email for each student
+    nmec_dict = {
+        "12345": {"name": "John Doe", "email": "john@example.com"},
+        "67890": {"name": "Jane Doe", "email": "jane@example.com"}
+    }
     exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict))
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
-    
+
     exam1 = Exam(exam_config_id=exam_config.id)
     exam2 = Exam(exam_config_id=exam_config.id)
     session.add(exam1)
@@ -46,7 +50,7 @@ async def setup_data(session):
     await session.commit()
     await session.refresh(exam1)
     await session.refresh(exam2)
-    
+
     return {
         "subject_id": subject.id,
         "exam_config_id": exam_config.id,
@@ -175,22 +179,24 @@ async def test_get_waiting_room_info(client, mock_auth_user, setup_data, session
     app.dependency_overrides[get_current_user_info] = mock_auth_user
     exam_config_id = setup_data["exam_config_id"]
     exam_ids = setup_data["exam_ids"]
-    
+
     waiting_room = WaitingRoom(
-        exam_config_id=exam_config_id, 
+        exam_config_id=exam_config_id,
         state=WaitingRoomState.RUNNING,
         associations=[f"{exam_ids[0]}:12345"]
     )
     session.add(waiting_room)
     await session.commit()
     await session.refresh(waiting_room)
-    
+
     response = await client.get(f"/api/waiting-rooms/{waiting_room.id}/info")
-    
+
     assert response.status_code == 200
     data = response.json()
     assert data["state"] == WaitingRoomState.RUNNING
-    assert "12345" in data["student_list"]
+    # student_list is now a list of StudentInfo objects with nmec and name
+    student_nmecs = [s["nmec"] for s in data["student_list"]]
+    assert "12345" in student_nmecs
     assert len(data["exam_ids"]) == 2
     assert data["total_students"] == 2
     assert data["total_exams"] == 2
