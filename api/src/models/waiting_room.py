@@ -50,8 +50,3 @@ class ProfessorWaitingRoomItem(BaseModel):
     waiting_room_id: int
     state: str
     role: str
-
-
-class ProfessorWaitingRoomsResponse(BaseModel):
-    """Response model for professor's waiting rooms as a flat list."""
-    waiting_rooms: list[ProfessorWaitingRoomItem]

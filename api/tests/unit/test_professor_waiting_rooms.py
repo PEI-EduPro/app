@@ -101,10 +101,7 @@ async def test_get_professor_waiting_rooms_success(client, professor_user, setup
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
     
     assert response.status_code == 200
-    data = response.json()
-    
-    assert "waiting_rooms" in data
-    waiting_rooms = data["waiting_rooms"]
+    waiting_rooms = response.json()
     
     # Should be a list with 3 waiting rooms
     assert isinstance(waiting_rooms, list)
@@ -146,10 +143,10 @@ async def test_get_professor_waiting_rooms_empty(client, professor_user_no_waiti
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
     
     assert response.status_code == 200
-    data = response.json()
+    waiting_rooms = response.json()
     
-    assert "waiting_rooms" in data
-    assert data["waiting_rooms"] == []
+    assert isinstance(waiting_rooms, list)
+    assert len(waiting_rooms) == 0
 
 
 @pytest.mark.asyncio
@@ -195,10 +192,7 @@ async def test_get_professor_waiting_rooms_partial_groups(client, session):
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
     
     assert response.status_code == 200
-    data = response.json()
-    
-    assert "waiting_rooms" in data
-    waiting_rooms = data["waiting_rooms"]
+    waiting_rooms = response.json()
     
     # Should be a list with one item
     assert isinstance(waiting_rooms, list)
@@ -249,11 +243,7 @@ async def test_get_professor_waiting_rooms_invalid_group_format(client, session)
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
     
     assert response.status_code == 200
-    data = response.json()
-    
-    # Should still work, just with valid groups
-    assert "waiting_rooms" in data
-    waiting_rooms = data["waiting_rooms"]
+    waiting_rooms = response.json()
     
     # Should have only the valid waiting room that exists
     assert isinstance(waiting_rooms, list)
@@ -278,10 +268,11 @@ async def test_get_professor_waiting_rooms_non_existent_waiting_room(client, ses
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
     
     assert response.status_code == 200
-    data = response.json()
+    waiting_rooms = response.json()
     
     # Should return empty list since the waiting room doesn't exist
-    assert data["waiting_rooms"] == []
+    assert isinstance(waiting_rooms, list)
+    assert len(waiting_rooms) == 0
 
 
 @pytest.mark.asyncio
@@ -292,9 +283,7 @@ async def test_get_professor_waiting_rooms_multiple_subjects(client, professor_u
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
 
     assert response.status_code == 200
-    data = response.json()
-
-    waiting_rooms = data["waiting_rooms"]
+    waiting_rooms = response.json()
 
     # Should be a list with 3 waiting rooms
     assert isinstance(waiting_rooms, list)
@@ -309,9 +298,7 @@ async def test_get_professor_waiting_rooms_all_states(client, professor_user, se
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
 
     assert response.status_code == 200
-    data = response.json()
-
-    waiting_rooms = data["waiting_rooms"]
+    waiting_rooms = response.json()
 
     # Collect all states and roles
     states_found = set(wr["state"] for wr in waiting_rooms)
