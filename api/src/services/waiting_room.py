@@ -1,6 +1,6 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
 from src.models.warning import Warning, WarningType
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
@@ -68,10 +68,18 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
     exams = await get_exams_by_config_id(session, waiting_room.exam_config_id)
     exam_ids = [exam.id for exam in exams]
     
-    student_list = {}
+    formatted_students = []
     if exam_config.nmec_name_list:
         try:
-            student_list = json.loads(exam_config.nmec_name_list)
+            raw_students = json.loads(exam_config.nmec_name_list)
+
+            for nmec_key, student_data in raw_students.items():
+                formatted_students.append(
+                    StudentInfo(
+                        nmec = str(nmec_key),
+                        name = student_data.get("name", "Unknown")
+                    )
+                )
         except json.JSONDecodeError:
             pass
             
@@ -80,9 +88,9 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
         exam_config_id=waiting_room.exam_config_id,
         state=waiting_room.state,
         associations=waiting_room.associations,
-        student_list=student_list,
+        student_list=formatted_students,
         exam_ids=exam_ids,
-        total_students=len(student_list),
+        total_students=len(formatted_students),
         total_exams=len(exam_ids)
     )
 

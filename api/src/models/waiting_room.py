@@ -28,12 +28,16 @@ class WaitingRoomResponse(BaseModel):
     associations: List[str]
     message: str
 
+class StudentInfo(BaseModel):
+    name: str
+    nmec: str
+
 class WaitingRoomInfoResponse(BaseModel):
     id: int
     exam_config_id: int
     state: WaitingRoomState
     associations: List[str]
-    student_list: Dict[str, str]
+    student_list: List[StudentInfo]
     exam_ids: List[int]
     total_students: int
     total_exams: int
