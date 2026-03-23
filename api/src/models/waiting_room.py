@@ -34,6 +34,8 @@ class StudentInfo(BaseModel):
 
 class WaitingRoomInfoResponse(BaseModel):
     id: int
+    subject_id: int
+    subject_name: str
     exam_config_id: int
     state: WaitingRoomState
     associations: List[str]

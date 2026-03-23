@@ -64,6 +64,12 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
         return None
+
+    # Get Subject to get the name
+    subject = await session.get(Subject, exam_config.subject_id)
+    if not subject:
+        logger.warning(f"Subject not found for exam config {wr.exam_config_id}")
+        return None
         
     exams = await get_exams_by_config_id(session, waiting_room.exam_config_id)
     exam_ids = [exam.id for exam in exams]
@@ -85,6 +91,8 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
             
     return WaitingRoomInfoResponse(
         id=waiting_room.id,
+        subject_id=subject.id,
+        subject_name=subject.name,
         exam_config_id=waiting_room.exam_config_id,
         state=waiting_room.state,
         associations=waiting_room.associations,
