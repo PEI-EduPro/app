@@ -1,18 +1,18 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { useGetUcById, useGetUcStudents } from "@/hooks/use-ucs";
-import type { UserI } from "@/lib/types";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircle } from "lucide-react";
 import { useState } from "react";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
 import {
+  useCloseWaitingRoom,
   useGetWaitingRoomById,
   useGetWaitingRoomMetrics,
   usePostPairExamStudent,
+  useStartWaitingRoom,
 } from "@/hooks/use-waiting-rooms";
 
 const detalheUCSearchSchema = z.object({
@@ -30,32 +30,30 @@ export const Route = createFileRoute("/_layout/mobile_scan_teste")({
 function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
-  // const { data: ucData } = useGetUcById(realId);
-  // const { data: students = [], isLoading: loadingStudents } =
-  //   useGetUcStudents(realId);
   const [alunosSelection, setAlunosSelection] = useState<{
     nome: string;
     nmec: string;
   }>();
-  const isRegent: boolean = false;
-
-  const { data: metrics } = useGetWaitingRoomMetrics({
-    enabled: isRegent,
-    roomId: realId,
-  });
 
   const { data: roomDetails, isLoading } = useGetWaitingRoomById(realId);
 
+  const { data: metrics } = useGetWaitingRoomMetrics({
+    enabled: roomDetails?.role === "regent",
+    roomId: realId,
+  });
+
   const { mutate: postExamStudent } = usePostPairExamStudent(realId);
+  const { mutate: closeRoom } = useCloseWaitingRoom(realId);
+  const { mutate: startRoom } = useStartWaitingRoom(realId);
 
   const [canAssociate, setCanAssociate] = useState<boolean>(false);
-  const [isOpen, setIsOpen] = useState<boolean>(false);
   const [QRCode, setQRCode] = useState<string>("");
 
   const studentsData = roomDetails?.student_list.map((s) => ({
-    nome: s.name,
+    id: s.nmec,
     nmec: s.nmec,
-  }));
+    nome: s.name,
+  })) as unknown as Record<string, string>[];
 
   return (
     <div className="py-3.5 px-6 w-full">
@@ -78,25 +76,27 @@ function RouteComponent() {
           </div>
         ) : (
           <div className="flex flex-col justify-center gap-10 md:w-full">
-            {isRegent && (
+            {roomDetails?.role === "regent" && (
               <div className="flex flex-row justify-between items-center">
                 {metrics && (
                   <span className="text-sm font-medium">
                     {metrics.associated_students_count}/
-                    {metrics.associated_exams_count}
+                    {roomDetails.total_exams}
                   </span>
                 )}
-                {isOpen ? (
-                  <Button
-                    className="cursor-pointer h-auto w-auto px-4 py-2 bg-red-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    <span className="w-fit font-medium">Fechar Exame</span>
-                  </Button>
+                {roomDetails?.state == "running" ? (
+                  <Link to="/mobile_evaluate_tests" search={{ ucId }}>
+                    <Button
+                      className="cursor-pointer h-auto w-auto px-4 py-2 bg-red-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
+                      onClick={() => closeRoom()}
+                    >
+                      <span className="w-fit font-medium">Fechar Exame</span>
+                    </Button>
+                  </Link>
                 ) : (
                   <Button
                     className="cursor-pointer h-auto w-auto px-4 py-2 bg-green-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
-                    onClick={() => setIsOpen(true)}
+                    onClick={() => startRoom()}
                   >
                     <span className="w-fit font-medium">Abrir Exame</span>
                   </Button>
@@ -107,7 +107,7 @@ function RouteComponent() {
               <Scanner
                 onScan={(e) => {
                   setCanAssociate(true);
-                  console.log(e);
+                  setQRCode(e[0].rawValue);
                 }}
                 paused={canAssociate}
                 formats={["qr_code"]}
@@ -127,17 +127,27 @@ function RouteComponent() {
             <div className="md:w-full flex flex-1 flex-col">
               <span className="text-[26px] font-medium">Alunos</span>
               <CustomTable
-                data={studentsData as unknown as Record<string, string>[]}
+                data={studentsData}
                 rowNumber={15}
                 isSelectable
-                rowSelection={alunosSelection ? [alunosSelection] : []}
+                rowSelection={
+                  alunosSelection
+                    ? [
+                        {
+                          id: alunosSelection.nmec,
+                          nmec: alunosSelection.nmec,
+                          nome: alunosSelection.nome,
+                        },
+                      ]
+                    : []
+                }
                 onChange={(e) => {
                   const newSelection = e.filter(
                     (el) => el.nmec != alunosSelection?.nmec,
                   );
                   if (newSelection.length > 0) {
                     setAlunosSelection({
-                      nome: newSelection[0].name,
+                      nome: newSelection[0].nome,
                       nmec: newSelection[0].nmec,
                     });
                   } else {
@@ -149,7 +159,9 @@ function RouteComponent() {
             <Button
               className="cursor-pointer h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
               disabled={
-                isOpen ? !canAssociate || alunosSelection === undefined : true
+                roomDetails?.state === "running"
+                  ? !canAssociate || alunosSelection === undefined
+                  : true
               }
               onClick={() => {
                 postExamStudent({

@@ -59,7 +59,7 @@ function UCCard({ label, srcImage, id, waitingRoomStatus }: UCCArdProps) {
 
 function UCS() {
   const isMobile = useIsMobile();
-  const { data, isLoading } = useGetUc();
+  const { data, isLoading } = useGetUc({ enabled: !isMobile });
   const { data: waitingRooms = [], isLoading: waitingRoomsLoading } =
     useGetWaitingRooms({ enabled: isMobile });
   const { keycloak } = useKeycloak();
@@ -81,7 +81,7 @@ function UCS() {
           <LoaderCircle className="animate-spin size-16" />
         </div>
       ) : (
-        <div className="flex-1 overflow-y-auto md:px-47.5 grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
+        <div className="flex-1 overflow-y-auto flex flex-col  md:px-47.5 md:grid md:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] md:gap-x-17.5 gap-y-7 md:gap-y-12.5">
           {isMobile
             ? waitingRooms &&
               (waitingRooms.length === 0 ? (
@@ -96,7 +96,7 @@ function UCS() {
                     waitingRoomStatus={el.state}
                     label={el.subject_name}
                     srcImage={"/card-image.png"}
-                    id={el.subject_id}
+                    id={el.waiting_room_id}
                     key={index}
                   />
                 ))
