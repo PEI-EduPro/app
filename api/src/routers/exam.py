@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status,
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.services import exam
+from src.services import waiting_room as waiting_room_service
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig, ExamConfigResponse
@@ -83,18 +84,17 @@ async def generate_exams(
         )
 
         # Create waiting room if vigilant_keycloak_ids provided
-        if vigilant_keycloak_ids:
-            from src.services import waiting_room as waiting_room_service
+        if not vigilant_keycloak_ids:
+            vigilant_keycloak_ids = []
+        # Get the created exam_config_id from the service
+        exam_config_id = await exam.get_latest_exam_config_id(session, subject_id)
             
-            # Get the created exam_config_id from the service
-            exam_config_id = await exam.get_latest_exam_config_id(session, subject_id)
-            
-            await waiting_room_service.create_waiting_room_service(
-                session=session,
-                exam_config_id=exam_config_id,
-                regent_keycloak_id=user_info.user_id,
-                vigilant_keycloak_ids=vigilant_keycloak_ids
-            )
+        await waiting_room_service.create_waiting_room_service(
+            session=session,
+            exam_config_id=exam_config_id,
+            regent_keycloak_id=user_info.user_id,
+            vigilant_keycloak_ids=vigilant_keycloak_ids
+        )
 
         logger.info(f"Successfully generated {num_variations} exam variations.")
 

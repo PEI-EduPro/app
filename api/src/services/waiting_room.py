@@ -264,6 +264,9 @@ async def get_professor_waiting_rooms(
     waiting_room_ids_with_roles: Dict[int, str] = {}
     
     for group in professor_groups:
+        # Keycloak groups often have a leading slash (/w1/regent for example). Remove it.
+        group = group.lstrip("/")
+
         # Check for waiting room groups (pattern: w{id}/role)
         if group.startswith("w") and "/" in group:
             parts = group.split("/", 1)
@@ -278,6 +281,7 @@ async def get_professor_waiting_rooms(
                         continue
     
     if not waiting_room_ids_with_roles:
+        logger.debug("Returning early. No waiting_room_ids were found.")
         return []
     
     # Fetch all waiting rooms at once
