@@ -56,7 +56,7 @@ async def create_waiting_room_service(
 
     return waiting_room
 
-async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoomInfoResponse]:
+async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: int, user_groups: List[str]) -> Optional[WaitingRoomInfoResponse]:
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
         return None
@@ -88,6 +88,22 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
                 )
         except json.JSONDecodeError:
             pass
+
+    # Role extraction logic
+    user_role = "Unknown"
+    target_prefix = f"w{waiting_room_id}/"
+    for raw_group in user_groups:
+        group = raw_group.lstrip("/")
+        # Check if the group is for THIS specific waiting room
+        if group.startswith(target_prefix):
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                extracted_role = parts[1]
+                if extracted_role in ["regent", "vigilant"]:
+                    user_role = extracted_role
+                    break  # Found the role, we can stop checking groups
+    # ---------
+
             
     return WaitingRoomInfoResponse(
         id=waiting_room.id,
@@ -99,7 +115,8 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
         student_list=formatted_students,
         exam_ids=exam_ids,
         total_students=len(formatted_students),
-        total_exams=len(exam_ids)
+        total_exams=len(exam_ids),
+        role = user_role
     )
 
 async def associate_student_to_exam_service(

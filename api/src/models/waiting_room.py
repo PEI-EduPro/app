@@ -43,6 +43,7 @@ class WaitingRoomInfoResponse(BaseModel):
     exam_ids: List[int]
     total_students: int
     total_exams: int
+    role: str
 
 class WaitingRoomMetricsResponse(BaseModel):
     associated_exams_count: int
