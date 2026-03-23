@@ -284,7 +284,7 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
-    
+
     topic = Topic(name="Exam Topic", subject_id=sub.id)
     session.add(topic)
     await session.commit()
@@ -304,7 +304,10 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
          patch("src.services.exam._compile_latex", return_value=b"%PDF-1.4 dummy"), \
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
-         patch("src.services.exam._update_rules"):
+         patch("src.services.exam._update_rules"), \
+         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
+
+        mock_wr_kc.return_value = True
 
         payload = {
             "subject_id": sub.id,
