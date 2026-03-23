@@ -27,7 +27,8 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
 
 async def create_configs(
     session: AsyncSession,
-    exam_specs: dict
+    exam_specs: dict,
+    student_tuples: List[tuple] = None
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
@@ -52,9 +53,17 @@ async def create_configs(
                     f"but {requested_questions} were requested."
                 )
 
+    # Convert student_tuples to JSON string if provided
+    nmec_name_list = None
+    if student_tuples:
+        import json
+        student_dict = {str(nmec): {"name": name, "email": email} for nmec, name, email in student_tuples}
+        nmec_name_list = json.dumps(student_dict)
+
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
+        nmec_name_list=nmec_name_list
         #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
@@ -89,7 +98,7 @@ def _compute_normalized_weights(topic_configs: List[TopicConfig]) -> Dict[int, f
     norm = 20.0 / total_mass
     return {tc.topic_id: tc.relative_weight * norm for tc in topic_configs}
 
-
+# put the exam batch number rendered in the LaTeX
 async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
@@ -488,10 +497,11 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    num_variations: int = 1
+    num_variations: int = 1,
+    student_tuples: List[tuple] = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    exam_config, topic_configs = await create_configs(session, exam_specs)
+    exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples)
     exam_title = exam_specs.get("exam_title", "Exame Época Normal")
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
@@ -630,3 +640,11 @@ async def delete_exam_config(
     return True
 
 
+async def get_latest_exam_config_id(session: AsyncSession, subject_id: int) -> int:
+    """Get the ID of the most recently created exam config for a subject."""
+    stmt = select(ExamConfig).where(ExamConfig.subject_id == subject_id).order_by(ExamConfig.id.desc()).limit(1)
+    result = await session.exec(stmt)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError(f"No exam config found for subject {subject_id}")
+    return exam_config.id

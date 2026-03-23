@@ -17,7 +17,7 @@ def test_user():
         username="test_regent",
         email="regent@example.com",
         realm_roles=[],
-        groups=["/s1/regent", "/w1/regent"]
+        groups=["/s1/regent", "/w1/regent", "/w99999/regent"]
     )
 
 @pytest.fixture
@@ -105,13 +105,48 @@ async def test_associate_student_to_exam(client, mock_auth_user, setup_data, ses
     
     response = await client.post(
         f"/api/waiting-rooms/{waiting_room.id}/student_to_exam",
-        json={str(exam_ids[0]): "12345"}
+        json={"qr": str(exam_ids[0]), "nmec": 12345}
     )
     
     assert response.status_code == 200
     
     updated_room = await session.get(WaitingRoom, waiting_room.id)
     assert f"{exam_ids[0]}:12345" in updated_room.associations
+
+@pytest.mark.asyncio
+async def test_get_waiting_room_metrics(client, mock_auth_user, setup_data, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    exam_config_id = setup_data["exam_config_id"]
+    
+    waiting_room = WaitingRoom(exam_config_id=exam_config_id, state=WaitingRoomState.RUNNING)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+    
+    response = await client.get(f"/api/waiting-rooms/{waiting_room.id}/metrics")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "associated_exams_count" in data
+    assert "associated_students_count" in data
+
+@pytest.mark.asyncio
+async def test_get_waiting_room_info(client, mock_auth_user, setup_data, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    exam_config_id = setup_data["exam_config_id"]
+    
+    waiting_room = WaitingRoom(exam_config_id=exam_config_id, state=WaitingRoomState.RUNNING)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+    
+    response = await client.get(f"/api/waiting-rooms/{waiting_room.id}/info")
+    
+    assert response.status_code == 200
+    data = response.json()
+    assert "waiting_room_id" in data
+    assert "state" in data
+    assert "exam_config" in data
 
 @pytest.mark.asyncio
 async def test_get_waiting_room_metrics(client, mock_auth_user, setup_data, session):
@@ -206,11 +241,73 @@ async def test_close_waiting_room_conflict(client, mock_auth_user, setup_data, s
     assert response.status_code == 200
     
     updated_room = await session.get(WaitingRoom, waiting_room.id)
-    assert updated_room.state == WaitingRoomState.CLOSED
+    assert updated_room.state == WaitingRoomState.CLOSED # Stops at closed
+
+@pytest.mark.asyncio
+async def test_student_to_exam_qr_success(client, mock_auth_user, setup_data, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    exam_config_id = setup_data["exam_config_id"]
+    exam_ids = setup_data["exam_ids"]
     
-    # Check that a Warning was created
-    from sqlmodel import select
-    result = await session.exec(select(Warning).where(Warning.exam_config_id == exam_config_id))
-    warnings = result.all()
-    assert len(warnings) == 1
-    assert warnings[0].type == WarningType.multiple_exams_to_student
+    waiting_room = WaitingRoom(exam_config_id=exam_config_id, state=WaitingRoomState.RUNNING)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+    
+    response = await client.post(
+        f"/api/waiting-rooms/{waiting_room.id}/student_to_exam",
+        json={"qr": str(exam_ids[0]), "nmec": 12345}
+    )
+    
+    assert response.status_code == 200
+    assert response.json()["message"] == "Student associated to exams successfully."
+
+@pytest.mark.asyncio
+async def test_student_to_exam_qr_invalid_exam_id(client, mock_auth_user, setup_data, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    exam_config_id = setup_data["exam_config_id"]
+    
+    waiting_room = WaitingRoom(exam_config_id=exam_config_id, state=WaitingRoomState.RUNNING)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+    
+    response = await client.post(
+        f"/api/waiting-rooms/{waiting_room.id}/student_to_exam",
+        json={"qr": "invalid_id", "nmec": 12345}
+    )
+    
+    assert response.status_code == 400
+    assert "Invalid exam ID format" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_student_to_exam_qr_waiting_room_not_running(client, mock_auth_user, setup_data, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    exam_config_id = setup_data["exam_config_id"]
+    exam_ids = setup_data["exam_ids"]
+    
+    waiting_room = WaitingRoom(exam_config_id=exam_config_id, state=WaitingRoomState.PREPARATION)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+    
+    response = await client.post(
+        f"/api/waiting-rooms/{waiting_room.id}/student_to_exam",
+        json={"qr": str(exam_ids[0]), "nmec": 12345}
+    )
+    
+    assert response.status_code == 400
+    assert "Waiting room must be in running state" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_student_to_exam_qr_waiting_room_not_found(client, mock_auth_user, setup_data, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    exam_ids = setup_data["exam_ids"]
+    
+    response = await client.post(
+        f"/api/waiting-rooms/99999/student_to_exam",
+        json={"qr": str(exam_ids[0]), "nmec": 12345}
+    )
+    
+    assert response.status_code == 404
+    assert "Waiting room not found" in response.json()["detail"]

@@ -4,15 +4,20 @@ from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomsResponse
 import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
 import logging
+from typing import TypedDict
+
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
+################################################################
+#############################################33
 @router.post("/", response_model=WaitingRoomResponse, status_code=status.HTTP_201_CREATED)
 async def create_waiting_room(
     request: WaitingRoomCreateRequest,
@@ -126,10 +131,14 @@ async def get_waiting_room_info(
             detail=f"Failed to retrieve waiting room info: {str(e)}"
         )
 
+class QRCodeToNMEC(TypedDict):
+    qr: str
+    nmec: int
+
 @router.post("/{waiting_room_id}/student_to_exam")
 async def associate_students_to_exams(
     waiting_room_id: int,
-    qrcode_to_nmec: dict,
+    qrcode_to_nmec: QRCodeToNMEC,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
@@ -148,18 +157,22 @@ async def associate_students_to_exams(
     if waiting_room.state != WaitingRoomState.RUNNING:
         raise HTTPException(status_code=400, detail="Waiting room must be in running state to associate students.")
 
-    try:
-        # qrcode_to_nmec is a dict: { "exam_id": "student_nmec" }
-        for exam_id_str, student_nmec in qrcode_to_nmec.items():
-            exam_id = int(exam_id_str)
-            await waiting_room_service.associate_student_to_exam_service(
-                session=session,
-                waiting_room_id=waiting_room_id,
-                exam_id=exam_id,
-                student_nmec=str(student_nmec)
-            )
+    # qrcode_to_nmec format
+    # {qr: string,
+    #  nmec: number}
 
-        return {"message": "Students associated to exams successfully."}
+    try:
+        # qrcode_to_nmec is a dict -> {qr: string, nmec: number}
+        exam_id = int(qrcode_to_nmec["qr"])
+        student_nmec = qrcode_to_nmec["nmec"]
+        await waiting_room_service.associate_student_to_exam_service(
+            session=session,
+            waiting_room_id=waiting_room_id,
+            exam_id=exam_id,
+            student_nmec=str(student_nmec)
+        )
+
+        return {"message": "Student associated to exams successfully."}
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid exam ID format. Must be an integer.")
     except Exception as e:
@@ -195,6 +208,52 @@ async def get_waiting_room_metrics(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve waiting room metrics: {str(e)}"
         )
+
+
+@router.get("/professor/my-waiting-rooms", response_model=ProfessorWaitingRoomsResponse)
+async def get_professor_waiting_rooms(
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all waiting rooms where the professor is either a regent or vigilant.
+    
+    Returns a flat list of waiting rooms with subject information:
+    {
+        "waiting_rooms": [
+            {
+                "subject_id": 1,
+                "subject_name": "Mathematics",
+                "waiting_room_id": 5,
+                "state": "preparation" | "running" | "closed",
+                "role": "regent" | "vigilant"
+            }
+        ]
+    }
+    
+    Only accessible by users with the professor role.
+    """
+    # Verify professor role
+    if "professor" not in user_info.realm_roles:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This endpoint requires the professor role."
+        )
+
+    try:
+        waiting_rooms = await waiting_room_service.get_professor_waiting_rooms(
+            session=session,
+            professor_keycloak_id=user_info.user_id,
+            professor_groups=user_info.groups
+        )
+        return {"waiting_rooms": waiting_rooms}
+    except Exception as e:
+        logger.error(f"Failed to retrieve professor waiting rooms: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve waiting rooms: {str(e)}"
+        )
+
 
 @router.patch("/{waiting_room_id}/close", response_model=WaitingRoomResponse)
 async def close_waiting_room(

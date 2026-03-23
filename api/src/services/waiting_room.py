@@ -1,13 +1,17 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem
 from src.models.warning import Warning, WarningType
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
+from src.models.subject import Subject
 from src.services.exam import get_exams_by_config_id
 from src.core.keycloak import keycloak_client
 from typing import Optional, List, Set, Dict
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 async def get_waiting_room(session: AsyncSession, waiting_room_id: int) -> Optional[WaitingRoom]:
     stmt = select(WaitingRoom).where(WaitingRoom.id == waiting_room_id)
@@ -231,3 +235,84 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
     await session.refresh(waiting_room)
 
     return waiting_room
+
+
+async def get_professor_waiting_rooms(
+    session: AsyncSession,
+    professor_keycloak_id: str,
+    professor_groups: List[str]
+) -> List[ProfessorWaitingRoomItem]:
+    """
+    Get all waiting rooms where the professor is either a regent or vigilant.
+    
+    Uses the professor's Keycloak groups to find associated waiting rooms.
+    Groups follow the pattern: w{waiting_room_id}/regent or w{waiting_room_id}/vigilant
+    
+    Returns a flat list of waiting rooms with subject information:
+    [
+        {
+            "subject_id": 1,
+            "subject_name": "Mathematics",
+            "waiting_room_id": 5,
+            "state": "preparation" | "running" | "closed",
+            "role": "regent" | "vigilant"
+        },
+        ...
+    ]
+    """
+    # Extract waiting room IDs and roles from groups
+    waiting_room_ids_with_roles: Dict[int, str] = {}
+    
+    for group in professor_groups:
+        # Check for waiting room groups (pattern: w{id}/role)
+        if group.startswith("w") and "/" in group:
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                wr_prefix, role = parts
+                if role in ["regent", "vigilant"]:
+                    try:
+                        waiting_room_id = int(wr_prefix[1:])  # Remove 'w' prefix
+                        waiting_room_ids_with_roles[waiting_room_id] = role
+                    except ValueError:
+                        logger.warning(f"Invalid waiting room ID in group: {group}")
+                        continue
+    
+    if not waiting_room_ids_with_roles:
+        return []
+    
+    # Fetch all waiting rooms at once
+    stmt = select(WaitingRoom).where(
+        WaitingRoom.id.in_(list(waiting_room_ids_with_roles.keys()))
+    )
+    results = await session.exec(stmt)
+    waiting_rooms = results.all()
+    
+    result: List[ProfessorWaitingRoomItem] = []
+    
+    # For each waiting room, get the subject info via ExamConfig
+    for wr in waiting_rooms:
+        role = waiting_room_ids_with_roles.get(wr.id)
+        if not role:
+            continue
+        
+        # Get ExamConfig to find subject_id
+        exam_config = await session.get(ExamConfig, wr.exam_config_id)
+        if not exam_config:
+            logger.warning(f"ExamConfig not found for waiting room {wr.id}")
+            continue
+        
+        # Get Subject to get the name
+        subject = await session.get(Subject, exam_config.subject_id)
+        if not subject:
+            logger.warning(f"Subject not found for exam config {wr.exam_config_id}")
+            continue
+        
+        result.append(ProfessorWaitingRoomItem(
+            subject_id=subject.id,
+            subject_name=subject.name,
+            waiting_room_id=wr.id,
+            state=wr.state.value,
+            role=role
+        ))
+    
+    return result

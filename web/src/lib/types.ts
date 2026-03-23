@@ -31,6 +31,8 @@ export interface NewExamConfigI {
   exam_date: string;
   semester: string;
   academic_year: string;
+  vigilant_keycloak_ids: string[];
+  student_tuples: Array<Array<string>>;
 }
 
 export interface ExamConfigI {
