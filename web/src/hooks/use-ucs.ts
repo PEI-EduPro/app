@@ -1,11 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
-import {
-  type GetWaitingRoomI,
-  type NewUcI,
-  type UcI,
-  type UserI,
-} from "@/lib/types";
+import { type NewUcI, type UcI, type UserI } from "@/lib/types";
 import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
@@ -64,13 +59,13 @@ const useDeleteUcById = (ucId: number) => {
     mutationKey: ["deleteUc", ucId],
     mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}/`),
     onSuccess: () => {
-      toast.success("Unidade curricular eliminada com sucesso", {
+      toast.success("Unidade curricular eliminada com sucesso!", {
         position: "top-right",
       });
       navigate({ to: "/unidades-curriculares" });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
@@ -90,23 +85,17 @@ const useUpdateUc = (ucId: number) => {
       queryClient.invalidateQueries({ queryKey: ["uc", ucId] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "professors"] });
       queryClient.invalidateQueries({ queryKey: ["uc", ucId, "regent"] });
-      toast.success("Unidade curricular editada com sucesso", {
+      toast.success("Unidade curricular editada com sucesso!", {
         position: "top-right",
       });
     },
     onError: () => {
-      toast.error("ocorreu um erro, tente novamente mais tarde", {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });
     },
   });
 };
-
-const useGetWaitingRooms = () =>
-  useQuery<GetWaitingRoomI[]>({
-    queryKey: ["waitingRooms"],
-    queryFn: () => apiClient.get("/waiting-rooms/professor/my-waiting-rooms"),
-  });
 
 export {
   useGetUc,
@@ -117,5 +106,4 @@ export {
   useGetUcProfessors,
   useGetUcRegent,
   useUpdateUc,
-  useGetWaitingRooms,
 };
