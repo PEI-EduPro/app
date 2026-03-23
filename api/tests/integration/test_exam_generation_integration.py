@@ -114,7 +114,7 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
     from src.models.topic import Topic
     from src.models.question import QuestionCreate
     from src.services.question import create_question
-    
+
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     # Setup test data
@@ -122,7 +122,7 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
     session.add(subject)
     await session.commit()
     await session.refresh(subject)
-    
+
     topic = Topic(name="Simple Topic", subject_id=subject.id)
     session.add(topic)
     await session.commit()
@@ -142,7 +142,8 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
          patch("src.services.exam._compile_latex", return_value=b"%PDF-1.4 dummy"), \
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
-         patch("src.services.exam._update_rules"):
+         patch("src.services.exam._update_rules"), \
+         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock):
 
         # Minimal payload without new optional parameters
         payload = {
@@ -156,7 +157,7 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
         }
 
         response = await client.post("/api/exams/generate", json=payload)
-        
+
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/zip"
 
@@ -164,17 +165,18 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
         from src.services.exam import get_latest_exam_config_id, get_exam_config_by_id
         config_id = await get_latest_exam_config_id(session, subject.id)
         exam_config = await get_exam_config_by_id(session, config_id)
-        
+
         assert exam_config.subject_id == subject.id
         assert exam_config.fraction == 50
         assert exam_config.nmec_name_list is None
 
-        # Verify no waiting room was created
+        # Verify waiting room was created (now always created)
         from sqlmodel import select
         from src.models.waiting_room import WaitingRoom
-        
+
         stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == config_id)
         result = await session.exec(stmt)
         waiting_room = result.first()
-        
-        assert waiting_room is None
+
+        assert waiting_room is not None
+        assert waiting_room.exam_config_id == config_id
