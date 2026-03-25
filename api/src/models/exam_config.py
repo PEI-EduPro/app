@@ -48,3 +48,4 @@ class ExamConfigResponse(SQLModel):
     #creator_keycloak_id: str
     topic_configs: List[TopicConfigDTO]
     nmec_name_list: Optional[str]
+    num_variations: int

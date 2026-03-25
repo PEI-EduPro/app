@@ -28,14 +28,14 @@ async def get_subject_exam_configs(
     """
     verify_permission(user_info, [f"/s{subject_id}"])
     configs = await exam.get_exam_configs_by_subject(session, subject_id)
-    
+
     response = []
     for config in configs:
         topic_configs_dto = []
         for tc in config.topic_configs:
             # Safely access the topic name if it exists
             topic_name = tc.topic.name if tc.topic else "Unknown Topic"
-            
+
             topic_configs_dto.append(TopicConfigDTO(
                 id=tc.id,
                 topic_id=tc.topic_id,
@@ -43,16 +43,20 @@ async def get_subject_exam_configs(
                 num_questions=tc.num_questions,
                 relative_weight=tc.relative_weight
             ))
-            
+
+        # Count exams using async query to avoid lazy loading
+        num_variations = len(config.exams) if config.exams is not None else 0
+
         response.append(ExamConfigResponse(
             id=config.id,
             subject_id=config.subject_id,
             fraction=config.fraction,
             #creator_keycloak_id=config.creator_keycloak_id,
             topic_configs=topic_configs_dto,
-            nmec_name_list=config.nmec_name_list
+            nmec_name_list=config.nmec_name_list,
+            num_variations=num_variations
         ))
-        
+
     return response
 
 @router.post("/generate")
@@ -166,7 +170,17 @@ async def retrieve_student_list(
     if not exam_config:
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
 
-    return ExamConfigResponse.model_validate(exam_config)
+    # Count exams using async query to avoid lazy loading
+    num_variations = len(exam_config.exams) if exam_config.exams is not None else 0
+
+    return ExamConfigResponse(
+        id=exam_config.id,
+        subject_id=exam_config.subject_id,
+        fraction=exam_config.fraction,
+        topic_configs=exam_config.topic_configs or [],
+        nmec_name_list=exam_config.nmec_name_list,
+        num_variations=num_variations
+    )
 
 
 @router.delete("/config/{exam_config_id}", status_code=status.HTTP_204_NO_CONTENT)
