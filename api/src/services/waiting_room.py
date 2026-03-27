@@ -354,7 +354,8 @@ async def get_professor_waiting_rooms(
             subject_name=subject.name,
             waiting_room_id=wr.id,
             state=wr.state.value,
-            role=role
+            role=role,
+            exam_name=exam_config.exam_name
         ))
     
     return result

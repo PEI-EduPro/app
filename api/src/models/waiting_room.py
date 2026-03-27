@@ -57,3 +57,4 @@ class ProfessorWaitingRoomItem(BaseModel):
     waiting_room_id: int
     state: str
     role: str
+    exam_name: Optional[str]
