@@ -63,7 +63,8 @@ async def create_configs(
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
-        nmec_name_list=nmec_name_list
+        nmec_name_list=nmec_name_list,
+        exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None)
         #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
