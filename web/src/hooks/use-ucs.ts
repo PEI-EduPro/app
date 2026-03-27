@@ -21,7 +21,15 @@ const useAddUc = () => {
     onSuccess: () => {
       navigate({ to: "/unidades-curriculares" });
       queryClient.invalidateQueries({ queryKey: ["uc"] });
+      toast.success("Unidade curricular criada com sucesso!", {
+        position: "top-right",
+      });
     },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+      });
+    }
   });
 };
 
