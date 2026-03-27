@@ -217,7 +217,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       onError: () => {
         toast.dismiss();
         toast.error(
-          "Um erro Ocorreu ao gerar exame, tente novamente mais tarde.",
+          "Um erro ocorreu ao gerar exame, tente novamente mais tarde.",
           {
             position: "top-right",
           },
@@ -281,7 +281,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                   name="topics"
                   render={({ field }) => (
                     <FormItem className="flex flex-col flex-1 min-h-0 gap-y-4">
-                      <FormLabel className="text-center block text-lg">
+                      <FormLabel className="text-center block text-lg gap-1">
                         Tópicos
                       </FormLabel>
                       {topics && (
@@ -593,8 +593,9 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                     name="exam_title"
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between">
-                        <FormLabel className="shrink-0">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Título do exame
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -614,8 +615,9 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                     name="exam_date"
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between">
-                        <FormLabel className="shrink-0">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Data do exame
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
                           <Popover>
@@ -659,7 +661,10 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                     name="semester"
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between">
-                        <FormLabel className="shrink-0">Semestre</FormLabel>
+                        <FormLabel className="shrink-0 flex items-center gap-1">
+                          Semestre
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -684,7 +689,10 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                     name="academic_year"
                     render={({ field }) => (
                       <FormItem className="flex items-center justify-between">
-                        <FormLabel className="shrink-0">Ano letivo</FormLabel>
+                        <FormLabel className="shrink-0 flex items-center gap-1">
+                          Ano letivo
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           defaultValue={field.value}
@@ -714,8 +722,9 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                     name="number_exams"
                     render={() => (
                       <FormItem className="flex items-center justify-between">
-                        <FormLabel className="shrink-0">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Número de exames
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
@@ -872,6 +881,13 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                     className="cursor-pointer"
                     size="sm"
                     onClick={handleNextStep}
+                    disabled={
+                      !watch("exam_title") ||
+                      !watch("exam_date") ||
+                      !watch("academic_year") ||
+                      !watch("number_exams") ||
+                      !watch("semester")
+                    }
                   >
                     Próximo
                   </Button>
@@ -932,7 +948,10 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                       name="vigilantes"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Professores Vigilantes</FormLabel>
+                          <FormLabel className="flex items-center gap-1">
+                            Professores Vigilantes
+                            <span className="text-red-500">*</span>
+                          </FormLabel>
                           <FormControl>
                             <MultiSelect
                               emptyIndicator="Nenhum resultado encontrado"
@@ -1000,7 +1019,10 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                       fieldState: { error },
                     }) => (
                       <FormItem>
-                        <FormLabel>Alunos (CSV)</FormLabel>
+                        <FormLabel className="flex items-center gap-1">
+                          Alunos (CSV)
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
                         <p className="text-xs text-muted-foreground">
                           Formato esperado: <code>nmec, nome, email</code> (uma
                           linha por aluno)

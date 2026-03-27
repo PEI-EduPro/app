@@ -1,9 +1,9 @@
 import {
-  Settings2,
   GraduationCap,
   SquareUserRound,
   ChevronDown,
   LogOutIcon,
+  Download,
 } from "lucide-react";
 import {
   SidebarContent,
@@ -29,11 +29,13 @@ import { useGetUc } from "@/hooks/use-ucs";
 import { useKeycloak } from "@/hooks/use-keycloak.ts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { encodeId } from "@/lib/id-encoder";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 export function AppSidebar() {
   const { data: ucs } = useGetUc();
   const { keycloak } = useKeycloak();
   const isMobile = useIsMobile();
+  const { canInstall, install } = usePwaInstall();
 
   const items = [
     {
@@ -102,14 +104,14 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 </Collapsible>
               ))}
-              <SidebarMenuItem key="Definições">
-                <SidebarMenuButton asChild>
-                  <a href="#">
-                    <Settings2 />
-                    <span className="text-base">Definições</span>
-                  </a>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
+              {canInstall && isMobile && (
+                <SidebarMenuItem key="instalar">
+                  <SidebarMenuButton className="cursor-pointer" onClick={install}>
+                    <Download className="w-4 h-4" />
+                    <span className="text-base">Instalar aplicação</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

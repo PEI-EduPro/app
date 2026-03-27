@@ -94,7 +94,7 @@ function UCS() {
                 waitingRooms?.map((el, index) => (
                   <UCCard
                     waitingRoomStatus={el.state}
-                    label={el.subject_name}
+                    label={`${el.subject_name} - ${el.exam_name}`}
                     srcImage={"/card-image.png"}
                     id={el.waiting_room_id}
                     key={index}
