@@ -61,9 +61,9 @@ async def setup_waiting_rooms(session):
     await session.refresh(subject2)
 
     # Create exam configs
-    exam_config1 = ExamConfig(subject_id=subject1.id, fraction=0)
-    exam_config2 = ExamConfig(subject_id=subject1.id, fraction=1)
-    exam_config3 = ExamConfig(subject_id=subject2.id, fraction=0)
+    exam_config1 = ExamConfig(subject_id=subject1.id, fraction=0, exam_name="Exam Config 1")
+    exam_config2 = ExamConfig(subject_id=subject1.id, fraction=1, exam_name="Exam Config 2")
+    exam_config3 = ExamConfig(subject_id=subject2.id, fraction=0, exam_name="Exam Config 3")
     session.add(exam_config1)
     session.add(exam_config2)
     session.add(exam_config3)
@@ -117,7 +117,8 @@ async def test_get_professor_waiting_rooms_success(client, professor_user, setup
     assert wr1["waiting_room_id"] == setup_waiting_rooms["wr1_id"]
     assert wr1["state"] == "preparation"
     assert wr1["role"] == "regent"
-    
+    assert wr1["exam_name"] == "Exam Config 1"
+
     # Check wr2 (vigilant, running)
     wr2 = wr_lookup[setup_waiting_rooms["wr2_id"]]
     assert wr2["subject_id"] == setup_waiting_rooms["subject1_id"]
@@ -125,7 +126,8 @@ async def test_get_professor_waiting_rooms_success(client, professor_user, setup
     assert wr2["waiting_room_id"] == setup_waiting_rooms["wr2_id"]
     assert wr2["state"] == "running"
     assert wr2["role"] == "vigilant"
-    
+    assert wr2["exam_name"] == "Exam Config 2"
+
     # Check wr3 (regent, closed)
     wr3 = wr_lookup[setup_waiting_rooms["wr3_id"]]
     assert wr3["subject_id"] == setup_waiting_rooms["subject2_id"]
@@ -133,6 +135,7 @@ async def test_get_professor_waiting_rooms_success(client, professor_user, setup
     assert wr3["waiting_room_id"] == setup_waiting_rooms["wr3_id"]
     assert wr3["state"] == "closed"
     assert wr3["role"] == "regent"
+    assert wr3["exam_name"] == "Exam Config 3"
 
 
 @pytest.mark.asyncio
@@ -177,33 +180,34 @@ async def test_get_professor_waiting_rooms_partial_groups(client, session):
     await session.commit()
     await session.refresh(subject)
     
-    exam_config = ExamConfig(subject_id=subject.id, fraction=0)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=0, exam_name="Test Exam")
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
-    
+
     wr = WaitingRoom(exam_config_id=exam_config.id, state=WaitingRoomState.RUNNING)
     session.add(wr)
     await session.commit()
     await session.refresh(wr)
-    
+
     app.dependency_overrides[get_current_user_info] = lambda: partial_prof
-    
+
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
-    
+
     assert response.status_code == 200
     waiting_rooms = response.json()
-    
+
     # Should be a list with one item
     assert isinstance(waiting_rooms, list)
     assert len(waiting_rooms) == 1
-    
+
     wr_data = waiting_rooms[0]
     assert wr_data["subject_id"] == subject.id
     assert wr_data["subject_name"] == "Test Subject"
     assert wr_data["waiting_room_id"] == wr.id
     assert wr_data["state"] == "running"
     assert wr_data["role"] == "regent"
+    assert wr_data["exam_name"] == "Test Exam"
 
 
 @pytest.mark.asyncio
@@ -228,27 +232,28 @@ async def test_get_professor_waiting_rooms_invalid_group_format(client, session)
     await session.commit()
     await session.refresh(subject)
     
-    exam_config = ExamConfig(subject_id=subject.id, fraction=0)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=0, exam_name="Test Exam")
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
-    
+
     wr = WaitingRoom(exam_config_id=exam_config.id, state=WaitingRoomState.PREPARATION)
     session.add(wr)
     await session.commit()
     await session.refresh(wr)
-    
+
     app.dependency_overrides[get_current_user_info] = lambda: prof_with_invalid_groups
-    
+
     response = await client.get("/api/waiting-rooms/professor/my-waiting-rooms")
-    
+
     assert response.status_code == 200
     waiting_rooms = response.json()
-    
+
     # Should have only the valid waiting room that exists
     assert isinstance(waiting_rooms, list)
     assert len(waiting_rooms) == 1
     assert waiting_rooms[0]["waiting_room_id"] == wr.id
+    assert waiting_rooms[0]["exam_name"] == "Test Exam"
 
 
 @pytest.mark.asyncio
