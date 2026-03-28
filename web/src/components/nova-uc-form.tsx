@@ -8,7 +8,6 @@ import {
   FormLabel,
 } from "@/components/ui/form";
 import { Card, CardContent } from "@/components/ui/card";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { MultiSelect } from "./multi-select";
@@ -30,7 +29,7 @@ type NovaUCFormT = {
 };
 
 export function NovaUCForm() {
-  const { mutate, isError } = useAddUc();
+  const { mutate } = useAddUc();
   const { data: professors, isLoading: loadingProfessors } = useGetProfessors();
 
   const form = useForm<NovaUCFormT>({
@@ -49,15 +48,6 @@ export function NovaUCForm() {
       regent_keycloak_id: formData.regente,
       professor_keycloak_ids: formData.professores,
     });
-    if (isError) {
-      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
-        position: "top-right",
-      });
-    } else {
-      toast.success("Unidade curricular criada com sucesso!", {
-        position: "top-right",
-      });
-    }
     reset();
   };
 

@@ -7,13 +7,14 @@ from src.models.topic_config import TopicConfigDTO
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     #creator_keycloak_id: str = Field(max_length=255)
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] # nmec (string): {name: string, email: string}
-    
+    exam_name: Optional[str] = Field(default=None, max_length=255)
+
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     exams: List["Exam"] = Relationship(back_populates="exam_config")
@@ -25,6 +26,7 @@ class ExamConfigCreate(SQLModel):
     fraction: int = 0
     subject_id: int
     nmec_list: Optional[str] #dict{nmec : nome}
+    exam_name: Optional[str] = None
 
 class ExamConfigUpdate(SQLModel):
     """Schema for updating exam configuration"""
@@ -48,3 +50,4 @@ class ExamConfigResponse(SQLModel):
     #creator_keycloak_id: str
     topic_configs: List[TopicConfigDTO]
     nmec_name_list: Optional[str]
+    num_variations: int

@@ -1,8 +1,8 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Scanner } from "@yudiel/react-qr-scanner";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { LoaderCircle } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { LoaderCircle, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,18 @@ import {
   usePostPairExamStudent,
   useStartWaitingRoom,
 } from "@/hooks/use-waiting-rooms";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),
@@ -34,6 +46,8 @@ function RouteComponent() {
     nome: string;
     nmec: string;
   }>();
+
+  const navigate = useNavigate();
 
   const { data: roomDetails, isLoading } = useGetWaitingRoomById(realId);
 
@@ -85,14 +99,48 @@ function RouteComponent() {
                   </span>
                 )}
                 {roomDetails?.state == "running" ? (
-                  <Link to="/mobile_evaluate_tests" search={{ ucId }}>
-                    <Button
-                      className="cursor-pointer h-auto w-auto px-4 py-2 bg-red-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
-                      onClick={() => closeRoom()}
-                    >
-                      <span className="w-fit font-medium">Fechar Exame</span>
-                    </Button>
-                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="cursor-pointer h-auto w-auto px-4 py-2 bg-red-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
+                        <span className="w-fit font-medium">Fechar Exame</span>
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                          <Trash2Icon />
+                        </AlertDialogMedia>
+                        <AlertDialogTitle className="font-medium text-xl">
+                          Fechar Exame
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="font-medium">
+                          Ao fechar o exame nenhum outro utilizador conseguirá
+                          fazer scan a mais nenhum código QR. Deseja continuar?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                        <AlertDialogCancel
+                          variant="outline"
+                          className="cursor-pointer text-xl"
+                        >
+                          Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          variant="destructive"
+                          className="cursor-pointer text-xl"
+                          onClick={() => {
+                            closeRoom();
+                            navigate({
+                              to: "/mobile_evaluate_tests",
+                              search: { ucId },
+                            });
+                          }}
+                        >
+                          Continuar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 ) : (
                   <Button
                     className="cursor-pointer h-auto w-auto px-4 py-2 bg-green-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
@@ -109,7 +157,7 @@ function RouteComponent() {
                   setCanAssociate(true);
                   setQRCode(e[0].rawValue);
                 }}
-                paused={canAssociate}
+                paused={canAssociate || roomDetails?.state !== "running"}
                 formats={["qr_code"]}
                 styles={{
                   container: {

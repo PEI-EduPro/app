@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useKeycloak } from "@/hooks/use-keycloak";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { Download } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -8,6 +11,8 @@ export const Route = createFileRoute("/")({
 
 function Index() {
   const { keycloak } = useKeycloak();
+  const { canInstall, install } = usePwaInstall();
+  const isMobile = useIsMobile();
 
   return (
     <div className="flex flex-col items-center gap-8 md:gap-30 mt-10 md:mt-42.5 px-4 md:px-0">
@@ -49,6 +54,17 @@ function Index() {
               Cria uma nova
             </a>
           </p>
+
+          {canInstall && isMobile && (
+            <Button
+              variant="outline"
+              className="flex items-center gap-2 cursor-pointer"
+              onClick={install}
+            >
+              <Download className="w-4 h-4" />
+              Instalar aplicação
+            </Button>
+          )}
         </div>
 
         <img

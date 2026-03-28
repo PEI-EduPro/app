@@ -63,7 +63,8 @@ async def create_configs(
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
-        nmec_name_list=nmec_name_list
+        nmec_name_list=nmec_name_list,
+        exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None)
         #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
@@ -510,18 +511,19 @@ async def create_configs_and_exams(
 
 
 async def get_exam_configs_by_subject(
-    session: AsyncSession, 
+    session: AsyncSession,
     subject_id: int
 ) -> List[ExamConfig]:
     """
-    Get all exam configurations for a specific subject, 
+    Get all exam configurations for a specific subject,
     including topic configurations and their topic details.
     """
     statement = (
         select(ExamConfig)
         .where(ExamConfig.subject_id == subject_id)
         .options(
-            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic)
+            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic),
+            selectinload(ExamConfig.exams)
         )
     )
     result = await session.exec(statement)
@@ -535,7 +537,14 @@ async def get_exam_config_by_id(
     """
     Get a specific exam configuration by ID.
     """
-    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    statement = (
+        select(ExamConfig)
+        .where(ExamConfig.id == exam_config_id)
+        .options(
+            selectinload(ExamConfig.exams),
+            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic)
+        )
+    )
     result = await session.exec(statement)
     return result.first()
 

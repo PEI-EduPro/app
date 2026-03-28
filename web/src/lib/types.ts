@@ -62,6 +62,7 @@ export interface GetWaitingRoomI {
   waiting_room_id: number;
   state: WaitingRoomStatusT;
   role: "regent" | "vigilant";
+  exam_name: string;
 }
 
 export type WaitingRoomStatusT = "preparation" | "running" | "closed";
