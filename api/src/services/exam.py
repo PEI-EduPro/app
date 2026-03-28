@@ -157,6 +157,10 @@ async def generate_exams_from_configs(
                 f.write(formatted_date)
 
         for var_num in range(1, num_variations + 1):
+            for f in os.listdir(TEMPLATES_DIR):
+                if f.endswith(".tex"):
+                    shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+
             # Gather questions for this variation
             all_questions = []
             for t_conf in topic_configs:

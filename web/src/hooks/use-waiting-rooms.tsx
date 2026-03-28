@@ -24,14 +24,17 @@ const useGetWaitingRoomById = (roomId: number) =>
 const useGetWaitingRoomMetrics = ({
   enabled = true,
   roomId,
+  refetchInterval,
 }: {
   enabled: boolean;
   roomId: number;
+  refetchInterval?: number;
 }) =>
   useQuery<GetWaitingRoomMetricsI>({
     queryKey: ["metrics", roomId],
     queryFn: () => apiClient.get(`/waiting-rooms/${roomId}/metrics`),
     enabled,
+    refetchInterval,
   });
 
 const usePostPairExamStudent = (roomId: number) => {
