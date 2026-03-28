@@ -52,7 +52,7 @@ app.add_middleware(
 )
 
 # Include routers
-from src.routers import user, subject, topic, question, question_option, exam
+from src.routers import user, subject, topic, question, question_option, exam, waiting_room, warning
 app.include_router(user.router, prefix="/users", tags=["users"])
 app.include_router(subject.router, prefix="/subjects", tags=["subjects"])
 app.include_router(topic.router, prefix="/topics", tags=["topics"])
