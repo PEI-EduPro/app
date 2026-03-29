@@ -21,12 +21,6 @@ export const Route = createFileRoute("/_layout/mobile_evaluate_tests")({
   }),
 });
 
-const VIDEO_CONSTRAINTS = {
-  facingMode: { ideal: "environment" },
-  width: { ideal: 1280 },
-  height: { ideal: 720 },
-};
-
 function CameraCapture({
   setCapturedImage,
   capturedImage,
@@ -56,13 +50,13 @@ function CameraCapture({
   }
 
   return (
-    <div className="flex flex-col items-center h-full w-full max-w-sm justify-between py-10">
+    <div className="flex flex-col items-center h-full w-full max-w-sm justify-between pb-2">
       {capturedImage ? (
         <>
           <img
             src={capturedImage}
             alt="Captured"
-            className="w-full rounded-xl object-cover shadow-md"
+            className="w-full rounded-xl object-cover shadow-md h-62.5"
           />
           <Button
             variant="outline"
@@ -78,13 +72,12 @@ function CameraCapture({
           <Webcam
             ref={webcamRef}
             screenshotFormat="image/jpeg"
-            videoConstraints={VIDEO_CONSTRAINTS}
             onUserMediaError={() =>
               setCameraError(
                 "Não foi possível acessar a câmera. Verifique as permissões.",
               )
             }
-            className="w-full rounded-xl shadow-md"
+            className="w-full h-62.5 object-cover rounded-xl shadow-md"
           />
           <button
             onClick={capture}
@@ -106,7 +99,7 @@ function RouteComponent() {
   const { data: roomDetails } = useGetWaitingRoomById(realId);
 
   return (
-    <div className="py-3.5 px-6 w-full min-h-screen flex flex-col">
+    <div className="py-3.5 px-6 w-full flex flex-col">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Detalhes"}
         crumbs={[
