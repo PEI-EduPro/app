@@ -72,6 +72,7 @@ function CameraCapture({
           <Webcam
             ref={webcamRef}
             screenshotFormat="image/jpeg"
+            videoConstraints={{ facingMode: "environment" }}
             onUserMediaError={() =>
               setCameraError(
                 "Não foi possível acessar a câmera. Verifique as permissões.",
