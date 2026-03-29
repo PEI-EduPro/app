@@ -2,7 +2,7 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { LoaderCircle, RotateCcw, Trash2Icon } from "lucide-react";
+import { LoaderCircle, Trash2Icon } from "lucide-react";
 import { useState } from "react";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,6 @@ function RouteComponent() {
   const { data: metrics } = useGetWaitingRoomMetrics({
     enabled: roomDetails?.role === "regent",
     roomId: realId,
-    refetchInterval: 5000,
   });
 
   const { mutate: postExamStudent } = usePostPairExamStudent(realId);
@@ -152,18 +151,7 @@ function RouteComponent() {
                 )}
               </div>
             )}
-            <div className="relative flex flex-row justify-center">
-              {canAssociate && (
-                <button
-                  className="absolute top-21 left-1/2 -translate-x-1/2 z-10 bg-white rounded-full p-2 shadow-md cursor-pointer"
-                  onClick={() => {
-                    setCanAssociate(false);
-                    setQRCode("");
-                  }}
-                >
-                  <RotateCcw className="size-5" />
-                </button>
-              )}
+            <div className="flex flex-row justify-center">
               <Scanner
                 onScan={(e) => {
                   setCanAssociate(true);
