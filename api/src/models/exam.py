@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Dict, Optional, List
 from sqlmodel import Field, SQLModel, Relationship
 from enum import Enum
 
@@ -15,6 +15,8 @@ class Exam(SQLModel, table=True):
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
+    answer_key: Optional[Dict[int, int]] = Field(default_factory=dict)
+    relative_weights: Optional[Dict[int, float]] = Field(default_factory=dict)
 
     # Relationships
     exam_config: "ExamConfig" = Relationship(back_populates="exams")
@@ -25,6 +27,8 @@ class ExamCreate(SQLModel):
     exam_config_id: int
     exam_xml: Optional[str] = None
     batch_number: Optional[int] = Field(default=None)
+    answer_key: Optional[Dict[int, int]] = Field(default_factory=dict)
+    relative_weights: Optional[Dict[int, float]] = Field(default_factory=dict)
 
 class ExamUpdate(SQLModel):
     """Schema for updating exam data"""
@@ -35,6 +39,8 @@ class ExamUpdate(SQLModel):
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
+    answer_key: Optional[Dict[int, int]] = Field(default_factory=dict)
+    relative_weights: Optional[Dict[int, float]] = Field(default_factory=dict)
 
 class ExamRead(SQLModel):
     """Schema for reading exam data"""

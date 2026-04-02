@@ -189,6 +189,41 @@ async def generate_exams_from_configs(
             # Generate T-variants.tex content and get answer positions
             questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
             all_answers_maps[var_num] = answers_map
+            answer_key = dict()
+            for k,v in answers_map.items():
+                val = ord(v)-65
+                k = k-1
+                answer_key[k] = val
+            '''
+            Temos de transformar algo do tipo:
+                {
+                    1: 'C',
+                    2: 'A',
+                    3: 'D'
+                }
+
+            Em:
+                {
+                    0: 2,
+                    1: 0,
+                    2: 3
+                }
+            '''
+            #relative_weights = dict()
+            '''
+            Criar algo do tipo:
+                {
+                    0: 1,
+                    1: 1,
+                    2: 2
+                }
+            '''
+            relative_weights = {}
+
+            for i, q in enumerate(all_questions):
+                weight = topic_weights.get(q.topic_id, 1.0)
+                relative_weights[i] = weight
+
             num_questions = len(all_questions)
 
             # Write variant questions file
@@ -199,7 +234,7 @@ async def generate_exams_from_configs(
             _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
             # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num)
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num, answer_key=answer_key, relative_weights=relative_weights)
             session.add(new_exam)
             await session.commit()
             await session.refresh(new_exam)
@@ -534,6 +569,21 @@ async def get_exam_configs_by_subject(
     return list(result.all())
 
 
+async def get_exam_by_id(
+    session: AsyncSession,
+    exam_id: int
+) -> Exam | None:
+    """
+    Get a specific exam by ID.
+    """
+    statement = (
+        select(Exam)
+        .where(Exam.id == exam_id)
+    )
+    result = await session.exec(statement)
+    return result.first()
+
+
 async def get_exam_config_by_id(
     session: AsyncSession,
     exam_config_id: int
@@ -622,6 +672,7 @@ async def get_student_list(
         raise ValueError("Exam configuration not found.")
     
     return exam_config.nmec_name_list
+
 
 async def get_exams_by_config_id(
     session: AsyncSession,

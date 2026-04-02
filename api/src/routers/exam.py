@@ -5,6 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.services import exam
 from src.services import waiting_room as waiting_room_service
+from src.services.omr import evaluate_exam
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig, ExamConfigResponse
@@ -13,6 +14,7 @@ from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
 import logging
 import traceback
+import cv2
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -204,4 +206,59 @@ async def delete_exam_config(
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+@router.post("/exam/evaluate")
+async def evaluate_exam_omr(
+    file: UploadFile = File(...),
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Evaluate an exam using OMR from a given image.
+    """
+    
+    # Load image
+    img = cv2.imread(file)
+
+    # Create QR detector
+    detector = cv2.QRCodeDetector()
+
+    # Decode
+    #exam_id_str, bbox, straight_qrcode = detector.detectAndDecode(img)
+    exam_id_str = detector.detectAndDecode(img)
+    exam_id = int(exam_id_str)
+
+    exam_instance = await exam.get_exam_by_id(session, exam_id)
+    if not exam_instance:
+        raise HTTPException(status_code=404, detail="Exam not found.")
+    
+    subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    # evaluate_exam(exam_instance, img)
+
+    if file.content_type not in ("image/png", "image/jpeg", "image/jpg"):
+        raise HTTPException(status_code=400, detail="Only PNG and JPEG files are accepted.")
+    
+    # Save the uploaded file to a temporary location
+    temp_file_path = f"/tmp/{file.filename}"
+    with open(temp_file_path, "wb") as buffer:
+        buffer.write(await file.read())
+
+    # Always release the file buffer when done
+    await file.close()
+
+    try:
+        await evaluate_exam(session, exam_instance, temp_file_path)
+        # await exam.update_exam_results(session, exam_id, grade, results)
+        return {"status": "success"}
+    except Exception as e:
+        logger.error(f"Error evaluating exam {exam_id}: {e}")
+        logger.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Error evaluating exam: {str(e)}")
+    
+
+    
+
+
 
