@@ -43,7 +43,7 @@ export interface ExamConfigI {
   topic_configs: {
     topic_id: number;
     topic_name: string;
-    number_questions: number;
+    num_questions: number;
     relative_weight: number;
   }[];
 }

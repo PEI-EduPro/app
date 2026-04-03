@@ -47,6 +47,10 @@ const accentInsensitiveFilter = (
   );
 };
 
+const globalFilterFn = (row: any, _columnId: string, filterValue: string) => {
+  return ["nome", "nmec"].some((key) => accentInsensitiveFilter(row, key, filterValue));
+};
+
 interface CustomTableProps {
   isSelectable?: boolean;
   data: Record<string, string>[];
@@ -103,7 +107,7 @@ export function CustomTable(props: CustomTableProps) {
     cell: ({ row }: { row: Row<Record<string, string>> }) => (
       <div>{row.getValue(key)}</div>
     ),
-    filterFn: key === "nome" ? accentInsensitiveFilter : undefined,
+    filterFn: undefined,
   })) as ColumnDef<Record<string, string>>[];
 
   const columns = isSelectable ? [selectColumn, ...dataColumns] : dataColumns;
@@ -130,6 +134,8 @@ export function CustomTable(props: CustomTableProps) {
     onChange(selectedRows);
   };
 
+  const [filterValue, setFilterValue] = useState("");
+
   const table = useReactTable({
     data: isSelectable ? data : rowSelection,
     columns,
@@ -140,8 +146,10 @@ export function CustomTable(props: CustomTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: handleRowSelectionChange,
+    globalFilterFn,
     state: {
       sorting,
+      globalFilter: filterValue,
       rowSelection: rowSelection.reduce(
         (acc, el) => {
           acc[el.id] = true;
@@ -162,11 +170,9 @@ export function CustomTable(props: CustomTableProps) {
       {isSelectable && (
         <div className="flex items-center py-4">
           <Input
-            placeholder="Filtrar por nome..."
-            value={(table.getColumn("nome")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("nome")?.setFilterValue(event.target.value)
-            }
+            placeholder="Filtrar por nome ou nmec..."
+            value={filterValue}
+            onChange={(event) => setFilterValue(event.target.value)}
           />
         </div>
       )}
