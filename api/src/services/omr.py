@@ -173,23 +173,23 @@ async def evaluate_exam(
         answers_details[q]["correct"] = correct
         answers_details[q]["incorrect"] = incorrect
 
-    print("--- Answers Accuracy Details (Usado para fazer as somas e multiplicações com as cotações relativas) ---")
-    print(json.dumps(answers_details, indent=2))
+    # print("--- Answers Accuracy Details (Usado para fazer as somas e multiplicações com as cotações relativas) ---")
+    # print(json.dumps(answers_details, indent=2))
 
-    print("--- Selected Options Dictionary (Usado para popular a grelha do frontend para ajustes manuais) ---")
-    print(json.dumps(answered_dict, indent=2))
+    # print("--- Selected Options Dictionary (Usado para popular a grelha do frontend para ajustes manuais) ---")
+    # print(json.dumps(answered_dict, indent=2))
 
-    for q, info in answers_details.items():
-        total_detected = info["correct"] + info["incorrect"]
-        if total_detected > 2:
-            print(f"⚠️  Detector might have glitched on question {q+1}, detected {total_detected} options! ⚠️")
+    # for q, info in answers_details.items():
+    #     total_detected = info["correct"] + info["incorrect"]
+    #     if total_detected > 2:
+    #         print(f"⚠️  Detector might have glitched on question {q+1}, detected {total_detected} options! ⚠️")
 
     #cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
     # --- NEW: MATH & SCORING LOGIC ---
     total_exam_score = 0.0
     sum_weights = sum(relative_weights.values())
 
-    print("\n--- Scoring Breakdown ---")
+    #print("\n--- Scoring Breakdown ---")
     for q, info in answers_details.items():
         q_weight = relative_weights[q]
         
@@ -203,12 +203,12 @@ async def evaluate_exam(
         q_score = (info["correct"] * q_value) - (info["incorrect"] * penalty_per_wrong)
         
         total_exam_score += q_score
-        print(f"Q{q+1:02d}: Weight={q_weight} | Value={q_value:.2f} | Correct={info['correct']}, Wrong={info['incorrect']} | Score={q_score:.3f}")
+        #print(f"Q{q+1:02d}: Weight={q_weight} | Value={q_value:.2f} | Correct={info['correct']}, Wrong={info['incorrect']} | Score={q_score:.3f}")
 
     # Floor the total score at 0 to prevent negative exam results (optional)
     total_exam_score = max(0.0, total_exam_score)
 
-    print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
+    #print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
     #cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
     new_name = image_path.rsplit(".", 1)
     new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"

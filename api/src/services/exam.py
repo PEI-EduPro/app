@@ -206,18 +206,17 @@ async def generate_exams_from_configs(
             #     1: 0,
             #     2: 3
             # }
+            relative_weights = {}
+            for i, q in enumerate(all_questions):
+                weight = topic_weights.get(q.topic_id, 1.0)
+                relative_weights[i] = weight
             # Build:
             # {
             #     0: 1,
             #     1: 1,
             #     2: 2
             # }
-            relative_weights = {}
-
-            for i, q in enumerate(all_questions):
-                weight = topic_weights.get(q.topic_id, 1.0)
-                relative_weights[i] = weight
-
+            
             num_questions = len(all_questions)
 
             # Write variant questions file
