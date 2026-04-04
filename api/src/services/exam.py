@@ -194,30 +194,24 @@ async def generate_exams_from_configs(
                 val = ord(v)-65
                 k = k-1
                 answer_key[k] = val
-            '''
-            Temos de transformar algo do tipo:
-                {
-                    1: 'C',
-                    2: 'A',
-                    3: 'D'
-                }
-
-            Em:
-                {
-                    0: 2,
-                    1: 0,
-                    2: 3
-                }
-            '''
-            #relative_weights = dict()
-            '''
-            Criar algo do tipo:
-                {
-                    0: 1,
-                    1: 1,
-                    2: 2
-                }
-            '''
+            # Transform:
+            # {
+            #     1: 'C',
+            #     2: 'A',
+            #     3: 'D'
+            # }
+            # into:
+            # {
+            #     0: 2,
+            #     1: 0,
+            #     2: 3
+            # }
+            # Build:
+            # {
+            #     0: 1,
+            #     1: 1,
+            #     2: 2
+            # }
             relative_weights = {}
 
             for i, q in enumerate(all_questions):
