@@ -64,21 +64,11 @@ async def evaluate_exam(
     paper = four_point_transform(image, targetCnt.reshape(4, 2))
     warped = four_point_transform(gray, targetCnt.reshape(4, 2))
 
-    #cv2.imwrite("4.jpg", paper)
-    #cv2.imwrite("5.jpg", warped)
-
     # 3. Apply Thresholding
     thresh = cv2.threshold(warped, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
-    #cv2.imwrite("6.jpg", thresh)
-
-    # --- NEW SECTION: ISOLATE THE INNER ANSWER GRID ---
-    # We skip the second inner contour search because we already warped directly 
-    # to the grid above. We just assign variables to match your original flow.
 
     grid_paper = paper.copy()
     grid_thresh = thresh.copy()
-
-    #cv2.imwrite("grid_only.jpg", grid_paper)
 
     # divide the grid into 4 rows x 13 columns (Now 5 rows x 18 cols for the new format)
     h, w = grid_thresh.shape
@@ -99,7 +89,7 @@ async def evaluate_exam(
         cell_totals = []
         answers_details[q] = dict()
         
-        # --- NEW: Initialize the sub-dictionary for the current question ---
+        # Initialize the sub-dictionary for the current question ---
         answered_dict[str(q)] = dict()
         
         erased = 0
@@ -137,7 +127,7 @@ async def evaluate_exam(
             if fill_ratio <= 0.85:  # not fully filled (not erased)
                 valid_selected.append(opt)
                 
-        # --- NEW: Populate answered_dict based on valid_selected ---
+        # Populate answered_dict based on valid_selected ---
         for opt in range(NUM_OPTIONS):
             option_letter = chr(65 + opt) # Converts 0->A, 1->B, 2->C, 3->D
             # True if the option is in valid_selected, False otherwise (including erased)
@@ -173,23 +163,10 @@ async def evaluate_exam(
         answers_details[q]["correct"] = correct
         answers_details[q]["incorrect"] = incorrect
 
-    # print("--- Answers Accuracy Details (Usado para fazer as somas e multiplicações com as cotações relativas) ---")
-    # print(json.dumps(answers_details, indent=2))
-
-    # print("--- Selected Options Dictionary (Usado para popular a grelha do frontend para ajustes manuais) ---")
-    # print(json.dumps(answered_dict, indent=2))
-
-    # for q, info in answers_details.items():
-    #     total_detected = info["correct"] + info["incorrect"]
-    #     if total_detected > 2:
-    #         print(f"⚠️  Detector might have glitched on question {q+1}, detected {total_detected} options! ⚠️")
-
-    #cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
-    # --- NEW: MATH & SCORING LOGIC ---
+    # Scoring logic
     total_exam_score = 0.0
     sum_weights = sum(relative_weights.values())
 
-    #print("\n--- Scoring Breakdown ---")
     for q, info in answers_details.items():
         q_weight = relative_weights[q]
         
@@ -203,75 +180,14 @@ async def evaluate_exam(
         q_score = (info["correct"] * q_value) - (info["incorrect"] * penalty_per_wrong)
         
         total_exam_score += q_score
-        #print(f"Q{q+1:02d}: Weight={q_weight} | Value={q_value:.2f} | Correct={info['correct']}, Wrong={info['incorrect']} | Score={q_score:.3f}")
 
     # Floor the total score at 0 to prevent negative exam results (optional)
     total_exam_score = max(0.0, total_exam_score)
+    print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
-    #print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
-    #cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
+    # Set the calculated exam score (can be overwritten by manual validation later on)
+    exam.grade = total_exam_score
+
     new_name = image_path.rsplit(".", 1)
     new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"
     cv2.imwrite(new_name, grid_paper)
-
-    '''
-    # --- BEGINNING: FOOTER ---
-    # 1. Get current warped grid dimensions
-    h, w = grid_paper.shape[:2]
-
-    # Define generic styling based on image width to keep it consistent
-    # even if images are varying resolutions
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = max(0.7, w / 1600.0)    # Dynamic font scaling based on width
-    thickness = max(2, int(w / 1000.0))  # Dynamic thickness based on width
-
-    # Define color constants (BGR format)
-    COLOR_GREEN = (0, 255, 0)
-    COLOR_RED = (0, 0, 255)
-    COLOR_BLUE = (255, 0, 0)
-    COLOR_BLACK = (0, 0, 0)
-
-    # Define lines and their associated colors
-    # We use standard letters here. NOTE: If your system font 
-    # struggles with portuguese accents (ã, ê, à), you can replace
-    # them with standard letters (e.g., Nao contabilizada).
-    lines = [
-        ("Verde - Resposta Assinalada Correta", COLOR_GREEN),
-        ("", COLOR_BLACK),
-        ("Vermelho - Resposta Assinalada Incorreta", COLOR_RED),
-        ("", COLOR_BLACK),
-        ("Azul - Resposta Rasurada (Nao contabilizada)", COLOR_BLUE),
-        ("", COLOR_BLACK),
-        (f"Nota: {total_exam_score:.2f}/20", COLOR_BLACK)
-    ]
-
-    # 2. Define Footer Height
-    # Estimate the height needed based on line spacing and margin
-    # 4 lines + margin top/bottom
-    line_height_padding = int(50 * (w / 1920.0)) # Scale spacing based on width
-    footer_height = (len(lines) + 1) * line_height_padding
-
-    # 3. Create a clean white footer canvas
-    footer = np.full((footer_height, w, 3), 255, dtype=np.uint8)
-
-    # 4. Draw the text lines onto the white footer
-    x_pos = int(w * 0.05) # 5% indent from the left edge
-    y_start = line_height_padding + 10 # Start coordinate for first line
-
-    for i, (text, color) in enumerate(lines):
-        y_pos = y_start + (i * line_height_padding)
-        cv2.putText(footer, text, (x_pos, y_pos), font, font_scale, color, thickness)
-
-    # 5. Join the graded grid and the new footer vertically
-    final_graded_image = cv2.vconcat([grid_paper, footer])
-
-    print(f"[INFO] Footer legend and score applied to image.")
-
-    # --- NOW UPDATE YOUR EXISTING SAVE LINE BELOW THIS ---
-    # Change the variable you are saving from `grid_paper` to `final_graded_image`
-
-    # In your original script, replace the existing:
-    # cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
-    # with the line below:
-    cv2.imwrite(f"exam_var_{version}.jpg", final_graded_image)
-    '''

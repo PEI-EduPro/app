@@ -210,7 +210,7 @@ async def generate_exams_from_configs(
             for i, q in enumerate(all_questions):
                 weight = topic_weights.get(q.topic_id, 1.0)
                 relative_weights[i] = weight
-            # Build:
+            # Associate questions with relative weights
             # {
             #     0: 1,
             #     1: 1,
