@@ -20,11 +20,11 @@ async def evaluate_exam(
     """Evaluates Exam from given image."""
 
     exam_config_id = exam.exam_config_id
-    exam_config = get_exam_config_by_id(session, exam_config_id)
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
 
     fraction = exam_config.fraction
-    answer_key = exam.answer_key
-    relative_weights = exam.relative_weights
+    answer_key = {int(k): v for k, v in exam.answer_key.items()}
+    relative_weights = {int(k): v for k, v in exam.relative_weights.items()}
     num_questions = len(answer_key)
     image = cv2.imread(image_path)
 
@@ -185,8 +185,6 @@ async def evaluate_exam(
             print(f"⚠️  Detector might have glitched on question {q+1}, detected {total_detected} options! ⚠️")
 
     #cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
-    cv2.waitKey(0)
-
     # --- NEW: MATH & SCORING LOGIC ---
     total_exam_score = 0.0
     sum_weights = sum(relative_weights.values())
@@ -212,10 +210,9 @@ async def evaluate_exam(
 
     print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
     #cv2.imwrite(f"exam_var_{version}.jpg", grid_paper)
-    new_name = image_path.split(".")
-    new_name[0] = new_name[0]+"_omr_correction"
-    new_name = "".join(new_name)
-    cv2.imwrite(f"{new_name}", grid_paper)
+    new_name = image_path.rsplit(".", 1)
+    new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"
+    cv2.imwrite(new_name, grid_paper)
 
     '''
     # --- BEGINNING: FOOTER ---

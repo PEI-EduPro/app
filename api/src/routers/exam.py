@@ -217,29 +217,9 @@ async def evaluate_exam_omr(
     Evaluate an exam using OMR from a given image.
     """
     
-    # Load image
-    img = cv2.imread(file)
-
-    # Create QR detector
-    detector = cv2.QRCodeDetector()
-
-    # Decode
-    #exam_id_str, bbox, straight_qrcode = detector.detectAndDecode(img)
-    exam_id_str = detector.detectAndDecode(img)
-    exam_id = int(exam_id_str)
-
-    exam_instance = await exam.get_exam_by_id(session, exam_id)
-    if not exam_instance:
-        raise HTTPException(status_code=404, detail="Exam not found.")
-    
-    subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
-    verify_permission(user_info, [f"/s{subject_id}/regent"])
-
-    # evaluate_exam(exam_instance, img)
-
     if file.content_type not in ("image/png", "image/jpeg", "image/jpg"):
         raise HTTPException(status_code=400, detail="Only PNG and JPEG files are accepted.")
-    
+
     # Save the uploaded file to a temporary location
     temp_file_path = f"/tmp/{file.filename}"
     with open(temp_file_path, "wb") as buffer:
@@ -247,6 +227,19 @@ async def evaluate_exam_omr(
 
     # Always release the file buffer when done
     await file.close()
+
+    # Load image and decode QR
+    img = cv2.imread(temp_file_path)
+    detector = cv2.QRCodeDetector()
+    exam_id_str, _, _ = detector.detectAndDecode(img)
+    exam_id = int(exam_id_str)
+
+    exam_instance = await exam.get_exam_by_id(session, exam_id)
+    if not exam_instance:
+        raise HTTPException(status_code=404, detail="Exam not found.")
+
+    subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
 
     try:
         await evaluate_exam(session, exam_instance, temp_file_path)
