@@ -1,7 +1,11 @@
-FROM python:3.12-alpine
+FROM python:3.12-slim
 
 # Install LaTeX and required packages
-RUN apk add --no-cache texlive texmf-dist-latexextra
+# RUN apk add --no-cache texlive texmf-dist-latexextra
+RUN apt-get update && apt-get install -y \
+    texlive \
+    texlive-latex-extra \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install uv.
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
