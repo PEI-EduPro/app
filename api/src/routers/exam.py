@@ -207,7 +207,7 @@ async def delete_exam_config(
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.post("/exam/evaluate")
+@router.post("/evaluate")
 async def evaluate_exam_omr(
     file: UploadFile = File(...),
     user_info: User = Depends(get_current_user_info),

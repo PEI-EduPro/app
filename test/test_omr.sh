@@ -46,6 +46,6 @@ echo "Token obtained."
 # --- CALL OMR ENDPOINT ---
 echo ""
 echo "--- Sending image to OMR evaluation endpoint ---"
-curl -v -X POST "$API_BASE/exams/exam/evaluate" \
+curl -v -X POST "$API_BASE/exams/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
   -F "file=@$IMAGE_PATH"
