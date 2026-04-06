@@ -15,6 +15,7 @@ from src.core.keycloak import keycloak_client
 import logging
 import traceback
 import cv2
+from src import utils
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -216,24 +217,8 @@ async def evaluate_exam_omr(
     """
     Evaluate an exam using OMR from a given image.
     """
-    
-    if file.content_type not in ("image/png", "image/jpeg", "image/jpg"):
-        raise HTTPException(status_code=400, detail="Only PNG and JPEG files are accepted.")
-
-    # Save the uploaded file to a temporary location
-    temp_file_path = f"/tmp/{file.filename}"
-    with open(temp_file_path, "wb") as buffer:
-        buffer.write(await file.read())
-
-    # Always release the file buffer when done
-    await file.close()
-
-    # Load image and decode QR
-    img = cv2.imread(temp_file_path)
-    detector = cv2.QRCodeDetector()
-    exam_id_str, _, _ = detector.detectAndDecode(img)
-    exam_id = int(exam_id_str)
-
+    exam_id = await utils.read_QR(file)
+   
     exam_instance = await exam.get_exam_by_id(session, exam_id)
     if not exam_instance:
         raise HTTPException(status_code=404, detail="Exam not found.")
