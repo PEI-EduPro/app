@@ -217,7 +217,7 @@ async def evaluate_exam_omr(
     """
     Evaluate an exam using OMR from a given image.
     """
-    exam_id = await utils.read_QR(file)
+    exam_id, temp_file_path = await utils.read_QR(file)
    
     exam_instance = await exam.get_exam_by_id(session, exam_id)
     if not exam_instance:

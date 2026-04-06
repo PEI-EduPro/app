@@ -1,7 +1,5 @@
-from http.client import HTTPException
-
 import cv2
-from pytest import File
+from fastapi import File, HTTPException, UploadFile
 from bs4 import BeautifulSoup
 
 
@@ -74,6 +72,6 @@ async def read_QR(file: UploadFile = File(...)):
 
     id = int(id_str)
 
-    return id
+    return id, temp_file_path
 
 
