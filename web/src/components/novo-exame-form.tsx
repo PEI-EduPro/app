@@ -245,7 +245,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full flex flex-col flex-1 min-h-0 space-y-4">
       <div className="flex items-center justify-center">
         {Array.from({ length: totalSteps }).map((_, index) => (
           <div key={index} className="flex items-center">
@@ -267,14 +267,14 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
           </div>
         ))}
       </div>
-      <Card className="border-none shadow-none">
-        <CardContent>
+      <Card className="border-none shadow-none flex flex-col flex-1 min-h-0">
+        <CardContent className="flex flex-col flex-1 min-h-0">
           {formStep === 0 && (
             // Selecionar tópicos
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col h-180"
+                className="flex flex-col flex-1 min-h-0"
               >
                 <FormField
                   control={control}
@@ -287,10 +287,12 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                       {topics && (
                         <CustomTable
                           isSelectable
-                          data={topics.map((topic) => ({
-                            id: topic[0].id.toString(),
-                            nome: topic[0].name,
-                          }))}
+                          data={topics
+                            .filter((topic) => topic[1] > 0)
+                            .map((topic) => ({
+                              id: topic[0].id.toString(),
+                              nome: topic[0].name,
+                            }))}
                           onChange={field.onChange}
                           rowSelection={field.value ?? []}
                           rowNumber={12}
@@ -327,7 +329,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col h-180"
+                className="flex flex-col flex-1 min-h-0"
               >
                 <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
@@ -455,7 +457,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col h-180"
+                className="flex flex-col flex-1 min-h-0"
               >
                 <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
@@ -580,7 +582,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col h-180"
+                className="flex flex-col flex-1 min-h-0"
               >
                 <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-lg">
@@ -900,7 +902,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col h-180"
+                className="flex flex-col flex-1 min-h-0"
               >
                 <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-lg">
@@ -935,7 +937,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
             <Form {...form}>
               <form
                 onSubmit={handleSubmit(onSubmit)}
-                className="flex flex-col h-180"
+                className="flex flex-col flex-1 min-h-0"
               >
                 <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-lg">

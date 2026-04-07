@@ -96,7 +96,18 @@ async def update_subject(
     
     # Regents can only update students and professors, not name or regent
     if not is_manager:
-        if subject_update.name is not None or subject_update.regent_keycloak_id is not None:
+        current = await subject_service.get_subject_by_id(session, subject_id)
+        if not current:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        name_changed = subject_update.name is not None and subject_update.name != current.name
+        regent_changed = False
+        if subject_update.regent_keycloak_id is not None:
+            try:
+                current_regent = await subject_service.get_regent_service(session, subject_id)
+                regent_changed = subject_update.regent_keycloak_id != current_regent.get("id")
+            except ValueError:
+                regent_changed = True
+        if name_changed or regent_changed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only managers can update subject name or regent"

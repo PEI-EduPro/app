@@ -44,7 +44,7 @@ async def create_configs(
             count_result = await session.exec(
                 select(func.count(Question.id)).where(Question.topic_id == topic.id)
             )
-            available_questions = count_result.one()
+            available_questions = count_result.one_or_none() or 0
             requested_questions = exam_specs["number_questions"].get(topic_name, 0)
             
             if requested_questions > available_questions:

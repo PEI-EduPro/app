@@ -101,7 +101,7 @@ export function NovaUCForm() {
                         onValueChange={field.onChange}
                         disabled={loadingProfessors}
                       >
-                        <SelectTrigger className="shadow-none w-full">
+                        <SelectTrigger className="w-full">
                           <SelectValue
                             placeholder={
                               loadingProfessors
