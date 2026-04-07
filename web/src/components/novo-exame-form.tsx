@@ -287,10 +287,12 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                       {topics && (
                         <CustomTable
                           isSelectable
-                          data={topics.map((topic) => ({
-                            id: topic[0].id.toString(),
-                            nome: topic[0].name,
-                          }))}
+                          data={topics
+                            .filter((topic) => topic[1] > 0)
+                            .map((topic) => ({
+                              id: topic[0].id.toString(),
+                              nome: topic[0].name,
+                            }))}
                           onChange={field.onChange}
                           rowSelection={field.value ?? []}
                           rowNumber={12}

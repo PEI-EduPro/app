@@ -33,10 +33,10 @@ import { encodeId } from "@/lib/id-encoder";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 
 export function AppSidebar() {
-  const { data: ucs } = useGetUc();
-  const { data: waitingRooms } = useGetWaitingRooms({ enabled: true });
-  const { keycloak } = useKeycloak();
   const isMobile = useIsMobile();
+  const { data: ucs } = useGetUc();
+  const { data: waitingRooms } = useGetWaitingRooms({ enabled: isMobile });
+  const { keycloak } = useKeycloak();
   const { canInstall, install } = usePwaInstall();
 
   const items = [
@@ -100,7 +100,9 @@ export function AppSidebar() {
                     <CollapsibleContent className="overflow-hidden data-[state=closed]:animate-[collapsible-up_200ms_ease] data-[state=open]:animate-[collapsible-down_200ms_ease]">
                       <SidebarMenuSub>
                         {el.subContent?.map((sub, i) => (
-                          <SidebarMenuSubItem key={sub.key ?? `${sub.title}-${i}`}>
+                          <SidebarMenuSubItem
+                            key={sub.key ?? `${sub.title}-${i}`}
+                          >
                             <SidebarMenuSubButton
                               href={sub.url}
                               className="text-sidebar-foreground/80 hover:text-white hover:bg-[#3263A8]/40"
