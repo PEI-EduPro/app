@@ -48,6 +48,14 @@ async def resolve_exam_config_warnings(
     Each assignment overwrites the current nmec on that exam.
     Old warnings are cleared and recalculated from the updated state.
     Only the regent of the subject can perform this action.
+
+    Request body:
+    {
+        "assignments": [
+            {"exam_id": 1, "student_nmec": "12345"},
+            {"exam_id": 2, "student_nmec": "67890"}
+        ]
+    }
     """
     exam_config = await session.get(ExamConfig, exam_config_id)
     if not exam_config:
