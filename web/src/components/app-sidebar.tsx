@@ -46,7 +46,10 @@ export function AppSidebar() {
       subContent: isMobile
         ? waitingRooms?.map((wr) => ({
             title: `${wr.subject_name} — ${wr.exam_name}`,
-            url: `/mobile_scan_teste?ucId=${encodeId(wr.waiting_room_id)}`,
+            url:
+              wr.state !== "closed"
+                ? `/mobile_scan_teste?ucId=${encodeId(wr.waiting_room_id)}`
+                : `/mobile_evaluate_tests?ucId=${encodeId(wr.waiting_room_id)}`,
             key: String(wr.waiting_room_id),
           })) || []
         : ucs?.map((uc) => ({
