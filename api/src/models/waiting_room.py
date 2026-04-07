@@ -58,3 +58,8 @@ class ProfessorWaitingRoomItem(BaseModel):
     state: str
     role: str
     exam_name: Optional[str]
+
+
+class QRCodeToNMEC(BaseModel):
+    qr: str
+    nmec: int

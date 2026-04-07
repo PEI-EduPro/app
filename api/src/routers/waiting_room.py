@@ -4,12 +4,12 @@ from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, QRCodeToNMEC
 import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
 import logging
-from typing import TypedDict
+from typing import List
 
 
 
@@ -131,10 +131,6 @@ async def get_waiting_room_info(
             detail=f"Failed to retrieve waiting room info: {str(e)}"
         )
 
-class QRCodeToNMEC(TypedDict):
-    qr: str
-    nmec: int
-
 @router.post("/{waiting_room_id}/student_to_exam")
 async def associate_students_to_exams(
     waiting_room_id: int,
@@ -157,14 +153,9 @@ async def associate_students_to_exams(
     if waiting_room.state != WaitingRoomState.RUNNING:
         raise HTTPException(status_code=400, detail="Waiting room must be in running state to associate students.")
 
-    # qrcode_to_nmec format
-    # {qr: string,
-    #  nmec: number}
-
     try:
-        # qrcode_to_nmec is a dict -> {qr: string, nmec: number}
-        exam_id = int(qrcode_to_nmec["qr"])
-        student_nmec = qrcode_to_nmec["nmec"]
+        exam_id = int(qrcode_to_nmec.qr)
+        student_nmec = qrcode_to_nmec.nmec
         await waiting_room_service.associate_student_to_exam_service(
             session=session,
             waiting_room_id=waiting_room_id,
