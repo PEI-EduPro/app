@@ -1,8 +1,87 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
-from typing import List
-from src.models.warning import Warning, WarningType
+from sqlmodel import select, delete
+from typing import List, Dict, Set
+from src.models.warning import Warning, WarningType, WarningAssignment
 from src.models.exam import Exam
+from src.models.exam_config import ExamConfig
+from src.models.waiting_room import WaitingRoom
+import json
+
+
+def _get_nmec_name(nmec_str: str, nmec_to_name: dict) -> str:
+    name = nmec_to_name.get(nmec_str, {})
+    if isinstance(name, dict):
+        name = name.get("name", "Unknown")
+    elif not isinstance(name, str):
+        name = "Unknown"
+    return f"{nmec_str}:{name}"
+
+
+async def calculate_and_persist_warnings(
+    session: AsyncSession,
+    exam_config_id: int,
+    associations: List[str],
+    nmec_to_name: dict
+) -> None:
+    """
+    Delete all existing warnings for exam_config_id, then recalculate and persist
+    new ones based on the provided associations list.
+    Also writes exam.nmec for clean (conflict-free) 1:1 associations.
+    """
+    # Delete old warnings
+    await session.exec(delete(Warning).where(Warning.exam_config_id == exam_config_id))
+
+    student_to_exams: Dict[str, Set[int]] = {}
+    exam_to_students: Dict[int, Set[str]] = {}
+
+    for assoc in associations:
+        if ":" not in assoc:
+            continue
+        try:
+            exam_id_str, student_nmec = assoc.split(":", 1)
+            exam_id = int(exam_id_str)
+            student_to_exams.setdefault(student_nmec, set()).add(exam_id)
+            exam_to_students.setdefault(exam_id, set()).add(student_nmec)
+        except (ValueError, TypeError):
+            continue
+
+    conflict_students: Set[str] = set()
+    conflict_exams: Set[int] = set()
+
+    for student_nmec, exams in student_to_exams.items():
+        if len(exams) > 1:
+            conflict_students.add(student_nmec)
+            conflict_exams.update(exams)
+            session.add(Warning(
+                exam_config_id=exam_config_id,
+                type=WarningType.multiple_exams_to_student,
+                student_list=_get_nmec_name(student_nmec, nmec_to_name),
+                exam_list=list(exams)
+            ))
+
+    for exam_id, students in exam_to_students.items():
+        if len(students) > 1:
+            conflict_exams.add(exam_id)
+            conflict_students.update(students)
+            session.add(Warning(
+                exam_config_id=exam_config_id,
+                type=WarningType.multiple_students_to_exam,
+                student_list="; ".join([_get_nmec_name(s, nmec_to_name) for s in students]),
+                exam_list=[exam_id]
+            ))
+
+    # Write exam.nmec for clean 1:1 associations
+    for exam_id, students in exam_to_students.items():
+        if len(students) == 1:
+            student_nmec = next(iter(students))
+            if student_nmec not in conflict_students and exam_id not in conflict_exams:
+                exam = await session.get(Exam, exam_id)
+                if exam:
+                    try:
+                        exam.nmec = int(student_nmec)
+                        session.add(exam)
+                    except (ValueError, TypeError):
+                        pass
 
 async def get_warnings_by_exam_config_id(session: AsyncSession, exam_config_id: int) -> List[dict]:
     statement = select(Warning).where(Warning.exam_config_id == exam_config_id)
@@ -77,3 +156,42 @@ async def get_warnings_by_exam_config_id(session: AsyncSession, exam_config_id: 
                 })
 
     return response_list
+
+
+async def resolve_warnings_service(
+    session: AsyncSession,
+    exam_config_id: int,
+    assignments: List[WarningAssignment]
+) -> List[dict]:
+    # Find the waiting room for this exam config
+    wr_result = await session.exec(
+        select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
+    )
+    waiting_room = wr_result.first()
+    if not waiting_room:
+        raise ValueError("No waiting room found for this exam config")
+
+    # Build set of exam_ids being resolved
+    incoming_exam_ids = {a.exam_id for a in assignments}
+
+    # Remove existing associations for those exams, keep the rest
+    kept = [a for a in waiting_room.associations if ":" in a and int(a.split(":", 1)[0]) not in incoming_exam_ids]
+
+    # Add new assignments
+    new_associations = kept + [f"{a.exam_id}:{a.student_nmec}" for a in assignments]
+    waiting_room.associations = new_associations
+    session.add(waiting_room)
+
+    # Load nmec->name map
+    exam_config = await session.get(ExamConfig, exam_config_id)
+    nmec_to_name = {}
+    if exam_config and exam_config.nmec_name_list:
+        try:
+            nmec_to_name = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            pass
+
+    await calculate_and_persist_warnings(session, exam_config_id, new_associations, nmec_to_name)
+    await session.commit()
+
+    return await get_warnings_by_exam_config_id(session, exam_config_id)

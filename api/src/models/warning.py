@@ -30,3 +30,12 @@ class ExamWarningResponse(BaseModel):
     exam_id: int
     batch_number: Optional[int] = None
     students: List[StudentWarningInfo]
+
+
+class WarningAssignment(BaseModel):
+    exam_id: int
+    student_nmec: str
+
+
+class ResolveWarningsRequest(BaseModel):
+    assignments: List[WarningAssignment]
