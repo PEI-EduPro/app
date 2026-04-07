@@ -126,9 +126,9 @@
   * {
     @apply border-border outline-ring/50;
     transition-property: color, background-color, border-color, box-shadow, opacity, transform;
-    transition-duration: 200ms;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
   }
+
   body {
     @apply bg-background text-foreground;
     font-family: "Nunito Sans", sans-serif;

@@ -5,6 +5,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Textarea } from "./ui/textarea";
+import { toast } from "sonner";
 
 interface Question {
   id: number;
@@ -126,7 +127,9 @@ export default function QuestionModal({
 
   const removeOption = (id: number) => {
     if (options.length <= 2) {
-      alert("A questão deve ter pelo menos 2 opções");
+      toast.error("A questão deve ter pelo menos 2 opções", {
+        position: "top-right",
+      });
       return;
     }
 
