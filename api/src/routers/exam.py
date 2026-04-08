@@ -208,32 +208,9 @@ async def delete_exam_config(
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.post("/evaluate")
-async def evaluate_exam_omr(
-    file: UploadFile = File(...),
-    user_info: User = Depends(get_current_user_info),
-    session: AsyncSession = Depends(get_session)
-):
-    """
-    Evaluate an exam using OMR from a given image.
-    """
-    exam_id, temp_file_path = await utils.read_QR(file)
-   
-    exam_instance = await exam.get_exam_by_id(session, exam_id)
-    if not exam_instance:
-        raise HTTPException(status_code=404, detail="Exam not found.")
-
-    subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
-    verify_permission(user_info, [f"/s{subject_id}/regent"])
-
-    try:
-        await evaluate_exam(session, exam_instance, temp_file_path)
-        # await exam.update_exam_results(session, exam_id, grade, results)
-        return {"status": "success"}
-    except Exception as e:
-        logger.error(f"Error evaluating exam {exam_id}: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error evaluating exam: {str(e)}")
+# Deprecated: use POST /api/waiting-rooms/{waiting_room_id}/evaluate instead
+# @router.post("/evaluate")
+# async def evaluate_exam_omr(...)
     
 
     
