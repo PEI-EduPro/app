@@ -194,6 +194,9 @@ async def evaluate_exam(
     await session.commit()
     await session.refresh(exam)
 
+    # I am assuming this save is for debug. 
+    # I would urge my colleagues to leave debugs in writting for future reference thought. Something like:
+    # Debug => saving image to check it out.
     new_name = image_path.rsplit(".", 1)
     new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"
     cv2.imwrite(new_name, grid_paper)
