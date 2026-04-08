@@ -54,7 +54,10 @@ async def _setup_waiting_room(session, exam_config_id, state):
 @pytest.mark.asyncio
 async def test_evaluate_batch_waiting_room_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
-    response = await client.post("/api/waiting-rooms/9999/evaluate", files=[])
+    dummy_file = ("files", ("exam.jpg", b"fake", "image/jpeg"))
+    with patch("src.routers.waiting_room.utils.read_QR", new_callable=AsyncMock) as mock_qr:
+        mock_qr.return_value = (1, "/tmp/exam.jpg")
+        response = await client.post("/api/waiting-rooms/9999/evaluate", files=[dummy_file])
     assert response.status_code == 404
 
 
