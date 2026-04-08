@@ -251,6 +251,11 @@ async def get_all_exams_info(
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Get info for all exams in an exam configuration.
+    Returns a dict keyed by exam_id with grade, results, capture (base64) and correction status.
+    Only accessible by the regent of the subject.
+    """
     subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
@@ -291,6 +296,11 @@ async def get_exam_info(
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
+    """
+    Get info for a single exam by ID.
+    Returns grade, results, capture (base64) and correction status.
+    Returns 404 if the exam is not found. Only accessible by the regent of the subject.
+    """
     import base64, json as json_lib, os
 
     e = await exam.get_exam_by_id(session, exam_id)
