@@ -217,3 +217,29 @@ async def delete_exam_config(
 
 
 
+@router.post("/{exam_id}/validate")
+async def validate_exam(
+    exam_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    The regent validates that an exam has been rightfully corrected.
+    This is to help the regent understand the exams he has already validated.
+    """
+
+    exam_instance = await exam.get_exam_by_id(session, exam_id)
+    if not exam_instance:
+        raise HTTPException(status_code=404, detail="Exam not found.")
+
+    subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    if exam_instance.grade is None or exam_instance.results is None or exam_instance.capture_path is None:
+        raise HTTPException(status_code=400, detail="Exam has not been corrected yet.")
+
+    exam_instance.validated = True
+    session.add(exam_instance)
+    await session.commit()
+
+    return {"status": "success"}
