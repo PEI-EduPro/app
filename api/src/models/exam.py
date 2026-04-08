@@ -16,6 +16,7 @@ class Exam(SQLModel, table=True):
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
+    validated: bool = Field(default=False)
     answer_key: Optional[Dict[int, int]] = Field(default_factory=dict, sa_column=Column(JSON))
     relative_weights: Optional[Dict[int, float]] = Field(default_factory=dict, sa_column=Column(JSON))
 
