@@ -103,7 +103,7 @@ async def get_students(user_info: User = Depends(get_current_user_info)):
         logger.error(f"Error fetching students: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch students")
 
-@router.get("/debug/token-info")
+@router.get("/debug/token-info", response_model=User)
 async def debug_token_info(
     user_info: User = Depends(get_current_user_info),
     _ = Depends(require_manager) # Only accessible by managers for debugging

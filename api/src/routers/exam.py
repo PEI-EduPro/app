@@ -9,6 +9,7 @@ from src.services.omr import evaluate_exam
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig, ExamConfigResponse, ExamGenerateRequest
+from src.models.common import MessageResponse, StatusResponse
 from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
@@ -112,7 +113,7 @@ async def generate_exams(
             detail=f"An error occurred: {str(e)}"
         )
 
-@router.post("/exam/{exam_config_id}/student_list")
+@router.post("/exam/{exam_config_id}/student_list", response_model=MessageResponse)
 async def store_student_list(
     exam_config_id: int,
     file: UploadFile = File(...),
@@ -195,7 +196,7 @@ async def delete_exam_config(
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.post("/evaluate")
+@router.post("/evaluate", response_model=StatusResponse)
 async def evaluate_exam_omr(
     file: UploadFile = File(...),
     user_info: User = Depends(get_current_user_info),

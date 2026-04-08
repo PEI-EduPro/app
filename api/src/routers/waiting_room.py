@@ -5,6 +5,7 @@ from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
 from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, QRCodeToNMEC
+from src.models.common import MessageResponse
 import src.services.waiting_room as waiting_room_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
@@ -131,7 +132,7 @@ async def get_waiting_room_info(
             detail=f"Failed to retrieve waiting room info: {str(e)}"
         )
 
-@router.post("/{waiting_room_id}/student_to_exam")
+@router.post("/{waiting_room_id}/student_to_exam", response_model=MessageResponse)
 async def associate_students_to_exams(
     waiting_room_id: int,
     qrcode_to_nmec: QRCodeToNMEC,
