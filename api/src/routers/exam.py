@@ -243,3 +243,43 @@ async def validate_exam(
     await session.commit()
 
     return {"status": "success"}
+
+
+@router.get("/{exam_config_id}/all_exams_info")
+async def get_all_exams_info(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    try:
+        exams = await exam.get_exams_by_config_id(session, exam_config_id)
+    except ValueError:
+        return []
+
+    import base64, json as json_lib, os
+
+    result = {}
+    for e in exams:
+        corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+
+        capture_b64 = None
+        if corrected and os.path.exists(e.capture_path):
+            with open(e.capture_path, "rb") as f:
+                capture_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        result[e.id] = {
+            "exam_id": e.id,
+            "batch_number": e.batch_number,
+            "nmec": e.nmec,
+            "answer_key": e.answer_key,
+            "corrected": corrected,
+            "validated": e.validated,
+            "grade": e.grade,
+            "results": json_lib.loads(e.results) if e.results else None,
+            "capture": capture_b64,
+        }
+
+    return result
