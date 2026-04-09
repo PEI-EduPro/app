@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status,
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.services import exam
+from src.services.exam import build_exam_questions
 from src.services import waiting_room as waiting_room_service
 from src.services.omr import evaluate_exam
 from src.core.db import get_session
@@ -12,7 +13,10 @@ from src.models.exam_config import ExamConfig, ExamConfigResponse
 from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
+import base64
+import json
 import logging
+import os
 import traceback
 import cv2
 from src import utils
@@ -264,8 +268,6 @@ async def get_all_exams_info(
     except ValueError:
         return []
 
-    import base64, json as json_lib, os
-
     exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
     fraction = exam_config.fraction if exam_config else 0
 
@@ -278,29 +280,6 @@ async def get_all_exams_info(
             with open(e.capture_path, "rb") as f:
                 capture_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-        questions = []
-        if corrected:
-            answered_dict = json_lib.loads(e.results)
-            answer_key = {int(k): v for k, v in e.answer_key.items()}
-            relative_weights = {int(k): v for k, v in e.relative_weights.items()}
-            sum_weights = sum(relative_weights.values()) or 1
-
-            for q_idx in sorted(answer_key.keys()):
-                q_weight = relative_weights.get(q_idx, 0)
-                q_value = round((q_weight / sum_weights) * 20.0, 4)
-                correct_option_idx = answer_key[q_idx]
-                correct_answer = chr(ord('a') + correct_option_idx)
-                raw_answers = answered_dict.get(str(q_idx), {})
-                answers = {k.lower(): v for k, v in raw_answers.items()}
-
-                questions.append({
-                    "question_number": q_idx,
-                    "correct_answer": correct_answer,
-                    "discount": fraction,
-                    "value": q_value,
-                    "answers": answers,
-                })
-
         result.append({
             "corrected": corrected,
             "nmec": e.nmec,
@@ -308,7 +287,7 @@ async def get_all_exams_info(
             "grade": e.grade,
             "exam_id": e.id,
             "capture": capture_b64,
-            "questions": questions,
+            "questions": build_exam_questions(e, fraction),
         })
 
     return result
@@ -325,8 +304,6 @@ async def get_exam_info(
     Returns grade, questions breakdown, capture (base64) and correction status.
     Returns 404 if the exam is not found. Only accessible by the regent of the subject.
     """
-    import base64, json as json_lib, os
-
     e = await exam.get_exam_by_id(session, exam_id)
     if not e:
         raise HTTPException(status_code=404, detail="Exam not found.")
@@ -345,27 +322,7 @@ async def get_exam_info(
     if corrected:
         exam_config = await exam.get_exam_config_by_id(session, e.exam_config_id)
         fraction = exam_config.fraction if exam_config else 0
-
-        answered_dict = json_lib.loads(e.results)
-        answer_key = {int(k): v for k, v in e.answer_key.items()}
-        relative_weights = {int(k): v for k, v in e.relative_weights.items()}
-        sum_weights = sum(relative_weights.values()) or 1
-
-        for q_idx in sorted(answer_key.keys()):
-            q_weight = relative_weights.get(q_idx, 0)
-            q_value = round((q_weight / sum_weights) * 20.0, 4)
-            correct_option_idx = answer_key[q_idx]
-            correct_answer = chr(ord('a') + correct_option_idx)
-            raw_answers = answered_dict.get(str(q_idx), {})
-            answers = {k.lower(): v for k, v in raw_answers.items()}
-
-            questions.append({
-                "question_number": q_idx,
-                "correct_answer": correct_answer,
-                "discount": fraction,
-                "value": q_value,
-                "answers": answers,
-            })
+        questions = build_exam_questions(e, fraction)
 
     return {
         "corrected": corrected,

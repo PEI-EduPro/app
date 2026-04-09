@@ -705,3 +705,31 @@ async def get_latest_exam_config_id(session: AsyncSession, subject_id: int) -> i
     if not exam_config:
         raise ValueError(f"No exam config found for subject {subject_id}")
     return exam_config.id
+
+
+def build_exam_questions(exam: Exam, fraction: float) -> list:
+    """Build the questions list for exam info responses."""
+    if not (exam.results and exam.answer_key and exam.relative_weights):
+        return []
+
+    answered_dict = json.loads(exam.results)
+    answer_key = {int(k): v for k, v in exam.answer_key.items()}
+    relative_weights = {int(k): v for k, v in exam.relative_weights.items()}
+    sum_weights = sum(relative_weights.values()) or 1
+
+    questions = []
+    for q_idx in sorted(answer_key.keys()):
+        q_weight = relative_weights.get(q_idx, 0)
+        q_value = round((q_weight / sum_weights) * 20.0, 4)
+        correct_answer = chr(ord('a') + answer_key[q_idx])
+        answers = {k.lower(): v for k, v in answered_dict.get(str(q_idx), {}).items()}
+
+        questions.append({
+            "question_number": q_idx,
+            "correct_answer": correct_answer,
+            "discount": fraction,
+            "value": q_value,
+            "answers": answers,
+        })
+
+    return questions
