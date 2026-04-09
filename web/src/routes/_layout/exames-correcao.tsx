@@ -1,42 +1,46 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { useGetUcById } from "@/hooks/use-ucs";
 import { decodeId } from "@/lib/id-encoder";
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
-
 import { CustomSwitch } from "@/components/custom-switch";
-import ExamesUcExams from "@/components/exames-uc-exams";
-import ExamesUcSalas from "@/components/exames-uc-salas";
+import StudentsQRCodes from "@/components/students-qrcodes";
+import ExamsCorrectionValidation from "@/components/exams-correction-validation";
 
 const examesUCSearchSchema = z.object({
   ucId: z.string(),
   ucName: z.string(),
+  wrId: z.string(),
+  wrName: z.string(),
 });
 
-export const Route = createFileRoute("/_layout/exames-uc")({
+export const Route = createFileRoute("/_layout/exames-correcao")({
   validateSearch: examesUCSearchSchema,
   component: RouteComponent,
   beforeLoad: ({ search }) => ({
     ucId: decodeId(search.ucId),
+    wrId: decodeId(search.wrId),
   }),
 });
 
 function RouteComponent() {
-  const { ucId, ucName } = Route.useSearch();
-  const realId = decodeId(ucId);
+  const { ucId, ucName, wrId, wrName } = Route.useSearch();
+  const realId = decodeId(wrId);
 
-  const { data: ucData } = useGetUcById(realId);
   const [checked, setChecked] = useState<boolean>(false);
 
   return (
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
       <div className="shrink-0">
         <AppBreadcrumb
-          page="Exames"
+          page={wrName}
           crumbs={[
             { name: "Unidades Curriculares", link: "/unidades-curriculares" },
             { name: ucName, link: `/detalhes-uc?ucId=${ucId}` },
+            {
+              name: "Exames",
+              link: `/exames-uc?ucId=${ucId}&ucName=${ucName}`,
+            },
           ]}
         />
 
@@ -46,14 +50,14 @@ function RouteComponent() {
               <CustomSwitch
                 checked={checked}
                 onCheckedChange={setChecked}
-                leftLabel="Exames"
-                rightLabel="Salas"
+                leftLabel="Alunos"
+                rightLabel="Testes"
               />
             </div>
             <div className="flex flex-col gap-2.5 items-center">
-              <span className="font-rubik text-5xl">{ucData?.name}</span>
+              <span className="font-rubik text-5xl">{wrName}</span>
               <span className="font-rubik text-4xl text-primary">
-                {checked ? "Salas" : "Exames"}
+                {checked ? "Testes" : "Alunos"}
               </span>
             </div>
           </div>
@@ -62,9 +66,9 @@ function RouteComponent() {
 
       <div className="flex-1 overflow-hidden px-47.5 py-1">
         {checked ? (
-          <ExamesUcSalas realId={realId} ucName={ucName} />
+          <ExamsCorrectionValidation />
         ) : (
-          <ExamesUcExams realId={realId} ucName={ucName} />
+          <StudentsQRCodes wrId={realId} />
         )}
       </div>
     </div>

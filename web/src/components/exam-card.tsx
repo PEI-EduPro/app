@@ -1,0 +1,151 @@
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Trash2Icon } from "lucide-react";
+import { useCallback, useState } from "react";
+import type { ExamConfigI } from "@/lib/types";
+import { ExamConfigCard } from "@/components/exam-config-card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { useDeleteExamConfig } from "@/hooks/use-exams";
+import { decodeId } from "@/lib/id-encoder";
+
+export default function ExamCard({
+  name,
+  examConfig,
+  ucId,
+  id,
+}: {
+  id: number;
+  name: string;
+  ucId: string;
+  examConfig: ExamConfigI;
+}) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
+  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  const deleteMutation = useDeleteExamConfig(decodeId(ucId));
+
+  const totalQuestions =
+    examConfig.topic_configs?.reduce(
+      (sum, t) => sum + (t.num_questions || 0),
+      0,
+    ) ?? 0;
+
+  return (
+    <>
+      <Card
+        className="group flex flex-row items-center gap-4 px-5 py-4 cursor-pointer border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+        onClick={handleOpenModal}
+      >
+        <div className="shrink-0 w-1 self-stretch rounded-full bg-linear-to-b from-[#41B5C0] to-[#3263A8]" />
+
+        <div className="flex-1 min-w-0">
+          <span className="text-base font-semibold text-[#2E2B50] truncate block">
+            {name}
+          </span>
+          <span className="text-xs text-muted-foreground">
+            {examConfig.topic_configs?.length ?? 0} tópico
+            {examConfig.topic_configs?.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground leading-none mb-0.5">
+              Variações
+            </p>
+            <p className="text-lg font-bold text-[#3263A8] leading-none">
+              {examConfig.num_variations}
+            </p>
+          </div>
+          <div className="w-px h-8 bg-border" />
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground leading-none mb-0.5">
+              Desconto
+            </p>
+            <p className="text-lg font-bold text-[#3263A8] leading-none">
+              {examConfig.fraction}%
+            </p>
+          </div>
+          <div className="w-px h-8 bg-border" />
+          <div className="text-center">
+            <p className="text-xs text-muted-foreground leading-none mb-0.5">
+              Questões
+            </p>
+            <p className="text-lg font-bold text-[#3263A8] leading-none">
+              {totalQuestions}
+            </p>
+          </div>
+        </div>
+
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={(e) => e.stopPropagation()}
+              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-red-500 hover:bg-red-50 rounded-full"
+            >
+              <Trash2Icon className="h-4 w-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                <Trash2Icon />
+              </AlertDialogMedia>
+              <AlertDialogTitle className="font-medium text-2xl">
+                Apagar Configuração de Exame
+              </AlertDialogTitle>
+              <AlertDialogDescription className="font-medium text-xl">
+                Esta ação irá apagar permanentemente a configuração de exame.
+                Deseja continuar?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+              <AlertDialogCancel
+                variant="outline"
+                className="cursor-pointer text-xl"
+                size="lg"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                size="lg"
+                variant="destructive"
+                className="cursor-pointer text-xl"
+                onClick={() => deleteMutation.mutate(id)}
+              >
+                Apagar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </Card>
+
+      {isModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={handleCloseModal}
+        >
+          <div
+            className="bg-white rounded-xl shadow-2xl max-w-lg w-full m-4 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ExamConfigCard examConfigData={examConfig} />
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

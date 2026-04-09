@@ -35,7 +35,7 @@ function LayoutComponent() {
   const isMobile = useIsMobile();
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <SidebarHoverWrapper>
         <AppSidebar />
       </SidebarHoverWrapper>
