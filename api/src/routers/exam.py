@@ -253,7 +253,7 @@ async def get_all_exams_info(
 ):
     """
     Get info for all exams in an exam configuration.
-    Returns a dict keyed by exam_id with grade, results, capture (base64) and correction status.
+    Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
     Only accessible by the regent of the subject.
     """
     subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
@@ -266,7 +266,10 @@ async def get_all_exams_info(
 
     import base64, json as json_lib, os
 
-    result = {}
+    exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
+    fraction = exam_config.fraction if exam_config else 0
+
+    result = []
     for e in exams:
         corrected = e.grade is not None and e.results is not None and e.capture_path is not None
 
@@ -275,17 +278,38 @@ async def get_all_exams_info(
             with open(e.capture_path, "rb") as f:
                 capture_b64 = base64.b64encode(f.read()).decode("utf-8")
 
-        result[e.id] = {
-            "exam_id": e.id,
-            "batch_number": e.batch_number,
-            "nmec": e.nmec,
-            "answer_key": e.answer_key,
+        questions = []
+        if corrected:
+            answered_dict = json_lib.loads(e.results)
+            answer_key = {int(k): v for k, v in e.answer_key.items()}
+            relative_weights = {int(k): v for k, v in e.relative_weights.items()}
+            sum_weights = sum(relative_weights.values()) or 1
+
+            for q_idx in sorted(answer_key.keys()):
+                q_weight = relative_weights.get(q_idx, 0)
+                q_value = round((q_weight / sum_weights) * 20.0, 4)
+                correct_option_idx = answer_key[q_idx]
+                correct_answer = chr(ord('a') + correct_option_idx)
+                raw_answers = answered_dict.get(str(q_idx), {})
+                answers = {k.lower(): v for k, v in raw_answers.items()}
+
+                questions.append({
+                    "question_number": q_idx,
+                    "correct_answer": correct_answer,
+                    "discount": fraction,
+                    "value": q_value,
+                    "answers": answers,
+                })
+
+        result.append({
             "corrected": corrected,
+            "nmec": e.nmec,
             "validated": e.validated,
             "grade": e.grade,
-            "results": json_lib.loads(e.results) if e.results else None,
+            "exam_id": e.id,
             "capture": capture_b64,
-        }
+            "questions": questions,
+        })
 
     return result
 
@@ -298,7 +322,7 @@ async def get_exam_info(
 ):
     """
     Get info for a single exam by ID.
-    Returns grade, results, capture (base64) and correction status.
+    Returns grade, questions breakdown, capture (base64) and correction status.
     Returns 404 if the exam is not found. Only accessible by the regent of the subject.
     """
     import base64, json as json_lib, os
@@ -317,14 +341,38 @@ async def get_exam_info(
         with open(e.capture_path, "rb") as f:
             capture_b64 = base64.b64encode(f.read()).decode("utf-8")
 
+    questions = []
+    if corrected:
+        exam_config = await exam.get_exam_config_by_id(session, e.exam_config_id)
+        fraction = exam_config.fraction if exam_config else 0
+
+        answered_dict = json_lib.loads(e.results)
+        answer_key = {int(k): v for k, v in e.answer_key.items()}
+        relative_weights = {int(k): v for k, v in e.relative_weights.items()}
+        sum_weights = sum(relative_weights.values()) or 1
+
+        for q_idx in sorted(answer_key.keys()):
+            q_weight = relative_weights.get(q_idx, 0)
+            q_value = round((q_weight / sum_weights) * 20.0, 4)
+            correct_option_idx = answer_key[q_idx]
+            correct_answer = chr(ord('a') + correct_option_idx)
+            raw_answers = answered_dict.get(str(q_idx), {})
+            answers = {k.lower(): v for k, v in raw_answers.items()}
+
+            questions.append({
+                "question_number": q_idx,
+                "correct_answer": correct_answer,
+                "discount": fraction,
+                "value": q_value,
+                "answers": answers,
+            })
+
     return {
-        "exam_id": e.id,
-        "batch_number": e.batch_number,
-        "nmec": e.nmec,
-        "answer_key": e.answer_key,
         "corrected": corrected,
+        "nmec": e.nmec,
         "validated": e.validated,
         "grade": e.grade,
-        "results": json_lib.loads(e.results) if e.results else None,
+        "exam_id": e.id,
         "capture": capture_b64,
+        "questions": questions,
     }
