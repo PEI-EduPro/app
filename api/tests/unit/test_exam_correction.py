@@ -216,7 +216,7 @@ async def test_exam_info_not_corrected(client, mock_auth, session):
     data = response.json()
     assert data["corrected"] is False
     assert data["grade"] is None
-    assert data["results"] is None
+    assert data["questions"] == []
     assert data["capture"] is None
 
 
@@ -242,7 +242,9 @@ async def test_exam_info_corrected(client, mock_auth, session):
     data = response.json()
     assert data["corrected"] is True
     assert data["grade"] == 18.0
-    assert data["results"] is not None
+    assert len(data["questions"]) == 1
+    assert data["questions"][0]["correct_answer"] == "b"
+    assert data["questions"][0]["answers"] == {"a": False, "b": True, "c": False, "d": False}
     assert data["capture"] == base64.b64encode(b"fakeimagebytes").decode()
 
 
@@ -288,7 +290,8 @@ async def test_all_exams_info_mixed(client, mock_auth, session):
     assert response.status_code == 200
     data = response.json()
 
-    assert str(e_corrected.id) in data
-    assert str(e_uncorrected.id) in data
-    assert data[str(e_corrected.id)]["corrected"] is True
-    assert data[str(e_uncorrected.id)]["corrected"] is False
+    assert isinstance(data, list)
+    corrected_item = next(item for item in data if item["exam_id"] == e_corrected.id)
+    uncorrected_item = next(item for item in data if item["exam_id"] == e_uncorrected.id)
+    assert corrected_item["corrected"] is True
+    assert uncorrected_item["corrected"] is False
