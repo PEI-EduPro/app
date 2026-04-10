@@ -183,11 +183,20 @@ async def evaluate_exam(
 
     # Floor the total score at 0 to prevent negative exam results (optional)
     total_exam_score = max(0.0, total_exam_score)
-    print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
+    print(f"\nFINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
-    # Set the calculated exam score (can be overwritten by manual validation later on)
+    # Persist results to the database
     exam.grade = total_exam_score
+    exam.results = json.dumps(answered_dict)
+    exam.capture_path = image_path
 
+    session.add(exam)
+    await session.commit()
+    await session.refresh(exam)
+
+    # I am assuming this save is for debug. 
+    # I would urge my colleagues to leave debugs in writting for future reference thought. Something like:
+    # Debug => saving image to check it out.
     new_name = image_path.rsplit(".", 1)
     new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"
     cv2.imwrite(new_name, grid_paper)

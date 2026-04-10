@@ -74,6 +74,8 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
+    volumes:
+      - exam_images:/app/images
     depends_on:
       db:
         condition: service_healthy
@@ -94,3 +96,4 @@ services:
 volumes:
   db_data:
   keycloak_db_data:
+  exam_images:
