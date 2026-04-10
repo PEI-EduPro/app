@@ -6,7 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Link } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Search, Plus } from "lucide-react";
 import { useGetExamConfig } from "@/hooks/use-exams";
 import { useMemo, useState } from "react";
@@ -14,6 +14,8 @@ import ExamCard from "./exam-card";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { encodeId } from "@/lib/id-encoder";
+import { useGetUCTopics } from "@/hooks/use-questions";
+import { NoQuestionsAlertDialog } from "./no-questions-alert-dialog";
 
 export default function ExamesUcExams({
   realId,
@@ -22,9 +24,12 @@ export default function ExamesUcExams({
   realId: number;
   ucName: string;
 }) {
+  const navigate = useNavigate();
   const { data: examConfigs } = useGetExamConfig(realId);
+  const { data: topics } = useGetUCTopics(realId);
 
   const [search, setSearch] = useState("");
+  const [noQuestionsAlertOpen, setNoQuestionsAlertOpen] = useState(false);
   const [filterField, setFilterField] = useState<
     "all" | "name" | "num_variations" | "fraction" | "num_questions"
   >("all");
@@ -123,17 +128,26 @@ export default function ExamesUcExams({
             Nenhum exame encontrado.
           </p>
         )}
-        <Link
-          to="/novo-exame"
-          search={{ ucId: encodeId(realId), ucName: ucName }}
+        <Card
+          className="flex-row justify-center items-center gap-2 px-5 py-4 border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 hover:-translate-y-1 cursor-pointer shadow-none group/add"
+          onClick={() => {
+            if (!topics?.some((t) => t[1] > 0)) {
+              setNoQuestionsAlertOpen(true);
+            } else {
+              navigate({ to: "/novo-exame", search: { ucId: encodeId(realId), ucName } });
+            }
+          }}
         >
-          <Card className="flex-row justify-center items-center gap-2 px-5 py-4 border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 hover:-translate-y-1 cursor-pointer shadow-none group/add">
-            <Plus className="text-primary h-8 w-8 transition-transform duration-300 group-hover/add:rotate-90" />
-            <span className="text-base font-medium text-primary">
-              Criar Exame
-            </span>
-          </Card>
-        </Link>
+          <Plus className="text-primary h-8 w-8 transition-transform duration-300 group-hover/add:rotate-90" />
+          <span className="text-base font-medium text-primary">
+            Criar Exame
+          </span>
+        </Card>
+        <NoQuestionsAlertDialog
+          open={noQuestionsAlertOpen}
+          onOpenChange={setNoQuestionsAlertOpen}
+          ucId={realId}
+        />
       </div>
     </>
   );
