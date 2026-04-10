@@ -1,5 +1,5 @@
 # src/models/exam_config.py
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
 
@@ -62,5 +62,5 @@ class ExamGenerateRequest(SQLModel):
     relative_quotations: Dict[str, float]
     num_variations: int = 1
     professors: List[str] = []
-    student_tuples: List[List] = []
+    student_tuples: List[Tuple[int, str, str]] = []
     vigilant_keycloak_ids: List[str] = []
