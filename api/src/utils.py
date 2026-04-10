@@ -1,6 +1,9 @@
+import os
 import cv2
 from fastapi import File, HTTPException, UploadFile
 from bs4 import BeautifulSoup
+
+IMAGES_DIR = os.getenv("IMAGES_DIR", "/tmp")
 
 
 
@@ -51,8 +54,9 @@ async def read_QR(file: UploadFile = File(...)):
     if file.content_type not in ("image/png", "image/jpeg", "image/jpg"):
         raise HTTPException(status_code=400, detail="Only PNG and JPEG files are accepted.")
 
-    # Save the uploaded file to a temporary location
-    temp_file_path = f"/tmp/{file.filename}"
+    # Save the uploaded file to the captures directory
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    temp_file_path = os.path.join(IMAGES_DIR, file.filename)
     with open(temp_file_path, "wb") as buffer:
         buffer.write(await file.read())
 
