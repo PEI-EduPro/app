@@ -40,10 +40,6 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
     return int(id_str), temp_file_path
 
 
-async def read_QR(file: UploadFile = File(...)):
-    """Read QR code from the uploaded image and return the decoded data."""
-
-
 def clean_text(xml_text: str) -> str:
     """Remove XML tags (like <p>) and return plain text."""
     if not xml_text:
