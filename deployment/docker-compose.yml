@@ -74,7 +74,6 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    # TODO Healthcheck que verifica se a BD já está ligada
 
   web:
     build: 
@@ -84,7 +83,7 @@ services:
       - "${WEB_PORT}:80"
       - "${SSL_PORT}:443"
     volumes:
-      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro  #muda isto se quiseres local
       - ./nginx_certs:/certs:ro
     depends_on:
       - api
