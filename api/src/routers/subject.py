@@ -15,6 +15,7 @@ from src.models.subject import (
     ProfessorAddRequest,
     ProfessorUpdateRequest
 )
+from src.models.common import MessageResponse
 from src.models.topic import TopicPublic
 import src.services.subject as subject_service
 import logging
@@ -96,7 +97,18 @@ async def update_subject(
     
     # Regents can only update students and professors, not name or regent
     if not is_manager:
-        if subject_update.name is not None or subject_update.regent_keycloak_id is not None:
+        current = await subject_service.get_subject_by_id(session, subject_id)
+        if not current:
+            raise HTTPException(status_code=404, detail="Subject not found")
+        name_changed = subject_update.name is not None and subject_update.name != current.name
+        regent_changed = False
+        if subject_update.regent_keycloak_id is not None:
+            try:
+                current_regent = await subject_service.get_regent_service(session, subject_id)
+                regent_changed = subject_update.regent_keycloak_id != current_regent.get("id")
+            except ValueError:
+                regent_changed = True
+        if name_changed or regent_changed:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only managers can update subject name or regent"
@@ -194,7 +206,7 @@ async def get_subject_regent(
     except ValueError:
         raise HTTPException(status_code=404, detail="Subject not found or no regent assigned")
 
-@router.post("/{subject_id}/students", status_code=status.HTTP_201_CREATED)
+@router.post("/{subject_id}/students", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_students_to_subject(
     subject_id: int,
     request: StudentAddRequest,
@@ -213,7 +225,7 @@ async def add_students_to_subject(
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to add students")
 
-@router.post("/{subject_id}/professors", status_code=status.HTTP_201_CREATED)
+@router.post("/{subject_id}/professors", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_professor_to_subject(
     subject_id: int,
     request: ProfessorAddRequest,
@@ -238,7 +250,7 @@ async def add_professor_to_subject(
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@router.put("/{subject_id}/professors/{professor_id}")
+@router.put("/{subject_id}/professors/{professor_id}", response_model=MessageResponse)
 async def update_professor_permissions(
     subject_id: int,
     professor_id: str,

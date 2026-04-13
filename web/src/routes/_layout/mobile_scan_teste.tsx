@@ -71,44 +71,49 @@ function RouteComponent() {
   })) as unknown as Record<string, string>[];
 
   return (
-    <div className="py-3.5 px-6 w-full">
+    <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-hidden">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Scan de Exames"}
         crumbs={[
           { name: "Unidades Curriculares", link: "/unidades-curriculares" },
         ]}
       />
-      <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-25">
-        <span className="font-rubik">
-          {roomDetails?.subject_name || "Carregando..."}
-        </span>
-      </div>
 
-      <div className="flex flex-col gap-15 items-center">
+      <h1 className="font-rubik text-center text-lg font-bold text-foreground mb-2 animate-fade-in-up">
+        {roomDetails?.subject_name || "Carregando..."}
+      </h1>
+
+      <div className="flex flex-col gap-3 items-center flex-1 min-h-0">
         {isLoading ? (
           <div className="flex justify-center items-center w-full h-40">
-            <LoaderCircle className="animate-spin size-16" />
+            <LoaderCircle className="animate-spin size-12 text-primary" />
           </div>
         ) : (
-          <div className="flex flex-col justify-center gap-10 md:w-full">
+          <div className="flex flex-col gap-3 w-full flex-1 min-h-0 animate-fade-in-up stagger-1">
             {roomDetails?.role === "regent" && (
-              <div className="flex flex-row justify-between items-center">
+              <div className="flex flex-row justify-between items-center px-1">
                 {metrics && (
-                  <span className="text-sm font-medium">
-                    {metrics.associated_students_count}/
-                    {roomDetails.total_exams}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-[#41B5C0] animate-pulse" />
+                    <span className="text-sm font-semibold text-foreground">
+                      {metrics.associated_students_count}/
+                      {roomDetails.total_exams} associados
+                    </span>
+                  </div>
                 )}
-                {roomDetails?.state == "running" ? (
+                {roomDetails?.state === "running" ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button className="cursor-pointer h-auto w-auto px-4 py-2 bg-red-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                        <span className="w-fit font-medium">Fechar Exame</span>
+                      <Button
+                        variant="destructive"
+                        className="cursor-pointer h-auto px-4 py-2"
+                      >
+                        Fechar Exame
                       </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                        <AlertDialogMedia className="bg-destructive/10 text-destructive">
                           <Trash2Icon />
                         </AlertDialogMedia>
                         <AlertDialogTitle className="font-medium text-xl">
@@ -122,13 +127,13 @@ function RouteComponent() {
                       <AlertDialogFooter className="w-full! flex flex-row justify-between!">
                         <AlertDialogCancel
                           variant="outline"
-                          className="cursor-pointer text-xl"
+                          className="cursor-pointer"
                         >
                           Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                           variant="destructive"
-                          className="cursor-pointer text-xl"
+                          className="cursor-pointer"
                           onClick={() => {
                             closeRoom();
                             navigate({
@@ -144,51 +149,68 @@ function RouteComponent() {
                   </AlertDialog>
                 ) : (
                   <Button
-                    className="cursor-pointer h-auto w-auto px-4 py-2 bg-green-500 border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
+                    className="cursor-pointer h-auto px-4 py-2 bg-[#41B5C0] text-white hover:bg-[#41B5C0]/80 font-semibold"
                     onClick={() => startRoom()}
                   >
-                    <span className="w-fit font-medium">Abrir Exame</span>
+                    Abrir Exame
                   </Button>
                 )}
               </div>
             )}
+
             <div className="relative flex flex-row justify-center">
               {canAssociate && (
                 <button
-                  className="absolute top-21 left-1/2 -translate-x-1/2 z-10 bg-white rounded-full p-2 shadow-md cursor-pointer"
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-white rounded-full p-3 shadow-lg cursor-pointer hover:scale-110 active:scale-95"
                   onClick={() => {
                     setCanAssociate(false);
                     setQRCode("");
                   }}
                 >
-                  <RotateCcw className="size-5" />
+                  <RotateCcw className="size-5 text-[#2E2B50]" />
                 </button>
               )}
-              <Scanner
-                onScan={(e) => {
-                  setCanAssociate(true);
-                  setQRCode(e[0].rawValue);
-                }}
-                paused={canAssociate || roomDetails?.state !== "running"}
-                formats={["qr_code"]}
-                styles={{
-                  container: {
-                    width: "70%",
-                    aspectRatio: "1 / 1",
-                    border: "2px dashed rgba(239, 68, 68, 0.4)",
-                    borderRadius: "0.5rem",
-                  },
-                }}
-                components={{
-                  finder: false,
-                }}
-              />
+              <div
+                className={`rounded-2xl overflow-hidden transition-all duration-300 ${canAssociate ? "ring-4 ring-[#41B5C0]/80" : "ring-2 ring-[#41B5C0]/40"}`}
+              >
+                <Scanner
+                  onScan={(e) => {
+                    setCanAssociate(true);
+                    setQRCode(e[0].rawValue);
+                  }}
+                  paused={canAssociate || roomDetails?.state !== "running"}
+                  formats={["qr_code"]}
+                  styles={{
+                    container: {
+                      width: "50vw",
+                      maxWidth: "200px",
+                      aspectRatio: "1 / 1",
+                    },
+                  }}
+                  components={{ finder: false }}
+                />
+              </div>
             </div>
-            <div className="md:w-full flex flex-1 flex-col">
-              <span className="text-[26px] font-medium">Alunos</span>
+
+            <div className="flex justify-center">
+              <span
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${canAssociate ? "bg-[#41B5C0]/20 text-[#3263A8]" : "bg-[#41B5C0]/15 text-[#3263A8]"}`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full bg-[#41B5C0]`} />
+                {canAssociate
+                  ? "QR Code lido — selecione um aluno"
+                  : "Aguardando QR Code"}
+              </span>
+            </div>
+
+            <div className="w-full flex flex-col gap-1 flex-1 min-h-0">
+              <span className="text-base font-semibold text-foreground">
+                Alunos
+              </span>
+              <div className="flex-1 min-h-0 overflow-auto">
               <CustomTable
                 data={studentsData}
-                rowNumber={15}
+                rowNumber={5}
                 isSelectable
                 rowSelection={
                   alunosSelection
@@ -203,7 +225,7 @@ function RouteComponent() {
                 }
                 onChange={(e) => {
                   const newSelection = e.filter(
-                    (el) => el.nmec != alunosSelection?.nmec,
+                    (el) => el.nmec !== alunosSelection?.nmec,
                   );
                   if (newSelection.length > 0) {
                     setAlunosSelection({
@@ -216,8 +238,10 @@ function RouteComponent() {
                 }}
               />
             </div>
+            </div>
+
             <Button
-              className="cursor-pointer h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none"
+              className="w-full cursor-pointer h-auto py-2.5 text-base font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-px active:translate-y-0"
               disabled={
                 roomDetails?.state === "running"
                   ? !canAssociate || alunosSelection === undefined
@@ -232,9 +256,7 @@ function RouteComponent() {
                 setAlunosSelection(undefined);
               }}
             >
-              <span className="w-fit font-medium text-[26px]">
-                Associar aluno
-              </span>
+              Associar aluno
             </Button>
           </div>
         )}

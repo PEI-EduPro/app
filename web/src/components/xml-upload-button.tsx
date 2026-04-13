@@ -25,11 +25,16 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
     if (!file) return;
 
     if (!file.name.endsWith(".xml")) {
-      alert("Por favor, selecione um arquivo XML.");
+      toast.error("Por favor, selecione um arquivo XML.", {
+        position: "top-right",
+      });
       return;
     }
 
     setIsUploading(true);
+    toast.loading("A importar questões...", {
+      position: "top-right",
+    });
     try {
       const xmlContent = await file.text();
 
@@ -38,10 +43,12 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
       });
 
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.dismiss();
       toast.success("Questões importadas com sucesso!", {
         position: "top-right",
       });
     } catch {
+      toast.dismiss();
       toast.error("Ocorreu um erro, tente novamente mais tarde.", {
         position: "top-right",
       });

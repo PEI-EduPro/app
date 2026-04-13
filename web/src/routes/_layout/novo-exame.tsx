@@ -23,7 +23,7 @@ function NovoExame() {
   const realId = decodeId(ucId);
 
   return (
-    <div className="py-3.5 px-6 w-full">
+    <div className="flex flex-col h-full py-3.5 px-6 w-full overflow-hidden">
       <AppBreadcrumb
         page={examId ? "Editar Exame" : "Novo Exame"}
         crumbs={[
@@ -41,11 +41,11 @@ function NovoExame() {
           },
         ]}
       />
-      <div className="flex justify-center text-5xl mb-25">
+      <div className="flex justify-center text-5xl mb-4">
         {examId ? "Editar Exame" : "Novo Exame"}
       </div>
-      <div className="flex flex-col items-center">
-        <div className="w-175 h-auto">
+      <div className="flex flex-col items-center flex-1 min-h-0">
+        <div className="w-175 flex flex-col flex-1 min-h-0">
           <NovoExameForm ucID={realId} ucName={ucName} />
         </div>
       </div>

@@ -1,15 +1,20 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, QRCodeToNMEC
+from src.models.common import MessageResponse
 import src.services.waiting_room as waiting_room_service
+import src.services.exam as exam_service
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
+from src.services.omr import evaluate_exam
+from src import utils
 import logging
-from typing import TypedDict
+import traceback
+from typing import List, TypedDict
 
 
 
@@ -131,11 +136,7 @@ async def get_waiting_room_info(
             detail=f"Failed to retrieve waiting room info: {str(e)}"
         )
 
-class QRCodeToNMEC(TypedDict):
-    qr: str
-    nmec: int
-
-@router.post("/{waiting_room_id}/student_to_exam")
+@router.post("/{waiting_room_id}/student_to_exam", response_model=MessageResponse)
 async def associate_students_to_exams(
     waiting_room_id: int,
     qrcode_to_nmec: QRCodeToNMEC,
@@ -157,14 +158,9 @@ async def associate_students_to_exams(
     if waiting_room.state != WaitingRoomState.RUNNING:
         raise HTTPException(status_code=400, detail="Waiting room must be in running state to associate students.")
 
-    # qrcode_to_nmec format
-    # {qr: string,
-    #  nmec: number}
-
     try:
-        # qrcode_to_nmec is a dict -> {qr: string, nmec: number}
-        exam_id = int(qrcode_to_nmec["qr"])
-        student_nmec = qrcode_to_nmec["nmec"]
+        exam_id = int(qrcode_to_nmec.qr)
+        student_nmec = qrcode_to_nmec.nmec
         await waiting_room_service.associate_student_to_exam_service(
             session=session,
             waiting_room_id=waiting_room_id,
@@ -296,3 +292,56 @@ async def close_waiting_room(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to close waiting room: {str(e)}"
         )
+
+
+@router.post("/{waiting_room_id}/evaluate")
+async def evaluate_exam_batch(
+    waiting_room_id: int,
+    files: List[UploadFile] = File(...),
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Evaluate a batch of exams using OMR. Only the regent of the subject can perform this.
+    The waiting room must be in the CLOSED state.
+    All exams must belong to the waiting room's exam_config.
+    """
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if waiting_room.state != WaitingRoomState.CLOSED:
+        raise HTTPException(status_code=400, detail="Waiting room must be in the closed state to evaluate exams.")
+
+    # Read QR codes and validate all exams belong to this waiting room's exam_config
+    exam_data = []
+    for file in files:
+        exam_id, temp_file_path = await utils.read_QR(file)
+        exam_instance = await exam_service.get_exam_by_id(session, exam_id)
+        if not exam_instance:
+            raise HTTPException(status_code=404, detail=f"Exam {exam_id} not found.")
+        if exam_instance.exam_config_id != waiting_room.exam_config_id:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Exam {exam_id} does not belong to this waiting room's exam configuration."
+            )
+        exam_data.append((exam_instance, temp_file_path))
+
+    # Process the batch
+    results = []
+    for exam_instance, temp_file_path in exam_data:
+        try:
+            await evaluate_exam(session, exam_instance, temp_file_path)
+            results.append({"exam_id": exam_instance.id, "status": "success"})
+        except Exception as e:
+            logger.error(f"Error evaluating exam {exam_instance.id}: {e}")
+            logger.error(traceback.format_exc())
+            results.append({"exam_id": exam_instance.id, "status": "error", "detail": str(e)})
+
+    return {"results": results}

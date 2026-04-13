@@ -4,6 +4,7 @@ from src.services import question_option
 from src.services import question as question_service
 from src.services import topic as topic_service
 from src.models.question_option import QuestionOption, QuestionOptionCreate, QuestionOptionPublic, QuestionOptionUpdate
+from src.models.common import MessageResponse
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
 from src.models.user import User
@@ -74,7 +75,7 @@ async def update_question_option(
         logger.error(f"Failed to update question option: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An error occurred while updating the question option.")
 
-@router.delete("/{id}")
+@router.delete("/{id}", response_model=MessageResponse)
 async def delete_question_option(
     id: int,
     user_info: User = Depends(get_current_user_info),

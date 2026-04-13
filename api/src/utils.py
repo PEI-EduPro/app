@@ -1,4 +1,9 @@
+import os
+import cv2
+from fastapi import File, HTTPException, UploadFile
 from bs4 import BeautifulSoup
+
+IMAGES_DIR = os.getenv("IMAGES_DIR", "/tmp")
 
 
 
@@ -43,7 +48,34 @@ def parse_moodle_xml(xml_content):
 
     return {"topics": list(topics.values())}
 
+async def read_QR(file: UploadFile = File(...)):
+    """Read QR code from the uploaded image and return the decoded data."""
+    
+    if file.content_type not in ("image/png", "image/jpeg", "image/jpg"):
+        raise HTTPException(status_code=400, detail="Only PNG and JPEG files are accepted.")
 
+    # Save the uploaded file to the captures directory
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    temp_file_path = os.path.join(IMAGES_DIR, file.filename)
+    with open(temp_file_path, "wb") as buffer:
+        buffer.write(await file.read())
 
+    # Always release the file buffer when done
+    await file.close()
+
+    # Load image and decode QR
+    img = cv2.imread(temp_file_path)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Failed to load the uploaded image.")
+    
+    detector = cv2.QRCodeDetector()
+    id_str, _, _ = detector.detectAndDecode(img)
+
+    if not id_str or not id_str.isdigit():
+        raise HTTPException(status_code=400, detail="Failed to decode a valid ID from the QR code.")
+
+    id = int(id_str)
+
+    return id, temp_file_path
 
 
