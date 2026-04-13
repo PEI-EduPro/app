@@ -54,10 +54,10 @@ async def _setup_waiting_room(session, exam_config_id, state):
 @pytest.mark.asyncio
 async def test_evaluate_batch_waiting_room_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
-    dummy_file = ("files", ("exam.jpg", b"fake", "image/jpeg"))
-    with patch("src.routers.waiting_room.utils.read_QR", new_callable=AsyncMock) as mock_qr:
-        mock_qr.return_value = (1, "/tmp/exam.jpg")
-        response = await client.post("/api/waiting-rooms/9999/evaluate", files=[dummy_file])
+    body = {"files": ["fakebase64string"]}
+    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode:
+        mock_decode.return_value = (1, "/tmp/exam.jpg")
+        response = await client.post("/api/waiting-rooms/9999/evaluate", json=body)
     assert response.status_code == 404
 
 
@@ -76,8 +76,8 @@ async def test_evaluate_batch_wrong_state(client, mock_auth, session):
     ec = await _setup_exam_config(session, sub.id)
     wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.RUNNING)
 
-    dummy_file = ("files", ("exam.jpg", b"fake", "image/jpeg"))
-    response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", files=[dummy_file])
+    body = {"files": ["fakebase64string"]}
+    response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
     assert response.status_code == 400
     assert "closed" in response.json()["detail"].lower()
 
@@ -99,10 +99,10 @@ async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
     wr = await _setup_waiting_room(session, ec1.id, WaitingRoomState.CLOSED)
     exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
 
-    with patch("src.routers.waiting_room.utils.read_QR", new_callable=AsyncMock) as mock_qr:
-        mock_qr.return_value = (exam_wrong.id, "/tmp/exam.jpg")
-        dummy_file = ("files", ("exam.jpg", b"fake", "image/jpeg"))
-        response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", files=[dummy_file])
+    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode:
+        mock_decode.return_value = (exam_wrong.id, "/tmp/exam.jpg")
+        body = {"files": ["fakebase64string"]}
+        response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
 
     assert response.status_code == 400
     assert "does not belong" in response.json()["detail"]
@@ -124,12 +124,12 @@ async def test_evaluate_batch_success(client, mock_auth, session):
     wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.CLOSED)
     exam_instance = await _setup_exam(session, ec.id)
 
-    with patch("src.routers.waiting_room.utils.read_QR", new_callable=AsyncMock) as mock_qr, \
+    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode, \
          patch("src.routers.waiting_room.evaluate_exam", new_callable=AsyncMock) as mock_eval:
-        mock_qr.return_value = (exam_instance.id, "/tmp/exam.jpg")
+        mock_decode.return_value = (exam_instance.id, "/tmp/exam.jpg")
         mock_eval.return_value = None
-        dummy_file = ("files", ("exam.jpg", b"fake", "image/jpeg"))
-        response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", files=[dummy_file])
+        body = {"files": ["fakebase64string"]}
+        response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
 
     assert response.status_code == 200
     results = response.json()["results"]

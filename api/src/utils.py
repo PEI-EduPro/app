@@ -1,3 +1,4 @@
+import base64
 import os
 import cv2
 from fastapi import File, HTTPException, UploadFile
@@ -5,6 +6,42 @@ from bs4 import BeautifulSoup
 
 IMAGES_DIR = os.getenv("IMAGES_DIR", "/tmp")
 
+
+def decode_base64_image(base64_str: str) -> tuple[int, str]:
+    """Decode a base64 image, save it temporarily, and read its QR code.
+
+    Returns:
+        Tuple of (exam_id, temp_file_path)
+    """
+    # Strip data URI prefix if present (e.g. "data:image/png;base64,")
+    if "," in base64_str:
+        base64_str = base64_str.split(",", 1)[1]
+
+    try:
+        image_bytes = base64.b64decode(base64_str)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {e}")
+
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    temp_file_path = os.path.join(IMAGES_DIR, f"exam_{os.urandom(8).hex()}.png")
+    with open(temp_file_path, "wb") as buffer:
+        buffer.write(image_bytes)
+
+    img = cv2.imread(temp_file_path)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Failed to load the uploaded image.")
+
+    detector = cv2.QRCodeDetector()
+    id_str, _, _ = detector.detectAndDecode(img)
+
+    if not id_str or not id_str.isdigit():
+        raise HTTPException(status_code=400, detail="Failed to decode a valid ID from the QR code.")
+
+    return int(id_str), temp_file_path
+
+
+async def read_QR(file: UploadFile = File(...)):
+    """Read QR code from the uploaded image and return the decoded data."""
 
 
 def clean_text(xml_text: str) -> str:
