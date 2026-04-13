@@ -3,11 +3,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
-import { RefreshCw, X, Camera } from "lucide-react";
+import { RefreshCw, X, Camera, Trash2 } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import Webcam from "react-webcam";
-import { toast } from "sonner";
-import { useGetWaitingRoomById } from "@/hooks/use-waiting-rooms";
+import {
+  useGetWaitingRoomById,
+  useSendExamsPhotos,
+} from "@/hooks/use-waiting-rooms";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),
@@ -22,19 +24,25 @@ export const Route = createFileRoute("/_layout/mobile_evaluate_tests")({
 });
 
 function CameraCapture({
-  setCapturedImage,
-  capturedImage,
+  onCapture,
 }: {
-  setCapturedImage: (imageSrc: string | null) => void;
-  capturedImage: string | null;
+  onCapture: (imageSrc: string) => void;
 }) {
   const webcamRef = useRef<Webcam>(null);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
 
   const capture = useCallback(() => {
     const imageSrc = webcamRef.current?.getScreenshot();
-    if (imageSrc) setCapturedImage(imageSrc);
-  }, [setCapturedImage]);
+    if (imageSrc) setPreview(imageSrc);
+  }, []);
+
+  const confirm = () => {
+    if (preview) {
+      onCapture(preview);
+      setPreview(null);
+    }
+  };
 
   if (cameraError) {
     return (
@@ -47,12 +55,12 @@ function CameraCapture({
 
   return (
     <div className="flex flex-col items-center w-full gap-5">
-      {capturedImage ? (
+      {preview ? (
         <>
           <div className="relative w-full rounded-2xl overflow-hidden shadow-xl ring-2 ring-[#41B5C0]/50">
             <img
-              src={capturedImage}
-              alt="Captured"
+              src={preview}
+              alt="Preview"
               className="w-full object-cover h-64"
             />
             <div className="absolute top-3 right-3 flex items-center gap-1.5 bg-[#41B5C0] text-white text-xs font-bold px-2.5 py-1 rounded-full shadow">
@@ -60,14 +68,19 @@ function CameraCapture({
               Foto capturada
             </div>
           </div>
-          <Button
-            variant="outline"
-            className="flex items-center gap-2 cursor-pointer border-[#41B5C0]/50 text-[#3263A8] hover:bg-[#41B5C0]/10"
-            onClick={() => setCapturedImage(null)}
-          >
-            <RefreshCw className="w-4 h-4" />
-            Tirar novamente
-          </Button>
+          <div className="flex gap-3 w-full">
+            <Button
+              variant="outline"
+              className="flex-1 flex items-center gap-2 cursor-pointer border-[#41B5C0]/50 text-[#3263A8] hover:bg-[#41B5C0]/10"
+              onClick={() => setPreview(null)}
+            >
+              <RefreshCw className="w-4 h-4" />
+              Tirar novamente
+            </Button>
+            <Button className="flex-1 cursor-pointer" onClick={confirm}>
+              Confirmar foto
+            </Button>
+          </div>
         </>
       ) : (
         <>
@@ -90,7 +103,6 @@ function CameraCapture({
               <div className="absolute bottom-0 right-0 w-6 h-6 border-b-2 border-r-2 border-[#41B5C0] rounded-br-sm" />
             </div>
           </div>
-
           <button
             onClick={capture}
             className="relative w-18 h-18 rounded-full bg-white border-4 border-[#41B5C0] shadow-lg shadow-[#41B5C0]/30 hover:shadow-[#41B5C0]/50 active:scale-95 cursor-pointer flex items-center justify-center"
@@ -104,12 +116,59 @@ function CameraCapture({
   );
 }
 
+function PhotoList({
+  photos,
+  onRemove,
+}: {
+  photos: string[];
+  onRemove: (index: number) => void;
+}) {
+  if (photos.length === 0) return null;
+
+  return (
+    <div className="w-full flex flex-col gap-2">
+      <span className="text-sm font-semibold text-[#3263A8]">
+        Fotos tiradas
+      </span>
+      <div className="flex flex-col gap-2 overflow-y-auto max-h-72 min-h-0">
+        {photos.map((src, i) => (
+          <div
+            key={i}
+            className="relative shrink-0 rounded-xl overflow-hidden shadow ring-1 ring-[#41B5C0]/30"
+          >
+            <img
+              src={src}
+              alt={`Foto ${i + 1}`}
+              className="w-full h-32 object-cover"
+            />
+            <div className="absolute top-2 left-2 bg-black/50 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              #{i + 1}
+            </div>
+            <button
+              onClick={() => onRemove(i)}
+              className="absolute top-2 right-2 bg-destructive text-white rounded-full p-1 shadow cursor-pointer"
+              aria-label="Remover foto"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
-  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   const { data: roomDetails } = useGetWaitingRoomById(realId);
+  const { mutate } = useSendExamsPhotos(realId);
+
+  const addPhoto = (src: string) => setPhotos((prev) => [...prev, src]);
+  const removePhoto = (index: number) =>
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
 
   return (
     <div className="py-3.5 px-4 w-full flex flex-col min-h-screen animate-fade-in">
@@ -128,15 +187,13 @@ function RouteComponent() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#41B5C0]/15 border border-[#41B5C0]/30">
           <span className="w-2 h-2 rounded-full bg-[#41B5C0] animate-pulse" />
           <span className="text-sm font-semibold text-[#3263A8]">
-            0/{roomDetails?.total_exams} exames
+            {photos.length}/{roomDetails?.total_exams} exames
           </span>
         </div>
 
-        <div className="w-full flex-1 flex flex-col items-center justify-center stagger-2 animate-fade-in-up">
-          <CameraCapture
-            capturedImage={capturedImage}
-            setCapturedImage={setCapturedImage}
-          />
+        <div className="w-full flex flex-col items-center gap-4 stagger-2 animate-fade-in-up">
+          <CameraCapture onCapture={addPhoto} />
+          <PhotoList photos={photos} onRemove={removePhoto} />
         </div>
       </div>
 
@@ -144,16 +201,14 @@ function RouteComponent() {
         <Button
           className="w-full cursor-pointer h-auto py-4 text-lg font-semibold shadow-lg shadow-primary/30 hover:shadow-primary/50 hover:-translate-y-px active:translate-y-0 disabled:opacity-40"
           onClick={() => {
-            if (capturedImage) {
-              toast.success("Exame adicionado com sucesso!", {
-                position: "top-right",
-              });
-              setCapturedImage(null);
+            if (photos.length > 0) {
+              mutate(photos);
+              setPhotos([]);
             }
           }}
-          disabled={!capturedImage}
+          disabled={photos.length === 0}
         >
-          Adicionar Teste
+          Enviar Testes
         </Button>
       </div>
     </div>

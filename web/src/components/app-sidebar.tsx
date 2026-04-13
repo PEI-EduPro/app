@@ -26,11 +26,11 @@ import {
   CollapsibleContent,
 } from "./ui/collapsible";
 import { useGetUc } from "@/hooks/use-ucs";
-import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 import { useKeycloak } from "@/hooks/use-keycloak.ts";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { encodeId } from "@/lib/id-encoder";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
+import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 
 export function AppSidebar() {
   const isMobile = useIsMobile();
@@ -94,7 +94,7 @@ export function AppSidebar() {
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton asChild>
                         <div className="cursor-pointer rounded-lg hover:bg-[#41B5C0]/20 text-sidebar-foreground">
-                          <el.icon className="text-[#41B5C0]" />
+                          <el.icon className="text-[#41B5C0]" size={20} />
                           <span className="text-base">{el.title}</span>
                           <ChevronDown className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-180 text-[#41B5C0]" />
                         </div>

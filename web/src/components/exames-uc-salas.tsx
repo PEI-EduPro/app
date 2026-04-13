@@ -1,11 +1,11 @@
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 import { useMemo, useState } from "react";
 import { Button } from "./ui/button";
 import { Card } from "./ui/card";
 import { encodeId } from "@/lib/id-encoder";
+import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 
 export default function ExamesUcSalas({
   realId,

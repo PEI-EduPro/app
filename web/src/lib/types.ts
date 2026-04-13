@@ -88,3 +88,15 @@ export interface PostExamStudentI {
   qr: string;
   nmec: number;
 }
+
+export interface GetWarningsI {
+  exam_id: number;
+  batch_number: number;
+  students: [
+    {
+      nmec: number;
+      name: string;
+      email: string;
+    },
+  ];
+}
