@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status,
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.services import exam
+from src.services.exam import build_exam_questions
 from src.services import waiting_room as waiting_room_service
 from src.services.omr import evaluate_exam
 from src.core.db import get_session
@@ -13,7 +14,10 @@ from src.models.common import MessageResponse, StatusResponse
 from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
+import base64
+import json
 import logging
+import os
 import traceback
 import cv2
 from src import utils
@@ -196,17 +200,26 @@ async def delete_exam_config(
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.post("/evaluate", response_model=StatusResponse)
-async def evaluate_exam_omr(
-    file: UploadFile = File(...),
+# Deprecated: use POST /api/waiting-rooms/{waiting_room_id}/evaluate instead
+# @router.post("/evaluate")
+# async def evaluate_exam_omr(...)
+    
+
+    
+
+
+
+@router.post("/{exam_id}/validate")
+async def validate_exam(
+    exam_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Evaluate an exam using OMR from a given image.
+    The regent validates that an exam has been rightfully corrected.
+    This is to help the regent understand the exams he has already validated.
     """
-    exam_id, temp_file_path = await utils.read_QR(file)
-   
+
     exam_instance = await exam.get_exam_by_id(session, exam_id)
     if not exam_instance:
         raise HTTPException(status_code=404, detail="Exam not found.")
@@ -214,17 +227,97 @@ async def evaluate_exam_omr(
     subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
+    if exam_instance.grade is None or exam_instance.results is None or exam_instance.capture_path is None:
+        raise HTTPException(status_code=400, detail="Exam has not been corrected yet.")
+
+    exam_instance.validated = True
+    session.add(exam_instance)
+    await session.commit()
+
+    return {"status": "success"}
+
+
+@router.get("/{exam_config_id}/all_exams_info")
+async def get_all_exams_info(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get info for all exams in an exam configuration.
+    Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
+    Only accessible by the regent of the subject.
+    """
+    subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
     try:
-        await evaluate_exam(session, exam_instance, temp_file_path)
-        # await exam.update_exam_results(session, exam_id, grade, results)
-        return {"status": "success"}
-    except Exception as e:
-        logger.error(f"Error evaluating exam {exam_id}: {e}")
-        logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=f"Error evaluating exam: {str(e)}")
-    
+        exams = await exam.get_exams_by_config_id(session, exam_config_id)
+    except ValueError:
+        return []
 
-    
+    exam_config = await exam.get_exam_config_by_id(session, exam_config_id)
+    fraction = exam_config.fraction if exam_config else 0
+
+    result = []
+    for e in exams:
+        corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+
+        capture_b64 = None
+        if corrected and os.path.exists(e.capture_path):
+            with open(e.capture_path, "rb") as f:
+                capture_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+        result.append({
+            "corrected": corrected,
+            "nmec": e.nmec,
+            "validated": e.validated,
+            "grade": e.grade,
+            "exam_id": e.id,
+            "capture": capture_b64,
+            "questions": build_exam_questions(e, fraction),
+        })
+
+    return result
 
 
+@router.get("/{exam_id}/exam_info")
+async def get_exam_info(
+    exam_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get info for a single exam by ID.
+    Returns grade, questions breakdown, capture (base64) and correction status.
+    Returns 404 if the exam is not found. Only accessible by the regent of the subject.
+    """
+    e = await exam.get_exam_by_id(session, exam_id)
+    if not e:
+        raise HTTPException(status_code=404, detail="Exam not found.")
 
+    subject_id = await exam.get_subject_id_by_exam_config_id(e.exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+
+    capture_b64 = None
+    if corrected and os.path.exists(e.capture_path):
+        with open(e.capture_path, "rb") as f:
+            capture_b64 = base64.b64encode(f.read()).decode("utf-8")
+
+    questions = []
+    if corrected:
+        exam_config = await exam.get_exam_config_by_id(session, e.exam_config_id)
+        fraction = exam_config.fraction if exam_config else 0
+        questions = build_exam_questions(e, fraction)
+
+    return {
+        "corrected": corrected,
+        "nmec": e.nmec,
+        "validated": e.validated,
+        "grade": e.grade,
+        "exam_id": e.id,
+        "capture": capture_b64,
+        "questions": questions,
+    }

@@ -28,20 +28,40 @@ async def evaluate_exam(
     num_questions = len(answer_key)
     image = cv2.imread(image_path)
 
+    # Detect QR Code to use as an anchor
+    qr_detector = cv2.QRCodeDetector()
+    retval, bbox = qr_detector.detect(image)
+
+    if not retval or bbox is None:
+        raise Exception("Could not detect the QR code. Please check image clarity.")
+
+    # Extract QR Code bounding box geometry
+    qr_pts = bbox[0]
+    qr_x_min = int(min(qr_pts[:, 0]))
+    qr_x_max = int(max(qr_pts[:, 0]))
+    qr_y_min = int(min(qr_pts[:, 1]))
+    qr_y_max = int(max(qr_pts[:, 1]))
+    qr_w = qr_x_max - qr_x_min
+    qr_h = qr_y_max - qr_y_min
+    
+    # Calculate the horizontal center line of the QR code
+    qr_cy = qr_y_min + (qr_h / 2.0)
+
+    # 2. Preprocess the image for Grid Extraction
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edged = cv2.Canny(blurred, 75, 200)
 
     cnts = cv2.findContours(edged.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
+    
+    # Sort contours by area (largest first)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
 
-    # 1. Dynamically find the target box contour (Directly looking for the grid now)
+    # 3. Dynamically find the target box using relative spatial constraints
     targetCnt = None
-    image_area = image.shape[0] * image.shape[1]
 
     for c in cnts:
-        # Approximate the contour's shape
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.02 * peri, True)
         
@@ -51,16 +71,28 @@ async def evaluate_exam(
             x, y, w, h = cv2.boundingRect(c)
             aspect_ratio = w / float(h) if h > 0 else 0
             
-            # INCREASE the minimum aspect ratio to bypass the taller instruction box.
-            # The actual grid is much wider (approx 4.5 to 6.0)
-            if area > 0.01 * image_area and 4.0 < aspect_ratio < 7.0:
+            # Center of the current contour
+            c_cy = y + (h / 2.0)
+            y_diff = abs(qr_cy - c_cy)
+            
+            # SPATIAL LOGIC: 
+            # 1. To the right: Grid's X starts after the QR code (allowing slight margin of error)
+            # 2. Aligned: Grid's center Y is roughly aligned with the QR code's center Y
+            # 3. Size: Grid is strictly larger than the QR code (replaces brittle image_area % check)
+            # 4. Shape: Grid is horizontally wide
+            
+            is_to_the_right = x > (qr_x_max - (qr_w * 0.5)) 
+            is_aligned_horizontally = y_diff < (qr_h * 2.0)
+            is_larger_than_qr = area > (qr_w * qr_h * 2.0)
+            
+            if is_to_the_right and is_aligned_horizontally and is_larger_than_qr and aspect_ratio > 3.0:
                 targetCnt = approx
                 break
 
     if targetCnt is None:
-        raise Exception("Could not find the target box contour. Please check image clarity or thresholds.")
+        raise Exception("Found the QR Code, but could not locate the adjacent answer grid.")
 
-    # 2. Apply the perspective transform (Bird's-eye view)
+    # 4. Apply the perspective transform (Bird's-eye view) directly on the grid
     paper = four_point_transform(image, targetCnt.reshape(4, 2))
     warped = four_point_transform(gray, targetCnt.reshape(4, 2))
 
@@ -183,11 +215,20 @@ async def evaluate_exam(
 
     # Floor the total score at 0 to prevent negative exam results (optional)
     total_exam_score = max(0.0, total_exam_score)
-    print(f"\n✅ FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
+    print(f"\nFINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
-    # Set the calculated exam score (can be overwritten by manual validation later on)
+    # Persist results to the database
     exam.grade = total_exam_score
+    exam.results = json.dumps(answered_dict)
+    exam.capture_path = image_path
 
+    session.add(exam)
+    await session.commit()
+    await session.refresh(exam)
+
+    # I am assuming this save is for debug. 
+    # I would urge my colleagues to leave debugs in writting for future reference thought. Something like:
+    # Debug => saving image to check it out.
     new_name = image_path.rsplit(".", 1)
     new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"
     cv2.imwrite(new_name, grid_paper)

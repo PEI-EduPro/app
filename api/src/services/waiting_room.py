@@ -6,6 +6,7 @@ from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
 from src.models.subject import Subject
 from src.services.exam import get_exams_by_config_id
+from src.services.warning import calculate_and_persist_warnings
 from src.core.keycloak import keycloak_client
 from typing import Optional, List, Set, Dict
 import json
@@ -182,27 +183,7 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
     await session.commit()
     await session.refresh(waiting_room)
 
-    # 2. Parse associations
-    student_to_exams: Dict[str, Set[int]] = {}
-    exam_to_students: Dict[int, Set[str]] = {}
-    
-    for assoc in waiting_room.associations:
-        if ":" in assoc:
-            try:
-                exam_id_str, student_nmec = assoc.split(":", 1)
-                exam_id = int(exam_id_str)
-                
-                if student_nmec not in student_to_exams:
-                    student_to_exams[student_nmec] = set()
-                student_to_exams[student_nmec].add(exam_id)
-                
-                if exam_id not in exam_to_students:
-                    exam_to_students[exam_id] = set()
-                exam_to_students[exam_id].add(student_nmec)
-            except (ValueError, TypeError):
-                continue
-
-    # 3. Load nmec-name mapping for warnings
+    # 2. Load nmec-name mapping for warnings
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     nmec_to_name = {}
     if exam_config and exam_config.nmec_name_list:
@@ -211,58 +192,8 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
         except json.JSONDecodeError:
             pass
 
-    def get_nmec_name(nmec_str: str) -> str:
-        name = nmec_to_name.get(nmec_str, "Unknown")
-        return f"{nmec_str}:{name}"
-
-    # 4. Identify conflicts and create warnings
-    conflict_students: Set[str] = set()
-    conflict_exams: Set[int] = set()
-
-    # Check for multiple exams per student
-    for student_nmec, exams in student_to_exams.items():
-        if len(exams) > 1:
-            conflict_students.add(student_nmec)
-            for e_id in exams:
-                conflict_exams.add(e_id)
-            
-            warning = Warning(
-                exam_config_id=waiting_room.exam_config_id,
-                type=WarningType.multiple_exams_to_student,
-                student_list=get_nmec_name(student_nmec),
-                exam_list=list(exams)
-            )
-            session.add(warning)
-
-    # Check for multiple students per exam
-    for exam_id, students in exam_to_students.items():
-        if len(students) > 1:
-            conflict_exams.add(exam_id)
-            for s_nmec in students:
-                conflict_students.add(s_nmec)
-            
-            students_str = "; ".join([get_nmec_name(s) for s in students])
-            warning = Warning(
-                exam_config_id=waiting_room.exam_config_id,
-                type=WarningType.multiple_students_to_exam,
-                student_list=students_str,
-                exam_list=[exam_id]
-            )
-            session.add(warning)
-
-    # 5. Map clean associations (1:1 with no conflicts)
-    for exam_id, students in exam_to_students.items():
-        # Only process if this exam has exactly one student AND that student is not involved in any other conflict
-        if len(students) == 1:
-            student_nmec = list(students)[0]
-            if student_nmec not in conflict_students and exam_id not in conflict_exams:
-                exam = await session.get(Exam, exam_id)
-                if exam:
-                    try:
-                        exam.nmec = int(student_nmec)
-                        session.add(exam)
-                    except (ValueError, TypeError):
-                        pass
+    # 4. Detect conflicts, persist warnings, and write clean exam.nmec values
+    await calculate_and_persist_warnings(session, waiting_room.exam_config_id, waiting_room.associations, nmec_to_name)
 
     await session.commit()
     await session.refresh(waiting_room)
