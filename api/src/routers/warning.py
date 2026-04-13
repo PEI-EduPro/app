@@ -4,31 +4,37 @@ from typing import List
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
+from src.models.waiting_room import WaitingRoom
 from src.models.warning import ExamWarningResponse, ResolveWarningsRequest
 from src.core.deps import get_current_user_info, verify_permission
-from src.services.warning import get_warnings_by_exam_config_id, resolve_warnings_service
+from src.services.warning import get_warnings_by_waiting_room_id, resolve_warnings_service
 
 router = APIRouter()
 
-@router.get("/exam_config/{exam_config_id}", response_model=List[ExamWarningResponse])
-async def get_exam_config_warnings(
-    exam_config_id: int,
+
+@router.get("/{waiting_room_id}", response_model=List[ExamWarningResponse])
+async def get_waiting_room_warnings(
+    waiting_room_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Get all warnings associated with an exam configuration.
+    Get all warnings associated with a waiting room.
     Only the regent of the subject can perform this action.
     """
-    exam_config = await session.get(ExamConfig, exam_config_id)
+    waiting_room = await session.get(WaitingRoom, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
 
-    # Verify permission - only regent can view warnings for this subject 
+    # Verify permission - only regent can view warnings for this subject
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
-    
+
     try:
-        warnings = await get_warnings_by_exam_config_id(session, exam_config_id)
+        warnings = await get_warnings_by_waiting_room_id(session, waiting_room_id)
         return warnings
     except Exception as e:
         import logging
@@ -36,9 +42,9 @@ async def get_exam_config_warnings(
         raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@router.post("/exam_config/{exam_config_id}/resolve", response_model=List[ExamWarningResponse])
-async def resolve_exam_config_warnings(
-    exam_config_id: int,
+@router.post("/{waiting_room_id}/resolve", response_model=List[ExamWarningResponse])
+async def resolve_waiting_room_warnings(
+    waiting_room_id: int,
     body: ResolveWarningsRequest,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
@@ -57,14 +63,18 @@ async def resolve_exam_config_warnings(
         ]
     }
     """
-    exam_config = await session.get(ExamConfig, exam_config_id)
+    waiting_room = await session.get(WaitingRoom, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
     try:
-        return await resolve_warnings_service(session, exam_config_id, body.assignments)
+        return await resolve_warnings_service(session, waiting_room_id, body.assignments)
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Failed to resolve warnings: {e}")
