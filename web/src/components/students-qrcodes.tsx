@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useGetWaitingRoomById } from "@/hooks/use-waiting-rooms";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
@@ -11,6 +10,7 @@ import {
 import { CustomTable } from "@/components/custom-table";
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useGetWarnings } from "@/hooks/use-waiting-rooms";
 
 const MOCK_QRCODES = [
   {
@@ -96,7 +96,9 @@ function StudentPickerDialog({
 }
 
 export default function StudentsQRCodes({ wrId }: { wrId: number }) {
-  useGetWaitingRoomById(wrId);
+  const { data: warnings } = useGetWarnings(wrId);
+
+  console.log("Warnings:", warnings);
 
   const [blocks, setBlocks] = useState(
     MOCK_QRCODES.map((qr) => ({

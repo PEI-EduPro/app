@@ -4,6 +4,7 @@ import {
   type GetWaintingRoomByIdI,
   type GetWaitingRoomI,
   type GetWaitingRoomMetricsI,
+  type GetWarningsI,
   type PostExamStudentI,
 } from "@/lib/types";
 import { toast } from "sonner";
@@ -100,6 +101,33 @@ const useCloseWaitingRoom = (roomId: number) => {
   });
 };
 
+const useSendExamsPhotos = (roomId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["send_exams_photos"],
+    mutationFn: (files: string[]) =>
+      apiClient.post(`/waiting-rooms/${roomId}/evaluate`, { files }),
+    onSuccess: () => {
+      toast.success("As fotos dos exames enviadas com sucesso!", {
+        position: "top-right",
+      });
+      queryClient.invalidateQueries({ queryKey: ["waitingRoom", roomId] });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+      });
+    },
+  });
+};
+
+const useGetWarnings = (roomId: number) =>
+  useQuery<GetWarningsI[]>({
+    queryKey: ["warnings", roomId],
+    queryFn: () => apiClient.get(`/warnings/exam_config/${roomId}/`),
+  });
+
 export {
   useGetWaitingRooms,
   useGetWaitingRoomById,
@@ -107,4 +135,6 @@ export {
   usePostPairExamStudent,
   useStartWaitingRoom,
   useCloseWaitingRoom,
+  useSendExamsPhotos,
+  useGetWarnings,
 };

@@ -1,7 +1,16 @@
 import { AppSidebar } from "@/components/app-sidebar";
-import { SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
+import {
+  SidebarProvider,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { createFileRoute, Outlet, redirect, useRouterState } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Outlet,
+  redirect,
+  useRouterState,
+} from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_layout")({
   component: LayoutComponent,
@@ -15,16 +24,13 @@ export const Route = createFileRoute("/_layout")({
 });
 
 function SidebarHoverWrapper({ children }: { children: React.ReactNode }) {
-  const { open, setOpen } = useSidebar();
+  const { setOpen } = useSidebar();
   const isMobile = useIsMobile();
 
   if (isMobile) return <>{children}</>;
 
   return (
-    <div
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-    >
+    <div onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
       {children}
     </div>
   );
@@ -41,7 +47,10 @@ function LayoutComponent() {
       </SidebarHoverWrapper>
       <main className="flex flex-row w-full h-screen">
         {isMobile && <SidebarTrigger />}
-        <div key={pathname} className="w-full h-full animate-fade-in-up overflow-clip">
+        <div
+          key={pathname}
+          className="w-full h-full animate-fade-in-up overflow-clip"
+        >
           <Outlet />
         </div>
       </main>
