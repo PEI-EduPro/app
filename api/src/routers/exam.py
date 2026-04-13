@@ -9,7 +9,8 @@ from src.services import waiting_room as waiting_room_service
 from src.services.omr import evaluate_exam
 from src.core.db import get_session
 from src.models.user import User
-from src.models.exam_config import ExamConfig, ExamConfigResponse
+from src.models.exam_config import ExamConfig, ExamConfigResponse, ExamGenerateRequest
+from src.models.common import MessageResponse, StatusResponse
 from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
 from src.core.keycloak import keycloak_client
@@ -68,7 +69,7 @@ async def get_subject_exam_configs(
 
 @router.post("/generate")
 async def generate_exams(
-    exam_specs: dict,
+    exam_specs: ExamGenerateRequest,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
@@ -76,41 +77,28 @@ async def generate_exams(
     Generate exams based on specifications.
     Returns a ZIP file containing the generated exam PDFs.
     """
-    subject_id = exam_specs.get("subject_id")
-    if not subject_id:
-        raise HTTPException(status_code=400, detail="subject_id is required in exam_specs")
-        
-    verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
+    verify_permission(user_info, [f"/s{exam_specs.subject_id}/generate_exams", f"/s{exam_specs.subject_id}/regent"])
     try:
-        num_variations = exam_specs.get("num_variations", 1)
-        professors = exam_specs.get("professors", [])
-        student_tuples = exam_specs.get("student_tuples", [])  # List of (nmec, name, email)
-        vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
-
         zip_bytes = await exam.create_configs_and_exams(
-            session, 
-            exam_specs, 
-            num_variations,
-            student_tuples
+            session,
+            exam_specs.model_dump(),
+            exam_specs.num_variations,
+            exam_specs.student_tuples
         )
 
-        # Create waiting room if vigilant_keycloak_ids provided
-        if not vigilant_keycloak_ids:
-            vigilant_keycloak_ids = []
-        # Get the created exam_config_id from the service
-        exam_config_id = await exam.get_latest_exam_config_id(session, subject_id)
-            
+        exam_config_id = await exam.get_latest_exam_config_id(session, exam_specs.subject_id)
+
         await waiting_room_service.create_waiting_room_service(
             session=session,
             exam_config_id=exam_config_id,
             regent_keycloak_id=user_info.user_id,
-            vigilant_keycloak_ids=vigilant_keycloak_ids
+            vigilant_keycloak_ids=exam_specs.vigilant_keycloak_ids
         )
 
-        logger.info(f"Successfully generated {num_variations} exam variations.")
+        logger.info(f"Successfully generated {exam_specs.num_variations} exam variations.")
 
         return Response(
-            content=zip_bytes, 
+            content=zip_bytes,
             media_type="application/zip",
             headers={"Content-Disposition": "attachment; filename=exams.zip"}
         )
@@ -129,7 +117,7 @@ async def generate_exams(
             detail=f"An error occurred: {str(e)}"
         )
 
-@router.post("/exam/{exam_config_id}/student_list")
+@router.post("/exam/{exam_config_id}/student_list", response_model=MessageResponse)
 async def store_student_list(
     exam_config_id: int,
     file: UploadFile = File(...),
