@@ -34,7 +34,7 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
     detector = cv2.QRCodeDetector()
     id_str, _, _ = detector.detectAndDecode(img)
 
-    if not id.str:
+    if not id_str:
         raise HTTPException(status_code=400, detail="Failed find an ID from the QR code.")
 
     if not id_str.isdigit():
