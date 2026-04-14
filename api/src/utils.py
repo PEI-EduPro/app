@@ -38,7 +38,7 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
         raise HTTPException(status_code=400, detail="Failed find an ID from the QR code.")
 
     if not id_str.isdigit():
-        raise HTTPException(status_code=400, detail="Failed to decode a valid ID from the QR code. (I.E, the QR code that was read did not have only digits)")
+        raise HTTPException(status_code=400, detail=f"Failed to decode a valid ID from the QR code. (I.E, the QR code that was read did not have only digits). We read: {id_str}")
 
     return int(id_str), temp_file_path
 
