@@ -100,3 +100,12 @@ export interface GetWarningsI {
     },
   ];
 }
+
+export interface ResolveWarningsI {
+  exam_id: number;
+  student_nmec: string;
+}
+
+export interface PostResolveWarningsI {
+  assignments: ResolveWarningsI[];
+}

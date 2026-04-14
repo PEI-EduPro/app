@@ -6,6 +6,7 @@ import {
   type GetWaitingRoomMetricsI,
   type GetWarningsI,
   type PostExamStudentI,
+  type PostResolveWarningsI,
 } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -125,8 +126,29 @@ const useSendExamsPhotos = (roomId: number) => {
 const useGetWarnings = (roomId: number) =>
   useQuery<GetWarningsI[]>({
     queryKey: ["warnings", roomId],
-    queryFn: () => apiClient.get(`/warnings/exam_config/${roomId}/`),
+    queryFn: () => apiClient.get(`/warnings/${roomId}/`),
   });
+
+const useResolveWarnings = (roomId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["resolve_warnings", roomId],
+    mutationFn: (props: PostResolveWarningsI) =>
+      apiClient.post(`/warnings/${roomId}/resolve`, props),
+    onSuccess: () => {
+      toast.success("Aluno associado a exame com sucesso!", {
+        position: "top-right",
+      });
+      queryClient.invalidateQueries({ queryKey: ["warnings", roomId] });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+      });
+    },
+  });
+};
 
 export {
   useGetWaitingRooms,
@@ -137,4 +159,5 @@ export {
   useCloseWaitingRoom,
   useSendExamsPhotos,
   useGetWarnings,
+  useResolveWarnings,
 };
