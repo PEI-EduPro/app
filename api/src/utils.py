@@ -13,9 +13,19 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
     Returns:
         Tuple of (exam_id, temp_file_path)
     """
-    # Strip data URI prefix if present (e.g. "data:image/png;base64,")
+    # Extract MIME type and strip data URI prefix if present
+    mime_type = "image/jpeg"  # default
     if "," in base64_str:
-        base64_str = base64_str.split(",", 1)[1]
+        header, base64_str = base64_str.split(",", 1)
+        # Extract MIME type from header like "data:image/jpeg;base64"
+        if "data:" in header:
+            mime_part = header.split(";")[0]  # "data:image/jpeg"
+            if "/" in mime_part:
+                mime_type = mime_part.split("/")[1]  # "image/jpeg"
+
+    # Map MIME type to file extension
+    ext_map = {"jpeg": ".jpg", "jpg": ".jpg", "png": ".png"}
+    ext = ext_map.get(mime_type.split("/")[1] if "/" in mime_type else mime_type, ".jpg")
 
     try:
         image_bytes = base64.b64decode(base64_str)
@@ -23,7 +33,7 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
         raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {e}")
 
     os.makedirs(IMAGES_DIR, exist_ok=True)
-    temp_file_path = os.path.join(IMAGES_DIR, f"exam_{os.urandom(8).hex()}.png")
+    temp_file_path = os.path.join(IMAGES_DIR, f"exam_{os.urandom(8).hex()}{ext}")
     with open(temp_file_path, "wb") as buffer:
         buffer.write(image_bytes)
 
