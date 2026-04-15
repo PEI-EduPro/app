@@ -60,3 +60,10 @@ class ExamPublic(SQLModel):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
+
+
+class CorrectByHandRequest(SQLModel):
+    """Schema for manual exam correction request"""
+    testId: int
+    grade: float  # ignored — grade is recomputed server-side
+    grid: Dict[str, Dict[str, bool]]
