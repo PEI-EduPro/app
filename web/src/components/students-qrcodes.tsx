@@ -11,9 +11,7 @@ import { CustomTable } from "@/components/custom-table";
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetWarnings, useResolveWarnings } from "@/hooks/use-waiting-rooms";
-
-const MOCK_URL =
-  "https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=test3";
+import QRCode from "react-qr-code";
 
 const MOCK_ALL_STUDENTS = [
   { id: "112903", name: "Marta", nmec: "112903", email: "marta@example.com" },
@@ -143,12 +141,8 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
               <div key={qr.exam_id} className="flex flex-col gap-2">
                 <Card className="flex flex-row gap-6 p-4 items-start">
                   <div className="flex flex-col gap-2 items-center">
-                    <img
-                      src={MOCK_URL}
-                      alt={`QR Code ${qr.exam_id}`}
-                      className="w-28 h-28 shrink-0 rounded"
-                    />
-                    <span>Id Teste: {qr.exam_id}</span>
+                    <QRCode value={qr.exam_id.toString()} size={72} level="M" />
+                    <span>Versão: {qr.batch_number}</span>
                   </div>
 
                   <div className="flex-1 flex flex-col gap-2">
@@ -215,7 +209,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
         )}
         <Button
           className="self-end cursor-pointer"
-          disabled={!warnings?.some((qr) => getState(qr.exam_id).selected)}
+          disabled={!warnings?.every((qr) => getState(qr.exam_id).selected)}
           onClick={() =>
             resolveWarnings({
               assignments: (warnings ?? [])

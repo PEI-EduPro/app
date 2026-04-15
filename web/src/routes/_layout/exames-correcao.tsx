@@ -66,7 +66,7 @@ function RouteComponent() {
 
       <div className="flex-1 overflow-hidden px-47.5 py-1">
         {checked ? (
-          <ExamsCorrectionValidation />
+          <ExamsCorrectionValidation wrId={realId} />
         ) : (
           <StudentsQRCodes wrId={realId} />
         )}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
 import {
+  type ExamResponseI,
   type GetWaintingRoomByIdI,
   type GetWaitingRoomI,
   type GetWaitingRoomMetricsI,
@@ -150,6 +151,33 @@ const useResolveWarnings = (roomId: number) => {
   });
 };
 
+const useGetExamsResponses = (roomId: number) =>
+  useQuery<ExamResponseI[]>({
+    queryKey: ["exams_responses", roomId],
+    queryFn: () => apiClient.get(`/exams/${roomId}/all_exams_info`),
+  });
+
+const useValidateExam = (roomId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["validate_exam", roomId],
+    mutationFn: (examId: number) =>
+      apiClient.post(`/exams/${examId}/validate`, { exam_id: examId }),
+    onSuccess: () => {
+      toast.success("Exame validado com sucesso!", {
+        position: "top-right",
+      });
+      queryClient.invalidateQueries({ queryKey: ["exams_responses", roomId] });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+      });
+    },
+  });
+};
+
 export {
   useGetWaitingRooms,
   useGetWaitingRoomById,
@@ -160,4 +188,6 @@ export {
   useSendExamsPhotos,
   useGetWarnings,
   useResolveWarnings,
+  useGetExamsResponses,
+  useValidateExam,
 };

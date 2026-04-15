@@ -109,3 +109,20 @@ export interface ResolveWarningsI {
 export interface PostResolveWarningsI {
   assignments: ResolveWarningsI[];
 }
+
+export interface QuestionsI {
+  question_number: number;
+  correct_answer: "a" | "b" | "c" | "d";
+  discount: number;
+  value: number;
+  answers: { a: boolean; b: boolean; c: boolean; d: boolean };
+}
+
+export interface ExamResponseI {
+  exam_id: number;
+  questions: QuestionsI[] | null;
+  grade: number | null;
+  capture: string | null;
+  corrected: boolean;
+  validated: boolean;
+}
