@@ -15,6 +15,7 @@ from src.models.subject import (
     ProfessorAddRequest,
     ProfessorUpdateRequest
 )
+from src.models.common import MessageResponse
 from src.models.topic import TopicPublic
 import src.services.subject as subject_service
 import logging
@@ -205,7 +206,7 @@ async def get_subject_regent(
     except ValueError:
         raise HTTPException(status_code=404, detail="Subject not found or no regent assigned")
 
-@router.post("/{subject_id}/students", status_code=status.HTTP_201_CREATED)
+@router.post("/{subject_id}/students", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_students_to_subject(
     subject_id: int,
     request: StudentAddRequest,
@@ -224,7 +225,7 @@ async def add_students_to_subject(
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to add students")
 
-@router.post("/{subject_id}/professors", status_code=status.HTTP_201_CREATED)
+@router.post("/{subject_id}/professors", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_professor_to_subject(
     subject_id: int,
     request: ProfessorAddRequest,
@@ -249,7 +250,7 @@ async def add_professor_to_subject(
     except Exception:
         raise HTTPException(status_code=500, detail="Internal Server Error")
 
-@router.put("/{subject_id}/professors/{professor_id}")
+@router.put("/{subject_id}/professors/{professor_id}", response_model=MessageResponse)
 async def update_professor_permissions(
     subject_id: int,
     professor_id: str,

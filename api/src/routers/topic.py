@@ -6,6 +6,7 @@ from src.services import question
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
 from src.models.topic import Topic, TopicCreate, TopicPublic, TopicUpdate
+from src.models.common import MessageResponse
 from src.models.user import User
 import logging
 from sqlmodel import select
@@ -80,7 +81,7 @@ async def update_topic(
     verify_permission(user_info, [f"/s{existing_topic.subject_id}/edit_topics", f"/s{existing_topic.subject_id}/regent"])
     return await topic.update_topic(session, topic_data, id)
 
-@router.delete("/{id}")
+@router.delete("/{id}", response_model=MessageResponse)
 async def delete_topic(
     id: int,
     session: AsyncSession = Depends(get_session),

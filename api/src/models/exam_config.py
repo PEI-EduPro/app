@@ -1,5 +1,5 @@
 # src/models/exam_config.py
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
 
@@ -51,3 +51,16 @@ class ExamConfigResponse(SQLModel):
     topic_configs: List[TopicConfigDTO]
     nmec_name_list: Optional[str]
     num_variations: int
+
+
+class ExamGenerateRequest(SQLModel):
+    subject_id: int
+    fraction: int
+    exam_name: Optional[str] = None
+    topics: List[str]
+    number_questions: Dict[str, int]
+    relative_quotations: Dict[str, float]
+    num_variations: int = 1
+    professors: List[str] = []
+    student_tuples: List[Tuple[int, str, str]] = []
+    vigilant_keycloak_ids: List[str] = []
