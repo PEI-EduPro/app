@@ -155,7 +155,7 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
     setValidated(true);
     validateExam(examId);
     if (grid) {
-      correctExam({ examId, props: { exam_id: examId, grid } });
+      correctExam({ examId, props: { grid } });
     }
   }
 
