@@ -1,7 +1,7 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select, delete
 from typing import List, Dict, Set
-from src.models.warning import Warning, WarningType, WarningAssignment
+from src.models.warning import Warning, WarningType, WarningAssignment, StudentSummary
 from src.models.exam import Exam
 from src.models.exam_config import ExamConfig
 from src.models.waiting_room import WaitingRoom
@@ -82,6 +82,64 @@ async def calculate_and_persist_warnings(
                         session.add(exam)
                     except (ValueError, TypeError):
                         pass
+
+async def get_filtered_students(
+    session: AsyncSession,
+    waiting_room_id: int,
+) -> List[StudentSummary]:
+    """
+    Returns students that either:
+    - have no association in the waiting room, OR
+    - are involved in any warning (any type)
+    """
+    waiting_room = await session.get(WaitingRoom, waiting_room_id)
+    if not waiting_room:
+        raise ValueError("Waiting room not found")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    nmec_to_info: dict = {}
+    if exam_config and exam_config.nmec_name_list:
+        try:
+            nmec_to_info = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            pass
+
+    # Build set of nmecs that have at least one association
+    associated_nmecs: Set[str] = set()
+    for assoc in waiting_room.associations:
+        if ":" in assoc:
+            _, nmec = assoc.split(":", 1)
+            associated_nmecs.add(nmec)
+
+    # Build set of nmecs involved in any warning
+    stmt = select(Warning).where(Warning.exam_config_id == waiting_room.exam_config_id)
+    result = await session.exec(stmt)
+    warnings = result.all()
+
+    warned_nmecs: Set[str] = set()
+    for w in warnings:
+        if not w.student_list:
+            continue
+        for part in w.student_list.split(";"):
+            part = part.strip()
+            if ":" in part:
+                nmec = part.split(":", 1)[0]
+                warned_nmecs.add(nmec)
+
+    students = []
+    for nmec, info in nmec_to_info.items():
+        if isinstance(info, dict):
+            name = info.get("name", "")
+            email = info.get("email", "")
+        else:
+            name = str(info)
+            email = ""
+
+        if nmec not in associated_nmecs or nmec in warned_nmecs:
+            students.append(StudentSummary(nmec=nmec, name=name, email=email))
+
+    return students
+
 
 async def get_warnings_by_waiting_room_id(session: AsyncSession, waiting_room_id: int) -> List[dict]:
     waiting_room = await session.get(WaitingRoom, waiting_room_id)

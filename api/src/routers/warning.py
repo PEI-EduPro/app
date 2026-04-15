@@ -5,21 +5,22 @@ from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
 from src.models.waiting_room import WaitingRoom
-from src.models.warning import ExamWarningResponse, ResolveWarningsRequest
+from src.models.warning import ExamWarningResponse, ResolveWarningsRequest, WarningsWithStudentsResponse
 from src.core.deps import get_current_user_info, verify_permission
-from src.services.warning import get_warnings_by_waiting_room_id, resolve_warnings_service
+from src.services.warning import get_warnings_by_waiting_room_id, resolve_warnings_service, get_filtered_students
 
 router = APIRouter()
 
 
-@router.get("/{waiting_room_id}", response_model=List[ExamWarningResponse])
+@router.get("/{waiting_room_id}", response_model=WarningsWithStudentsResponse)
 async def get_waiting_room_warnings(
     waiting_room_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Get all warnings associated with a waiting room.
+    Get all warnings and filtered student list for a waiting room.
+    Students returned are those with no association OR are involved in any warning.
     Only the regent of the subject can perform this action.
     """
     waiting_room = await session.get(WaitingRoom, waiting_room_id)
@@ -35,7 +36,8 @@ async def get_waiting_room_warnings(
 
     try:
         warnings = await get_warnings_by_waiting_room_id(session, waiting_room_id)
-        return warnings
+        students = await get_filtered_students(session, waiting_room_id)
+        return WarningsWithStudentsResponse(warnings=warnings, students=students)
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"Failed to fetch warnings: {e}")
