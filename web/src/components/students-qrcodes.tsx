@@ -124,7 +124,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
         </p>
       ) : (
         <div className="flex-1 overflow-y-auto flex flex-col gap-6 pr-1">
-          {warnings?.map((qr) => {
+          {warnings?.map((qr, idx) => {
             const s = getState(qr.exam_id);
             const rows: StudentRow[] = [
               ...qr.students
@@ -139,7 +139,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
             ];
 
             return (
-              <div key={qr.exam_id} className="flex flex-col gap-2">
+              <div key={idx} className="flex flex-col gap-2">
                 <Card className="flex flex-row gap-6 p-4 items-start">
                   <div className="flex flex-col gap-2 items-center">
                     <QRCode value={qr.exam_id.toString()} size={72} level="M" />

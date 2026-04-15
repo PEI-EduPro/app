@@ -113,10 +113,11 @@ const useSendExamsPhotos = (roomId: number) => {
     mutationFn: (files: string[]) =>
       apiClient.post(`/waiting-rooms/${roomId}/evaluate`, { files }),
     onSuccess: () => {
-      toast.success("As fotos dos exames enviadas com sucesso!", {
+      toast.success("A foto do exame foi enviada com sucesso!", {
         position: "top-right",
       });
       queryClient.invalidateQueries({ queryKey: ["waitingRoom", roomId] });
+      queryClient.invalidateQueries({ queryKey: ["submited_exams", roomId] });
     },
     onError: () => {
       toast.error("Ocorreu um erro, tente novamente mais tarde.", {
@@ -203,6 +204,12 @@ const useCorrectExam = (roomId: number) => {
   });
 };
 
+const useGetSubmitedExams = (roomId: number) =>
+  useQuery<{ count: number }>({
+    queryKey: ["submited_exams", roomId],
+    queryFn: () => apiClient.get(`/waiting-rooms/${roomId}/submitted_count`),
+  });
+
 export {
   useGetWaitingRooms,
   useGetWaitingRoomById,
@@ -216,4 +223,5 @@ export {
   useGetExamsResponses,
   useValidateExam,
   useCorrectExam,
+  useGetSubmitedExams,
 };
