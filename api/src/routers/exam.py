@@ -4,7 +4,8 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status,
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.services import exam
-from src.services.exam import build_exam_questions
+from src.services.exam import build_exam_questions, get_exam_by_id, get_exam_config_by_id
+from src.services.subject import get_subject_by_id
 from src.services import waiting_room as waiting_room_service
 from src.services.omr import evaluate_exam
 from src.core.db import get_session
@@ -21,6 +22,7 @@ import os
 import traceback
 import cv2
 from src import utils
+import smtplib
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -321,3 +323,44 @@ async def get_exam_info(
         "capture": capture_b64,
         "questions": questions,
     }
+
+@router.post("{exam_id}/notify-student")
+async def notify_student_via_email(
+    exam_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Notifies the associated student via email about their grade.
+    The email consists of a message indicating the grade and 2 attachments (their answer grid, and the corresponding correction)
+    """
+    exam = get_exam_by_id(session, exam_id)
+    exam_config = get_exam_config_by_id(exam.exam_config)
+    subject = get_subject_by_id(exam_config.subject_id)
+    subject_name = subject.name
+    
+    student_email = exam.student_email  # NEEDS IMPLEMENTATION
+    name = exam.name
+    nmec = exam.nmec
+    grade = exam.grade
+    fraction = exam_config.fraction
+    relative_weights = exam.relative_weights
+
+    message = f"A sua nota da disciplina de {subject_name} foi de <b>{grade:.2f}</b> valores.\n"
+    message += f"\nAluno:\n- Nome: {name}\n- NMEC: {nmec}\n"
+    message += f"\nEm anexo encontram-se dois ficheiros, respetivamente a sua folha de resposta e a folha de resposta correspondente à versão do seu exame."
+    message += f"\nSe detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.\n"
+    message += f"\nA distribuição de cotação por cada pergunta foi:"
+    # Pergunta 1 - X valores
+    # Sendo q X é calculado tipo relative_weight/sum_of_unique_relative_weights*20
+    # for q_num in sorted(relative_weights.keys()):
+    #     weight = relative_weights[q_num]
+    #     valor_pergunta = (weight / total_weight_sum) * 20
+    #     message += f"- Pergunta {q_num}: {valor_pergunta:.2f} valores\n"
+
+    sorted_indices = sorted([int(k) for k in exam.relative_weights.keys()])
+    for idx in sorted_indices:
+        val = exam.relative_weights[str(idx)]
+        message += f"- Pergunta {idx + 1}: {val:.2f} valores\n"
+
+    message += f"\nSendo que a cada questão errada descontava {fraction}% da cotação dessa pergunta."
