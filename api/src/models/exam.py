@@ -64,6 +64,4 @@ class ExamPublic(SQLModel):
 
 class CorrectByHandRequest(SQLModel):
     """Schema for manual exam correction request"""
-    testId: int
-    grade: float  # ignored — grade is recomputed server-side
     grid: Dict[str, Dict[str, bool]]
