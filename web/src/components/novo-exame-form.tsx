@@ -794,6 +794,91 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
 
                   <hr />
 
+                  {/* Variants field */}
+                  <FormField
+                    control={control}
+                    name="number_versions"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Número de versões
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            className="max-w-18.25" 
+                            type="number"
+                            min="1"
+                            max={watch("number_exams")}
+                            //placeholder={ watch("number_exams") || 0}
+                            placeholder="1"
+                            value={field.value || ""}
+                            onChange={(e) => {
+                              let value = parseInt(e.target.value);
+                              if (isNaN(value)) {
+                                field.onChange("");
+                                return;
+                              }
+                              
+                              const maxExams = watch("number_exams") || 1;
+                              const clampedValue = Math.max(1, Math.min(maxExams, value));
+                              field.onChange(clampedValue);
+                            }}
+                            onBlur={(e) => {
+                              const value = parseInt(e.target.value);
+                              if (isNaN(value)) {
+                                field.onChange(0);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                !/[0-9]/.test(e.key) &&
+                                ![
+                                  "Backspace",
+                                  "Delete",
+                                  "Tab",
+                                  "Escape",
+                                  "Enter",
+                                  "ArrowLeft",
+                                  "ArrowRight",
+                                  "ArrowUp",
+                                  "ArrowDown",
+                                  "Home",
+                                  "End",
+                                ].includes(e.key) &&
+                                !e.ctrlKey &&
+                                !e.metaKey
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <h4 className="font-semibold text-amber-800 mb-2">
+                      Sobre o número de versões
+                    </h4>
+                    <p className="text-sm text-amber-700">
+                      O número de versões corresponde à quantidade de exames diferentes a ser gerados.<br/>
+                      <b>Exemplo:</b> Se {watch("number_exams") > 1 ? "forem gerados" : "for gerado"}{" "}
+                      <strong>{watch("number_exams") || 1}</strong> {watch("number_exams") > 1 ? "exames" : "exame"}{" "}
+                      e {watch("number_versions") > 1 ? "selecionadas" : "selecionada"}{" "}
+                      <strong>{watch("number_versions") || 1}</strong> {watch("number_versions") > 1 ? "versões" : "versão"}, serão gerados:
+                      
+                      <ul className="list-disc list-inside mt-2 text-sm text-amber-700">
+                        <li>
+                          Aproximadamente <strong>
+                            {Math.floor((watch("number_exams") || 1) / (watch("number_versions") || 1))}
+                          </strong> {Math.floor((watch("number_exams") || 1) / (watch("number_versions") || 1)) > 1 ? "cópias" : "cópia"} de cada versão.
+                        </li>
+                      </ul>
+                    </p>
+                  </div>
+
+                  <hr />
                   {/* Discount field */}
                   <FormField
                     control={control}
@@ -863,7 +948,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                         {watch("fraction") || 0}%
                       </span>{" "}
                       do valor da questão.<br></br>
-                      Exemplo: Se uma questão vale 2 valores e o desconto é de
+                      <b>Exemplo:</b> Se uma questão vale 2 valores e o desconto é de
                       20%, cada erro nessa questão resulta numa penalização de
                       0.4 valores.
                     </p>
@@ -888,7 +973,8 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
                       !watch("exam_date") ||
                       !watch("academic_year") ||
                       !watch("number_exams") ||
-                      !watch("semester")
+                      !watch("semester") ||
+                      !watch("number_versions")
                     }
                   >
                     Próximo
