@@ -257,14 +257,16 @@ async def test_all_exams_info_empty(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
+    from src.models.waiting_room import WaitingRoomState
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
     ec = await _setup_exam_config(session, sub.id)
+    wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.PREPARATION)
 
-    response = await client.get(f"/api/exams/{ec.id}/all_exams_info")
+    response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
     assert response.status_code == 200
     assert response.json() == []
 
@@ -274,19 +276,21 @@ async def test_all_exams_info_mixed(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
+    from src.models.waiting_room import WaitingRoomState
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
     ec = await _setup_exam_config(session, sub.id)
+    wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.PREPARATION)
     e_corrected = await _setup_exam(session, ec.id, corrected=True)
     e_uncorrected = await _setup_exam(session, ec.id, corrected=False)
 
     with open("/tmp/exam.jpg", "wb") as f:
         f.write(b"fakeimagebytes")
 
-    response = await client.get(f"/api/exams/{ec.id}/all_exams_info")
+    response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
     assert response.status_code == 200
     data = response.json()
 
