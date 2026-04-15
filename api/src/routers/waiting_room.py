@@ -306,7 +306,32 @@ async def close_waiting_room(
         )
 
 
-@router.post("/{waiting_room_id}/evaluate")
+@router.get("/{waiting_room_id}/submitted_count")
+async def get_submitted_exams_count(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get the number of exams that have been submitted for OMR correction (i.e. have a capture_path).
+    Only accessible by the regent of the subject.
+    """
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    exams = await exam_service.get_exams_by_config_id(session, waiting_room.exam_config_id)
+    count = sum(1 for e in exams if e.capture_path is not None)
+
+    return {"submitted_count": count}
+
+
 async def evaluate_exam_batch(
     waiting_room_id: int,
     body: EvaluateBatchRequest,

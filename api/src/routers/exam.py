@@ -300,23 +300,6 @@ async def get_all_exams_info(
     return result
 
 
-@router.get("/{exam_config_id}/submitted_count")
-async def get_submitted_exams_count(
-    exam_config_id: int,
-    user_info: User = Depends(get_current_user_info),
-    session: AsyncSession = Depends(get_session)
-):
-    """
-    Get the number of exams that have been submitted for OMR correction (i.e. have a capture_path).
-    Only accessible by the regent of the subject.
-    """
-    subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
-    verify_permission(user_info, [f"/s{subject_id}/regent"])
-
-    exams = await exam.get_exams_by_config_id(session, exam_config_id)
-    count = sum(1 for e in exams if e.capture_path is not None)
-
-    return {"submitted_count": count}
 
 
 @router.get("/{exam_id}/exam_info")
