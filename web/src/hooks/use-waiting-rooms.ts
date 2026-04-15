@@ -8,6 +8,7 @@ import {
   type GetWarningsI,
   type PostExamStudentI,
   type PostResolveWarningsI,
+  type StudentsI,
 } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -125,7 +126,7 @@ const useSendExamsPhotos = (roomId: number) => {
 };
 
 const useGetWarnings = (roomId: number) =>
-  useQuery<GetWarningsI[]>({
+  useQuery<{ students: StudentsI[]; warnings: GetWarningsI[] }>({
     queryKey: ["warnings", roomId],
     queryFn: () => apiClient.get(`/warnings/${roomId}/`),
   });

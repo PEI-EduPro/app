@@ -89,6 +89,12 @@ export interface PostExamStudentI {
   nmec: number;
 }
 
+export interface StudentsI {
+  nmec: number;
+  name: string;
+  email: string;
+}
+
 export interface GetWarningsI {
   exam_id: number;
   batch_number: number;

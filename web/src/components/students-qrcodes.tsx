@@ -12,39 +12,36 @@ import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useGetWarnings, useResolveWarnings } from "@/hooks/use-waiting-rooms";
 import QRCode from "react-qr-code";
+import type { StudentsI } from "@/lib/types";
 
-const MOCK_ALL_STUDENTS = [
-  { id: "112903", name: "Marta", nmec: "112903", email: "marta@example.com" },
-  { id: "112904", name: "Maria", nmec: "112904", email: "maria@example.com" },
-  { id: "112905", name: "Joana", nmec: "112905", email: "joana@example.com" },
-  { id: "112906", name: "Manel", nmec: "112906", email: "manel@example.com" },
-  { id: "112907", name: "Goni", nmec: "112907", email: "goni@example.com" },
-  { id: "112908", name: "Pedro", nmec: "112908", email: "pedro@example.com" },
-  { id: "112909", name: "Ana", nmec: "112909", email: "ana@example.com" },
-  { id: "112910", name: "Bruno", nmec: "112910", email: "bruno@example.com" },
-  { id: "112911", name: "Carla", nmec: "112911", email: "carla@example.com" },
-  { id: "112912", name: "David", nmec: "112912", email: "david@example.com" },
-];
-
-type Student = (typeof MOCK_ALL_STUDENTS)[number];
+type StudentRow = Record<string, string>;
 
 function StudentPickerDialog({
   open,
   assigned,
   onAdd,
   onClose,
+  students,
 }: {
   open: boolean;
   assigned: string[];
-  onAdd: (s: Student) => void;
+  onAdd: (s: StudentRow) => void;
   onClose: () => void;
+  students: StudentsI[];
 }) {
-  const [selection, setSelection] = useState<Record<string, string>[]>([]);
-  const available = MOCK_ALL_STUDENTS.filter((s) => !assigned.includes(s.id));
+  const [selection, setSelection] = useState<StudentRow[]>([]);
+  const available: StudentRow[] = students
+    .filter((s) => !assigned.includes(s.nmec.toString()))
+    .map((s) => ({
+      id: s.nmec.toString(),
+      nome: s.name,
+      nmec: s.nmec.toString(),
+      email: s.email,
+    }));
 
   const handleConfirm = () => {
     if (selection.length > 0) {
-      onAdd(selection[0] as Student);
+      onAdd(selection[0]);
       setSelection([]);
       onClose();
     }
@@ -78,11 +75,15 @@ function StudentPickerDialog({
 type BlockState = {
   selected: string | null;
   removed: string[];
-  extra: Student[];
+  extra: StudentRow[];
 };
 
 export default function StudentsQRCodes({ wrId }: { wrId: number }) {
-  const { data: warnings } = useGetWarnings(wrId);
+  const { data: warningsErrors } = useGetWarnings(wrId);
+  const { students, warnings } = warningsErrors || {
+    students: [],
+    warnings: [],
+  };
   const { mutate: resolveWarnings } = useResolveWarnings(wrId);
 
   const [blockState, setBlockState] = useState<Record<number, BlockState>>({});
@@ -125,12 +126,12 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
         ) : (
           warnings?.map((qr) => {
             const s = getState(qr.exam_id);
-            const students = [
+            const rows: StudentRow[] = [
               ...qr.students
                 .filter((st) => !s.removed.includes(st.nmec.toString()))
                 .map((st) => ({
                   id: st.nmec.toString(),
-                  name: st.name,
+                  nome: st.name,
                   nmec: st.nmec.toString(),
                   email: st.email,
                 })),
@@ -146,7 +147,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
                   </div>
 
                   <div className="flex-1 flex flex-col gap-2">
-                    {students.map((st) => (
+                    {rows.map((st) => (
                       <div key={st.id} className="flex items-center gap-1">
                         <Button
                           variant="outline"
@@ -162,7 +163,10 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
                               : "border-border",
                           )}
                         >
-                          <span className="font-medium text-sm">{st.name}</span>
+                        <span className="font-medium text-sm">{st.nome}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {st.email}
+                          </span>
                           <span className="text-xs text-muted-foreground">
                             {st.nmec}
                           </span>
@@ -196,6 +200,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
                     <StudentPickerDialog
                       open={pickerOpen === qr.exam_id}
                       assigned={allAssigned || []}
+                      students={students}
                       onAdd={(st) =>
                         updateState(qr.exam_id, { extra: [...s.extra, st] })
                       }
