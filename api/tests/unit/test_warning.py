@@ -32,7 +32,10 @@ async def setup_data(session):
     await session.commit()
     await session.refresh(subject)
 
-    nmec_dict = {"12345": "John Doe", "67890": "Jane Doe"}
+    nmec_dict = {
+        "12345": {"name": "John Doe", "email": "john@example.com"},
+        "67890": {"name": "Jane Doe", "email": "jane@example.com"}
+    }
     exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict))
     session.add(exam_config)
     await session.commit()
@@ -94,15 +97,16 @@ async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_dat
 
     assert response.status_code == 200
     data = response.json()
+    warnings = data["warnings"]
 
-    # We expect 4 items in the response list:
+    # We expect 4 items in the warnings list:
     # 1 for warning1
     # 2 for warning2
     # 1 for warning3
-    assert len(data) == 4
+    assert len(warnings) == 4
 
     # Assert WarningType.multiple_students_to_exam handling
-    w1_res = next(w for w in data if w["exam_id"] == exam_ids[0] and len(w["students"]) == 2)
+    w1_res = next(w for w in warnings if w["exam_id"] == exam_ids[0] and len(w["students"]) == 2)
     assert w1_res["batch_number"] == 1
     assert w1_res["students"][0]["nmec"] == 12345
     assert w1_res["students"][0]["name"] == "John Doe"
@@ -111,8 +115,8 @@ async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_dat
 
     # Assert WarningType.multiple_exams_to_student handling
     # Should result in two entries for the same student, different exams
-    w2_res1 = next(w for w in data if w["exam_id"] == exam_ids[0] and len(w["students"]) == 1)
-    w2_res2 = next(w for w in data if w["exam_id"] == exam_ids[1] and len(w["students"]) == 1)
+    w2_res1 = next(w for w in warnings if w["exam_id"] == exam_ids[0] and len(w["students"]) == 1)
+    w2_res2 = next(w for w in warnings if w["exam_id"] == exam_ids[1] and len(w["students"]) == 1)
 
     assert w2_res1["batch_number"] == 1
     assert w2_res1["students"][0]["nmec"] == 12345
@@ -121,9 +125,15 @@ async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_dat
     assert w2_res2["students"][0]["nmec"] == 12345
 
     # Assert WarningType.exam_correction_no_student handling
-    w3_res = next(w for w in data if w["exam_id"] == exam_ids[1] and len(w["students"]) == 0)
+    w3_res = next(w for w in warnings if w["exam_id"] == exam_ids[1] and len(w["students"]) == 0)
     assert w3_res["batch_number"] == 2
     assert w3_res["students"] == []
+
+    # Assert students list: both students are in warnings, so both should appear
+    students = data["students"]
+    student_nmecs = {s["nmec"] for s in students}
+    assert "12345" in student_nmecs
+    assert "67890" in student_nmecs
 
 @pytest.mark.asyncio
 async def test_get_warnings_unauthorized(client, session, setup_data):
