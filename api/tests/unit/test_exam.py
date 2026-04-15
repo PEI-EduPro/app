@@ -342,6 +342,37 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
 
 
 @pytest.mark.asyncio
+async def test_get_submitted_exams_count(client, mock_auth, session):
+    """Test counting exams submitted for OMR correction (have a capture_path)"""
+    app.dependency_overrides[get_current_user_info] = mock_auth
+
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
+
+    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
+    session.add(exam_config)
+    await session.commit()
+    await session.refresh(exam_config)
+
+    # 2 submitted (have capture_path), 1 not submitted
+    session.add(Exam(exam_config_id=exam_config.id, capture_path="/some/path/1.jpg"))
+    session.add(Exam(exam_config_id=exam_config.id, capture_path="/some/path/2.jpg"))
+    session.add(Exam(exam_config_id=exam_config.id, capture_path=None))
+    await session.commit()
+
+    response = await client.get(f"/api/exams/{exam_config.id}/submitted_count")
+
+    assert response.status_code == 200
+    assert response.json()["submitted_count"] == 2
+
+
+@pytest.mark.asyncio
 async def test_generate_exam_with_waiting_room(client, mock_auth, session):
     """Test generate exam endpoint with waiting room creation"""
     app.dependency_overrides[get_current_user_info] = mock_auth
