@@ -82,7 +82,9 @@ async def generate_exams(
         zip_bytes = await exam.create_configs_and_exams(
             session,
             exam_specs.model_dump(),
+            exam_specs.number_exams,
             exam_specs.num_variations,
+            #exam_specs.num_variations,
             exam_specs.student_tuples
         )
 
@@ -95,7 +97,8 @@ async def generate_exams(
             vigilant_keycloak_ids=exam_specs.vigilant_keycloak_ids
         )
 
-        logger.info(f"Successfully generated {exam_specs.num_variations} exam variations.")
+        # logger.info(f"Successfully generated {exam_specs.num_variations} exam variations.")
+        logger.info(f"Successfully generated {exam_specs.number_exams} exam variations.")
 
         return Response(
             content=zip_bytes,

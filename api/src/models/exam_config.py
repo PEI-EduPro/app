@@ -61,6 +61,7 @@ class ExamGenerateRequest(SQLModel):
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
     num_variations: int = 1
+    number_exams: int = 1
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []
     vigilant_keycloak_ids: List[str] = []

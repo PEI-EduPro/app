@@ -104,6 +104,7 @@ async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
+    number_exams: int = 1,
     num_variations: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
@@ -119,6 +120,14 @@ async def generate_exams_from_configs(
     if not topic_configs:
         raise ValueError("No topic configurations provided - cannot generate exams")
 
+    # Clamp num_variations to number_exams
+    num_variations = min(num_variations, number_exams)
+
+    # Version distribution
+    # e.g. number_exams=10, num_variations=3 → [4, 3, 3]
+    base, remainder = divmod(number_exams, num_variations)
+    copies_per_variant = [base + (1 if i < remainder else 0) for i in range(num_variations)]
+
     # Get subject name
     subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
     subject = subject_result.first()
@@ -127,7 +136,7 @@ async def generate_exams_from_configs(
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
     all_answers_maps = {}
-    
+
     with tempfile.TemporaryDirectory() as tmpdir:
         exams_dir = os.path.join(tmpdir, "exams")
         keys_dir = os.path.join(tmpdir, "answer_keys")
@@ -144,7 +153,6 @@ async def generate_exams_from_configs(
             from datetime import datetime
             date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
             formatted_date = date_obj.strftime("%d de %B de %Y")
-            # Portuguese month names
             pt_months = {
                 "January": "janeiro", "February": "fevereiro", "March": "março",
                 "April": "abril", "May": "maio", "June": "junho",
@@ -156,12 +164,13 @@ async def generate_exams_from_configs(
             with open(os.path.join(tmpdir, "date.tex"), "w") as f:
                 f.write(formatted_date)
 
-        for var_num in range(1, num_variations + 1):
+        # Generate num_variations distinct question sets
+        variants = []  # list of (questions_latex, answers_map, answer_key, relative_weights, num_questions)
+        for var_idx in range(num_variations):
             for f in os.listdir(TEMPLATES_DIR):
                 if f.endswith(".tex"):
                     shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
 
-            # Gather questions for this variation
             all_questions = []
             for t_conf in topic_configs:
                 result = await session.exec(
@@ -171,8 +180,7 @@ async def generate_exams_from_configs(
                     .limit(t_conf.num_questions)
                 )
                 all_questions.extend(result.all())
-            
-            # Load options for all questions
+
             q_ids = [q.id for q in all_questions]
             opts_by_q = {}
             if q_ids:
@@ -183,83 +191,66 @@ async def generate_exams_from_configs(
                 logger.info(f"Loaded {len(all_opts)} options for {len(q_ids)} questions")
                 for opt in all_opts:
                     opts_by_q.setdefault(opt.question_id, []).append(opt)
-            
+
             random.shuffle(all_questions)
 
-            # Generate T-variants.tex content and get answer positions
             questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
-            all_answers_maps[var_num] = answers_map
-            answer_key = dict()
-            for k,v in answers_map.items():
-                val = ord(v)-65
-                k = k-1
-                answer_key[k] = val
-            # Transform:
-            # {
-            #     1: 'C',
-            #     2: 'A',
-            #     3: 'D'
-            # }
-            # into:
-            # {
-            #     0: 2,
-            #     1: 0,
-            #     2: 3
-            # }
-            relative_weights = {}
-            for i, q in enumerate(all_questions):
-                weight = topic_weights.get(q.topic_id, 1.0)
-                relative_weights[i] = weight
-            # Associate questions with relative weights
-            # {
-            #     0: 1,
-            #     1: 1,
-            #     2: 2
-            # }
-            
+            all_answers_maps[var_idx + 1] = answers_map
+
+            answer_key = {k - 1: ord(v) - 65 for k, v in answers_map.items()}
+            relative_weights = {i: topic_weights.get(q.topic_id, 1.0) for i, q in enumerate(all_questions)}
             num_questions = len(all_questions)
 
-            # Write variant questions file
-            with open(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
-                f.write(questions_latex)
+            variants.append((questions_latex, answers_map, answer_key, relative_weights, num_questions))
 
-            # Update Rules.tex with actual number of questions and fraction
-            _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
+        # Generate PDFs
+        copy_number = 1  # Versioning
+        for var_idx, (questions_latex, answers_map, answer_key, relative_weights, num_questions) in enumerate(variants):
+            for _ in range(copies_per_variant[var_idx]):
+                for f in os.listdir(TEMPLATES_DIR):
+                    if f.endswith(".tex"):
+                        shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
 
-            # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num, answer_key=answer_key, relative_weights=relative_weights)
-            session.add(new_exam)
-            await session.commit()
-            await session.refresh(new_exam)
-            exam_id_str = str(new_exam.id)
+                with open(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
+                    f.write(questions_latex)
 
-            # Generate exam PDF (blank answer grid)
-            _write_blank_answers(tmpdir, num_questions)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
-            if exam_pdf:
-                with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
-                    f.write(exam_pdf)
+                _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
-            # Generate answer key PDF (marked grid)
-            ''' Temporarily disable this because of the new all_solutions.pdf
-            _write_answer_key(tmpdir, answers_map, num_questions)
-            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
-            if key_pdf:
-                with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
-                    f.write(key_pdf)
-            '''
+                # Save exam to DB with batch_number = sequential copy number
+                new_exam = Exam(
+                    exam_config_id=exam_config.id,
+                    exam_xml=questions_latex,
+                    batch_number=copy_number,
+                    answer_key=answer_key,
+                    relative_weights=relative_weights
+                )
+                session.add(new_exam)
+                await session.commit()
+                await session.refresh(new_exam)
 
-        # Generate single solutions PDF with all variations
-        _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title)
+                _write_blank_answers(tmpdir, num_questions)
+                exam_pdf = _compile_latex(tmpdir, "main_variants.tex", copy_number, subject_name, exam_title, semester, academic_year, str(new_exam.id))
+                if exam_pdf:
+                    with open(os.path.join(exams_dir, f"exam_var_{copy_number}.pdf"), "wb") as f:
+                        f.write(exam_pdf)
+
+                copy_number += 1
+
+        # Generate single solutions PDF (one entry per distinct variant)
+        variant_ranges = {}
+        copy_cursor = 1
+        for var_idx, copies in enumerate(copies_per_variant):
+            variant_ranges[var_idx + 1] = (copy_cursor, copy_cursor + copies - 1)
+            copy_cursor += copies
+        _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title, variant_ranges)
         solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
         if solutions_pdf:
             with open(os.path.join(keys_dir, "all_solutions.pdf"), "wb") as f:
                 f.write(solutions_pdf)
 
         if not os.listdir(exams_dir):
-             raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
+            raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
 
-        # Create ZIP
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zf:
             for f in os.listdir(exams_dir):
                 zf.write(os.path.join(exams_dir, f), f"exams/{f}")
@@ -399,7 +390,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
         f.write(content)
 
 
-def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], num_questions: int, exam_title: str = "Exame Época Normal"):
+def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], num_questions: int, exam_title: str = "Exame Época Normal", variant_ranges: Dict[int, tuple] = None):
     """Write solutions.tex with all variations in horizontal lines."""
     content = f"""\\documentclass[a4paper,10pt]{{exam}}
 \\input{{H}}
@@ -432,6 +423,12 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
         for letter in ['A', 'B', 'C', 'D']:
             cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
             rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
+
+        if variant_ranges and var_num in variant_ranges:
+            start, end = variant_ranges[var_num]
+            label = f"Versão {start}-{end}" if start != end else f"Versão {start}"
+        else:
+            label = f"Versão {var_num}"
         
         content += f"""\\noindent\\rule{{\\textwidth}}{{0.4pt}}
 
@@ -439,7 +436,7 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
 
 \\begin{{center}}
 \\begin{{tabular}}{{c c}}
-\\textbf{{Version {var_num}}} &
+\\textbf{{{label}}} &
 \\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{minipage}}{{0.75\\textwidth}}
 \\scriptsize
@@ -530,6 +527,7 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
+    number_exams: int = 1,
     num_variations: int = 1,
     student_tuples: List[tuple] = None
 ) -> bytes:
@@ -539,7 +537,8 @@ async def create_configs_and_exams(
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year)
+    
+    return await generate_exams_from_configs(session, exam_config, topic_configs, number_exams, num_variations, exam_title, exam_date, semester, academic_year)
 
 
 async def get_exam_configs_by_subject(

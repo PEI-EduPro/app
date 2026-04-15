@@ -24,6 +24,7 @@ export interface NewExamConfigI {
   subject_id: number;
   fraction: number;
   num_variations: number;
+  number_exams: number;
   topics: string[];
   number_questions: Record<string, number>;
   relative_quotations: Record<string, number>;

@@ -47,6 +47,7 @@ export type NovoExameFormT = {
   number_questions: Record<string, number>;
   relative_quotations: Record<string, number>;
   number_exams: number;
+  number_versions: number;
   vigilantes: string[];
   exam_date: string;
   semester: string;
@@ -101,11 +102,16 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
   const validateAndNormalizeData = (
     formData: NovoExameFormT,
   ): NovoExameFormT => {
+    const maxExams =
+      formData.number_exams && formData.number_exams >= 1
+        ? formData.number_exams
+        : 1;
     const validated: NovoExameFormT = {
       ...formData,
-      number_exams:
-        formData.number_exams && formData.number_exams >= 1
-          ? formData.number_exams
+      number_exams: maxExams,
+      number_versions:
+        formData.number_versions && formData.number_versions >= 1
+          ? Math.min(formData.number_versions, maxExams)
           : 1,
       fraction:
         formData.fraction !== undefined &&
@@ -151,6 +157,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       setValidatedData(validated);
 
       setValue("number_exams", validated.number_exams);
+      setValue("number_versions", validated.number_versions);
       setValue("fraction", validated.fraction);
 
       Object.keys(validated.number_questions).forEach((key) => {
@@ -179,7 +186,8 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       subject_id: ucID,
       topics: finalData.topics.map((topic) => topic.nome),
       fraction: finalData.fraction,
-      num_variations: finalData.number_exams,
+      num_variations: finalData.number_versions,
+      number_exams: finalData.number_exams,
       number_questions: {},
       relative_quotations: {},
       exam_title: finalData.exam_title,
