@@ -167,9 +167,6 @@ const useValidateExam = (roomId: number) => {
     mutationFn: (examId: number) =>
       apiClient.post(`/exams/${examId}/validate`, { exam_id: examId }),
     onSuccess: () => {
-      toast.success("Exame validado com sucesso!", {
-        position: "top-right",
-      });
       queryClient.invalidateQueries({ queryKey: ["exams_responses", roomId] });
     },
     onError: () => {
