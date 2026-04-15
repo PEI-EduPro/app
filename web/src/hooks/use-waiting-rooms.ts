@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
 import {
+  type ExamCorrectionI,
   type ExamResponseI,
   type GetWaintingRoomByIdI,
   type GetWaitingRoomI,
@@ -179,6 +180,32 @@ const useValidateExam = (roomId: number) => {
   });
 };
 
+const useCorrectExam = (roomId: number) => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationKey: ["correct_exam", roomId],
+    mutationFn: ({
+      examId,
+      props,
+    }: {
+      examId: number;
+      props: ExamCorrectionI;
+    }) => apiClient.post(`/exams/${examId}/correct_by_hand_job`, props),
+    onSuccess: () => {
+      toast.success("Exame corrigido com sucesso!", {
+        position: "top-right",
+      });
+      queryClient.invalidateQueries({ queryKey: ["exams_responses", roomId] });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+      });
+    },
+  });
+};
+
 export {
   useGetWaitingRooms,
   useGetWaitingRoomById,
@@ -191,4 +218,5 @@ export {
   useResolveWarnings,
   useGetExamsResponses,
   useValidateExam,
+  useCorrectExam,
 };

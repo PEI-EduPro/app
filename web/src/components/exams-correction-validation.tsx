@@ -2,12 +2,11 @@ import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
+  useCorrectExam,
   useGetExamsResponses,
   useValidateExam,
 } from "@/hooks/use-waiting-rooms";
-import type { QuestionsI } from "@/lib/types";
-
-type OptionKey = "a" | "b" | "c" | "d";
+import type { OptionKey, QuestionsI } from "@/lib/types";
 
 const OPTIONS: OptionKey[] = ["a", "b", "c", "d"];
 
@@ -140,6 +139,7 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
 
   const { data: examsResponses } = useGetExamsResponses(wrId);
   const { mutate: validateExam } = useValidateExam(wrId);
+  const { mutate: correctExam } = useCorrectExam(wrId);
 
   const selectedExam = examsResponses?.find((e) => e.exam_id === selected);
 
@@ -154,7 +154,9 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
   function handleValidar(examId: number) {
     setValidated(true);
     validateExam(examId);
-    console.log({ testId: selected, grid });
+    if (grid) {
+      correctExam({ examId, props: { exam_id: examId, grid } });
+    }
   }
 
   function handleCorrigirOutraVez() {
@@ -226,7 +228,7 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
                     Nota:
                   </span>
                   <span className="text-3xl font-bold text-primary">
-                    {grade ? Math.round(grade * 100) / 100 : "—"}
+                    {grade ? Math.round(grade * 100) / 100 : 0}
                   </span>
                   <span className="text-sm text-muted-foreground">/ 20</span>
                 </div>

@@ -118,13 +118,13 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
         </p>
       )}
 
-      <div className="flex-1 overflow-y-auto flex flex-col gap-6 pr-1">
-        {warnings?.length === 0 ? (
-          <p className="text-center text-muted-foreground py-12">
-            Não existem problemas de associação.
-          </p>
-        ) : (
-          warnings?.map((qr) => {
+      {warnings?.length === 0 ? (
+        <p className="text-center text-muted-foreground py-12">
+          Não existem problemas de associação.
+        </p>
+      ) : (
+        <div className="flex-1 overflow-y-auto flex flex-col gap-6 pr-1">
+          {warnings?.map((qr) => {
             const s = getState(qr.exam_id);
             const rows: StudentRow[] = [
               ...qr.students
@@ -163,7 +163,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
                               : "border-border",
                           )}
                         >
-                        <span className="font-medium text-sm">{st.nome}</span>
+                          <span className="font-medium text-sm">{st.nome}</span>
                           <span className="text-xs text-muted-foreground">
                             {st.email}
                           </span>
@@ -210,25 +210,25 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
                 </Card>
               </div>
             );
-          })
-        )}
-        <Button
-          className="self-end cursor-pointer"
-          disabled={!warnings?.every((qr) => getState(qr.exam_id).selected)}
-          onClick={() =>
-            resolveWarnings({
-              assignments: (warnings ?? [])
-                .filter((qr) => getState(qr.exam_id).selected)
-                .map((qr) => ({
-                  exam_id: qr.exam_id,
-                  student_nmec: getState(qr.exam_id).selected as string,
-                })),
-            })
-          }
-        >
-          Associar
-        </Button>
-      </div>
+          })}
+          <Button
+            className="self-end cursor-pointer"
+            disabled={!warnings?.every((qr) => getState(qr.exam_id).selected)}
+            onClick={() =>
+              resolveWarnings({
+                assignments: (warnings ?? [])
+                  .filter((qr) => getState(qr.exam_id).selected)
+                  .map((qr) => ({
+                    exam_id: qr.exam_id,
+                    student_nmec: getState(qr.exam_id).selected as string,
+                  })),
+              })
+            }
+          >
+            Associar
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
