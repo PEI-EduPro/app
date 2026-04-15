@@ -331,7 +331,7 @@ async def get_submitted_exams_count(
 
     return {"submitted_count": count}
 
-
+@router.post("/{waiting_room_id}/evaluate")
 async def evaluate_exam_batch(
     waiting_room_id: int,
     body: EvaluateBatchRequest,

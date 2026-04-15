@@ -349,6 +349,7 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     from src.models.subject import Subject
     from src.models.exam_config import ExamConfig
     from src.models.exam import Exam
+    from src.models.waiting_room import WaitingRoom
 
     subject = Subject(name="Test Subject")
     session.add(subject)
@@ -360,13 +361,18 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     await session.commit()
     await session.refresh(exam_config)
 
+    waiting_room = WaitingRoom(exam_config_id=exam_config.id)
+    session.add(waiting_room)
+    await session.commit()
+    await session.refresh(waiting_room)
+
     # 2 submitted (have capture_path), 1 not submitted
     session.add(Exam(exam_config_id=exam_config.id, capture_path="/some/path/1.jpg"))
     session.add(Exam(exam_config_id=exam_config.id, capture_path="/some/path/2.jpg"))
     session.add(Exam(exam_config_id=exam_config.id, capture_path=None))
     await session.commit()
 
-    response = await client.get(f"/api/exams/{exam_config.id}/submitted_count")
+    response = await client.get(f"/api/waiting-rooms/{waiting_room.id}/submitted_count")
 
     assert response.status_code == 200
     assert response.json()["submitted_count"] == 2
