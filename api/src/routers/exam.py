@@ -6,6 +6,7 @@ from sqlmodel import select
 from src.services import exam
 from src.services.exam import build_exam_questions
 from src.services import waiting_room as waiting_room_service
+from src.services.waiting_room import get_waiting_room
 from src.services.omr import evaluate_exam
 from src.core.db import get_session
 from src.models.user import User
@@ -249,17 +250,22 @@ async def validate_exam(
     return {"status": "success"}
 
 
-@router.get("/{exam_config_id}/all_exams_info")
+@router.get("/{waiting_room_id}/all_exams_info")
 async def get_all_exams_info(
-    exam_config_id: int,
+    waiting_room_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Get info for all exams in an exam configuration.
+    Get info for all exams in an exam configuration, identified by waiting room ID.
     Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
     Only accessible by the regent of the subject.
     """
+    waiting_room = await get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+    exam_config_id = waiting_room.exam_config_id
+
     subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
