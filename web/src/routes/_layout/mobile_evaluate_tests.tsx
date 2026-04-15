@@ -86,9 +86,15 @@ function CameraCapture({
         <>
           <div className="relative w-full rounded-2xl overflow-hidden shadow-lg ring-2 ring-[#41B5C0]/30">
             <Webcam
+              screenshotQuality={1}
+              forceScreenshotSourceSize={true}
               ref={webcamRef}
               screenshotFormat="image/jpeg"
-              videoConstraints={{ facingMode: "environment" }}
+              videoConstraints={{
+                width: 1280,
+                height: 720,
+                facingMode: "environment",
+              }}
               onUserMediaError={() =>
                 setCameraError(
                   "Não foi possível acessar a câmera. Verifique as permissões.",

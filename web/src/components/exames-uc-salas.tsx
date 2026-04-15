@@ -54,6 +54,7 @@ export default function ExamesUcSalas({
       <div className="flex-1 overflow-y-auto flex flex-col gap-3 pt-2 pb-2">
         {filtered.map((wr) => (
           <Link
+            key={wr.waiting_room_id}
             to="/exames-correcao"
             search={{
               ucId: encodeId(realId),
@@ -62,10 +63,7 @@ export default function ExamesUcSalas({
               wrName: wr.exam_name,
             }}
           >
-            <Card
-              key={wr.waiting_room_id}
-              className="group flex flex-row items-center gap-4 px-5 py-4 cursor-pointer border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
-            >
+            <Card className="group flex flex-row items-center gap-4 px-5 py-4 cursor-pointer border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
               <div className="shrink-0 w-1 self-stretch rounded-full bg-linear-to-b from-[#41B5C0] to-[#3263A8]" />
               <div className="flex-1 min-w-0">
                 <span className="text-base font-semibold text-[#2E2B50] truncate block">

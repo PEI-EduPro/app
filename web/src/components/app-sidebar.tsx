@@ -66,11 +66,11 @@ export function AppSidebar() {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <div className="h-auto">
-                <div className="flex aspect-square size-12 items-center justify-center rounded-xl bg-[#41B5C0] text-white shadow-md shadow-[#41B5C0]/40">
-                  <SquareUserRound className="size-7" />
+              <div className="h-auto group-data-[collapsible=icon]:justify-center">
+                <div className="flex aspect-square size-12 shrink-0 items-center justify-center rounded-xl bg-[#41B5C0] text-white shadow-md shadow-[#41B5C0]/40 group-data-[collapsible=icon]:size-8">
+                  <SquareUserRound className="size-7 group-data-[collapsible=icon]:size-5" />
                 </div>
-                <div className="flex flex-col gap-0.5 leading-none">
+                <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
                   <span className="text-base font-semibold text-sidebar-foreground">
                     {keycloak.tokenParsed?.name || "Utilizador"}
                   </span>
@@ -94,9 +94,9 @@ export function AppSidebar() {
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton asChild>
                         <div className="cursor-pointer rounded-lg hover:bg-[#41B5C0]/20 text-sidebar-foreground">
-                          <el.icon className="text-[#41B5C0]" size={20} />
+                          <el.icon className="text-[#41B5C0] size-5! shrink-0" />
                           <span className="text-base">{el.title}</span>
-                          <ChevronDown className="ml-auto transition-transform duration-300 group-data-[state=open]/collapsible:rotate-180 text-[#41B5C0]" />
+                          <ChevronDown className="ml-auto size-5! shrink-0 transition-transform duration-300 group-data-[state=open]/collapsible:rotate-180 text-[#41B5C0]" />
                         </div>
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
