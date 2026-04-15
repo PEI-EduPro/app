@@ -136,6 +136,5 @@ export interface ExamResponseI {
 export type OptionKey = "a" | "b" | "c" | "d";
 
 export interface ExamCorrectionI {
-  exam_id: number;
   grid: Record<number, Record<OptionKey, boolean>>;
 }
