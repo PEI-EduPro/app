@@ -58,3 +58,7 @@ class ProfessorWaitingRoomItem(BaseModel):
     state: str
     role: str
     exam_name: Optional[str]
+
+class EvaluateBatchRequest(BaseModel):
+    """Request for evaluation. List of files"""
+    files: List[str]

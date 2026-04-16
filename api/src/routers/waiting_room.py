@@ -4,7 +4,7 @@ from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, EvaluateBatchRequest
 import src.services.waiting_room as waiting_room_service
 import src.services.exam as exam_service
 from src.core.deps import get_current_user_info, verify_permission
@@ -16,9 +16,6 @@ import traceback
 from typing import List, TypedDict
 from pydantic import BaseModel
 
-
-class EvaluateBatchRequest(BaseModel):
-    files: List[str]
 
 
 logger = logging.getLogger(__name__)
