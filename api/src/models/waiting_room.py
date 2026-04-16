@@ -62,3 +62,7 @@ class ProfessorWaitingRoomItem(BaseModel):
 class EvaluateBatchRequest(BaseModel):
     """Request for evaluation. List of files"""
     files: List[str]
+
+class QRCodeToNMEC(BaseModel):
+    qr: str
+    nmec: int

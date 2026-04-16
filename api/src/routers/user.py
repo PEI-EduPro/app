@@ -1,9 +1,10 @@
 import logging
+from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.core.deps import get_current_user_info, require_manager
-from src.models.user import UserCreate, User, UserPublic
+from src.models.user import UserCreate, User, UserPublic, KeycloakUserPublic
 from src.core.keycloak import keycloak_client
 
 logger = logging.getLogger(__name__)
@@ -64,45 +65,45 @@ async def create_user_endpoint(
             detail="An error occurred while creating the user in Keycloak."
         )
 
-@router.get("/professors")
+@router.get("/professors", response_model=List[KeycloakUserPublic])
 async def get_professors(user_info: User = Depends(get_current_user_info)):
     """Get all users with professor role"""
     try:
         users = await keycloak_client.get_users_by_role("professor")
         return [
-            {
-                "id": user["id"],
-                "username": user.get("username"),
-                "email": user.get("email"),
-                "firstName": user.get("firstName"),
-                "lastName": user.get("lastName")
-            }
+            KeycloakUserPublic(
+                id=user["id"],
+                username=user.get("username"),
+                email=user.get("email"),
+                firstName=user.get("firstName"),
+                lastName=user.get("lastName")
+            )
             for user in users
         ]
     except Exception as e:
         logger.error(f"Error fetching professors: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch professors")
 
-@router.get("/students")
+@router.get("/students", response_model=List[KeycloakUserPublic])
 async def get_students(user_info: User = Depends(get_current_user_info)):
     """Get all users with student role"""
     try:
         users = await keycloak_client.get_users_by_role("student")
         return [
-            {
-                "id": user["id"],
-                "username": user.get("username"),
-                "email": user.get("email"),
-                "firstName": user.get("firstName"),
-                "lastName": user.get("lastName")
-            }
+            KeycloakUserPublic(
+                id=user["id"],
+                username=user.get("username"),
+                email=user.get("email"),
+                firstName=user.get("firstName"),
+                lastName=user.get("lastName")
+            )
             for user in users
         ]
     except Exception as e:
         logger.error(f"Error fetching students: {e}")
         raise HTTPException(status_code=500, detail="Failed to fetch students")
 
-@router.get("/debug/token-info")
+@router.get("/debug/token-info", response_model=User)
 async def debug_token_info(
     user_info: User = Depends(get_current_user_info),
     _ = Depends(require_manager) # Only accessible by managers for debugging

@@ -1,3 +1,4 @@
+from src.models.common import *
 from src.models.exam_config import *
 from src.models.exam import *
 from src.models.question_option import *
@@ -19,5 +20,8 @@ __all__ = [
     "Workbook",
     "Warning",
     "WarningType",
-    "WaitingRoom"
+    "WaitingRoom",
+    "MessageResponse",
+    "StatusResponse",
+    "XMLImportResponse"
 ]

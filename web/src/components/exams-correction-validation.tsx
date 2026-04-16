@@ -166,7 +166,11 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
   return (
     <div className="flex h-full min-h-0">
       <ul className="w-48 border-r flex flex-col gap-1 p-2 overflow-y-auto custom-scrollbar shrink-0">
-        {examsResponses?.map((exam) => (
+        {[...(examsResponses ?? [])].sort((a, b) => {
+          const rank = (e: typeof a) =>
+            e.corrected && !e.validated ? 0 : e.corrected && e.validated ? 1 : 2;
+          return rank(a) - rank(b);
+        }).map((exam) => (
           <li key={exam.exam_id}>
             <Button
               disabled={!exam.corrected}

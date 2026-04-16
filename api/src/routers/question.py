@@ -7,6 +7,7 @@ from src.services import topic as topic_service
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
 from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
+from src.models.common import XMLImportResponse
 from src.models.user import User
 from sqlmodel.ext.asyncio.session import AsyncSession
 import logging
@@ -61,7 +62,7 @@ async def create_question(
         )
     
 
-@router.post("/{subject_id}/XML", response_model=dict)
+@router.post("/{subject_id}/XML", response_model=XMLImportResponse)
 async def create_question_from_XML(
     subject_id: int,
     xml: str = Body(required=True,media_type="application/xml"),
