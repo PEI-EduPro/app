@@ -7,36 +7,6 @@ from bs4 import BeautifulSoup
 IMAGES_DIR = os.getenv("IMAGES_DIR", "/tmp")
 
 
-def _detect_qr(img) -> str:
-    """Try multiple strategies to decode a QR code from an image."""
-    detector = cv2.QRCodeDetector()
-
-    # 1. Try as-is
-    id_str, _, _ = detector.detectAndDecode(img)
-    if id_str:
-        return id_str
-
-    # 2. Try grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    id_str, _, _ = detector.detectAndDecode(gray)
-    if id_str:
-        return id_str
-
-    # 3. Try with sharpening
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    sharpened = cv2.filter2D(gray, -1, kernel)
-    id_str, _, _ = detector.detectAndDecode(sharpened)
-    if id_str:
-        return id_str
-
-    # 4. Try rescaled (2x)
-    upscaled = cv2.resize(gray, None, fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
-    id_str, _, _ = detector.detectAndDecode(upscaled)
-    if id_str:
-        return id_str
-
-    return ""
-
 
 def decode_base64_image(base64_str: str) -> tuple[int, str]:
     """Decode a base64 image, save it temporarily, and read its QR code.
@@ -72,7 +42,9 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
     if img is None:
         raise HTTPException(status_code=400, detail="Failed to load the uploaded image.")
 
-    id_str = _detect_qr(img)
+    detector = cv2.QRCodeDetector()
+    id_str, _, _ = detector.detectAndDecode(img)
+
 
     if not id_str:
         raise HTTPException(status_code=400, detail="Failed find an ID from the QR code.")
