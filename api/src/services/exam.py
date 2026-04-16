@@ -535,7 +535,7 @@ async def create_configs_and_exams(
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
     exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples)
-    exam_title = exam_specs.get("exam_title", "Exame Época Normal")
+    exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
