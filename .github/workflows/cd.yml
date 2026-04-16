@@ -10,5 +10,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Copy env files
+        run: |
+          cp /etc/edupro/deployment.env deployment/.env
+          cp /etc/edupro/web.env web/.env
+
       - name: Deploy
         run: ./deployment/deploy.sh
