@@ -62,6 +62,7 @@ interface CustomTableProps {
 export function CustomTable(props: CustomTableProps) {
   const { isSelectable, data, rowNumber = 10, rowSelection = [], onChange } = props;
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: rowNumber });
 
   const keys = data[0]
     ? Object.keys(data[0]).filter((key) => key !== "id")
@@ -150,6 +151,7 @@ export function CustomTable(props: CustomTableProps) {
     state: {
       sorting,
       globalFilter: filterValue,
+      pagination,
       rowSelection: rowSelection.reduce(
         (acc, el) => {
           acc[el.id] = true;
@@ -158,11 +160,7 @@ export function CustomTable(props: CustomTableProps) {
         {} as Record<string, boolean>,
       ),
     },
-    initialState: {
-      pagination: {
-        pageSize: rowNumber,
-      },
-    },
+    onPaginationChange: setPagination,
   });
 
   return (

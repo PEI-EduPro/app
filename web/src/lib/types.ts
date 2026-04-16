@@ -88,3 +88,53 @@ export interface PostExamStudentI {
   qr: string;
   nmec: number;
 }
+
+export interface StudentsI {
+  nmec: number;
+  name: string;
+  email: string;
+}
+
+export interface GetWarningsI {
+  exam_id: number;
+  batch_number: number;
+  students: [
+    {
+      nmec: number;
+      name: string;
+      email: string;
+    },
+  ];
+}
+
+export interface ResolveWarningsI {
+  exam_id: number;
+  student_nmec: string;
+}
+
+export interface PostResolveWarningsI {
+  assignments: ResolveWarningsI[];
+}
+
+export interface QuestionsI {
+  question_number: number;
+  correct_answer: "a" | "b" | "c" | "d";
+  discount: number;
+  value: number;
+  answers: { a: boolean; b: boolean; c: boolean; d: boolean };
+}
+
+export interface ExamResponseI {
+  exam_id: number;
+  questions: QuestionsI[] | null;
+  grade: number | null;
+  capture: string | null;
+  corrected: boolean;
+  validated: boolean;
+}
+
+export type OptionKey = "a" | "b" | "c" | "d";
+
+export interface ExamCorrectionI {
+  grid: Record<number, Record<OptionKey, boolean>>;
+}

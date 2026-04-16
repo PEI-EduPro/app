@@ -96,8 +96,8 @@ function RouteComponent() {
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-[#41B5C0] animate-pulse" />
                     <span className="text-sm font-semibold text-foreground">
-                      {metrics.associated_students_count}/
-                      {roomDetails.total_exams} associados
+                      {metrics.associated_exams_count}/{roomDetails.total_exams}{" "}
+                      exames associados
                     </span>
                   </div>
                 )}
@@ -208,36 +208,36 @@ function RouteComponent() {
                 Alunos
               </span>
               <div className="flex-1 min-h-0 overflow-auto">
-              <CustomTable
-                data={studentsData}
-                rowNumber={5}
-                isSelectable
-                rowSelection={
-                  alunosSelection
-                    ? [
-                        {
-                          id: alunosSelection.nmec,
-                          nmec: alunosSelection.nmec,
-                          nome: alunosSelection.nome,
-                        },
-                      ]
-                    : []
-                }
-                onChange={(e) => {
-                  const newSelection = e.filter(
-                    (el) => el.nmec !== alunosSelection?.nmec,
-                  );
-                  if (newSelection.length > 0) {
-                    setAlunosSelection({
-                      nome: newSelection[0].nome,
-                      nmec: newSelection[0].nmec,
-                    });
-                  } else {
-                    setAlunosSelection(undefined);
+                <CustomTable
+                  data={studentsData}
+                  rowNumber={5}
+                  isSelectable
+                  rowSelection={
+                    alunosSelection
+                      ? [
+                          {
+                            id: alunosSelection.nmec,
+                            nmec: alunosSelection.nmec,
+                            nome: alunosSelection.nome,
+                          },
+                        ]
+                      : []
                   }
-                }}
-              />
-            </div>
+                  onChange={(e) => {
+                    const newSelection = e.filter(
+                      (el) => el.nmec !== alunosSelection?.nmec,
+                    );
+                    if (newSelection.length > 0) {
+                      setAlunosSelection({
+                        nome: newSelection[0].nome,
+                        nmec: newSelection[0].nmec,
+                      });
+                    } else {
+                      setAlunosSelection(undefined);
+                    }
+                  }}
+                />
+              </div>
             </div>
 
             <Button
