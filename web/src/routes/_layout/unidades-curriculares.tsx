@@ -4,12 +4,12 @@ import { Card } from "@/components/ui/card";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGetUc } from "@/hooks/use-ucs";
-import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 import { encodeId } from "@/lib/id-encoder";
 import type { WaitingRoomStatusT } from "@/lib/types";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LoaderCircle, Plus, Search } from "lucide-react";
 import { useState } from "react";
+import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 
 export const Route = createFileRoute("/_layout/unidades-curriculares")({
   component: UCS,

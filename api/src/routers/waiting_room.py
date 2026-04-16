@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.core.db import get_session
 from src.models.user import User
 from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, QRCodeToNMEC
+from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, EvaluateBatchRequest, QRCodeToNMEC
 from src.models.common import MessageResponse
 import src.services.waiting_room as waiting_room_service
 import src.services.exam as exam_service
@@ -15,6 +15,7 @@ from src import utils
 import logging
 import traceback
 from typing import List, TypedDict
+from pydantic import BaseModel
 
 
 
@@ -294,10 +295,35 @@ async def close_waiting_room(
         )
 
 
+@router.get("/{waiting_room_id}/submitted_count")
+async def get_submitted_exams_count(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get the number of exams that have been submitted for OMR correction (i.e. have a capture_path).
+    Only accessible by the regent of the subject.
+    """
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    exams = await exam_service.get_exams_by_config_id(session, waiting_room.exam_config_id)
+    count = sum(1 for e in exams if e.capture_path is not None)
+
+    return {"submitted_count": count}
+
 @router.post("/{waiting_room_id}/evaluate")
 async def evaluate_exam_batch(
     waiting_room_id: int,
-    files: List[UploadFile] = File(...),
+    body: EvaluateBatchRequest,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
@@ -305,6 +331,8 @@ async def evaluate_exam_batch(
     Evaluate a batch of exams using OMR. Only the regent of the subject can perform this.
     The waiting room must be in the CLOSED state.
     All exams must belong to the waiting room's exam_config.
+
+    body.files: list of base64-encoded image strings (optionally with data URI prefix).
     """
     waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
     if not waiting_room:
@@ -321,8 +349,8 @@ async def evaluate_exam_batch(
 
     # Read QR codes and validate all exams belong to this waiting room's exam_config
     exam_data = []
-    for file in files:
-        exam_id, temp_file_path = await utils.read_QR(file)
+    for b64_str in body.files:
+        exam_id, temp_file_path = utils.decode_base64_image(b64_str)
         exam_instance = await exam_service.get_exam_by_id(session, exam_id)
         if not exam_instance:
             raise HTTPException(status_code=404, detail=f"Exam {exam_id} not found.")

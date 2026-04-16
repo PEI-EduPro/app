@@ -6,9 +6,11 @@ from sqlmodel import select
 from src.services import exam
 from src.services.exam import build_exam_questions
 from src.services import waiting_room as waiting_room_service
+from src.services.waiting_room import get_waiting_room
 from src.services.omr import evaluate_exam
 from src.core.db import get_session
 from src.models.user import User
+from src.models.exam import Exam, ExamRead, ExamPublic, ExamUpdate, ExamCreate, CorrectByHandRequest
 from src.models.exam_config import ExamConfig, ExamConfigResponse, ExamGenerateRequest
 from src.models.common import MessageResponse, StatusResponse
 from src.models.topic_config import TopicConfigDTO
@@ -237,17 +239,22 @@ async def validate_exam(
     return {"status": "success"}
 
 
-@router.get("/{exam_config_id}/all_exams_info")
+@router.get("/{waiting_room_id}/all_exams_info")
 async def get_all_exams_info(
-    exam_config_id: int,
+    waiting_room_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Get info for all exams in an exam configuration.
+    Get info for all exams in an exam configuration, identified by waiting room ID.
     Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
     Only accessible by the regent of the subject.
     """
+    waiting_room = await get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+    exam_config_id = waiting_room.exam_config_id
+
     subject_id = await exam.get_subject_id_by_exam_config_id(exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
@@ -279,6 +286,8 @@ async def get_all_exams_info(
         })
 
     return result
+
+
 
 
 @router.get("/{exam_id}/exam_info")
@@ -320,4 +329,38 @@ async def get_exam_info(
         "exam_id": e.id,
         "capture": capture_b64,
         "questions": questions,
+    }
+
+
+@router.post("/{exam_id}/correct_by_hand_job")
+async def correct_by_hand_job(
+    exam_id: int,
+    body: CorrectByHandRequest,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Manually correct an exam by providing the filled grid.
+    The grade is recomputed server-side from the answer key — the client-supplied grade is ignored.
+    Only accessible by the regent of the subject.
+    """
+    exam_instance = await exam.get_exam_by_id(session, exam_id)
+    if not exam_instance:
+        raise HTTPException(status_code=404, detail="Exam not found.")
+
+    subject_id = await exam.get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    try:
+        updated = await exam.correct_by_hand(session, exam_id, body.grid)
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+    exam_config = await exam.get_exam_config_by_id(session, updated.exam_config_id)
+    fraction = exam_config.fraction if exam_config else 0
+
+    return {
+        "exam_id": updated.id,
+        "grade": updated.grade,
+        "questions": build_exam_questions(updated, fraction),
     }

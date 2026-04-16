@@ -31,6 +31,7 @@ export function useCreateTopic(subjectId: number) {
       apiClient.post("/topics/", { name, subject_id: subjectId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      queryClient.invalidateQueries({ queryKey: ["ucTopics", subjectId] });
       toast.success("Tópico criado com sucesso!", {
         position: "top-right",
       });
@@ -68,6 +69,7 @@ export function useDeleteTopic(subjectId: number) {
     mutationFn: (id: number) => apiClient.delete(`/topics/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      queryClient.invalidateQueries({ queryKey: ["ucTopics", subjectId] });
       toast.success("Tópico eliminado com sucesso!", {
         position: "top-right",
       });

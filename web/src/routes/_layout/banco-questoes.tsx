@@ -1,6 +1,6 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   Plus,
   ChevronDown,
@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { NoQuestionsAlertDialog } from "@/components/no-questions-alert-dialog";
 
 const bancoQuestoesSearchSchema = z.object({
   ucId: z.string(),
@@ -69,6 +70,7 @@ interface Topic {
 function BancoQuestões() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
+  const navigate = useNavigate();
 
   const { data: subjectData } = useSubject(realId);
   const { data: apiData, isLoading, error } = useQuestions(realId);
@@ -90,6 +92,7 @@ function BancoQuestões() {
   } | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const [noQuestionsAlertOpen, setNoQuestionsAlertOpen] = useState(false);
 
   // Transform API data to local state format
   useEffect(() => {
@@ -271,17 +274,30 @@ function BancoQuestões() {
               </div>
             </div>
             <div className="absolute right-0">
-              <Link
-                to="/exames-uc"
-                search={{ ucId: ucId, ucName: subjectData?.name || "" }}
+              <Button
+                size="lg"
+                className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                onClick={() => {
+                  const hasQuestions = topics.some(
+                    (t) => Object.keys(t.questions).length > 0,
+                  );
+                  if (!hasQuestions) {
+                    setNoQuestionsAlertOpen(true);
+                  } else {
+                    navigate({
+                      to: "/novo-exame",
+                      search: { ucId, ucName: subjectData?.name || "" },
+                    });
+                  }
+                }}
               >
-                <Button
-                  size="lg"
-                  className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
-                >
-                  Novo Exame
-                </Button>
-              </Link>
+                Novo Exame
+              </Button>
+              <NoQuestionsAlertDialog
+                open={noQuestionsAlertOpen}
+                onOpenChange={setNoQuestionsAlertOpen}
+                ucId={realId}
+              />
             </div>
           </div>
         </div>

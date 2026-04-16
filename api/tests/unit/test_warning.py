@@ -6,6 +6,7 @@ from src.models.warning import Warning, WarningType
 from src.models.subject import Subject
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
+from src.models.waiting_room import WaitingRoom, WaitingRoomState
 import json
 
 @pytest.fixture
@@ -30,13 +31,16 @@ async def setup_data(session):
     session.add(subject)
     await session.commit()
     await session.refresh(subject)
-    
-    nmec_dict = {"12345": "John Doe", "67890": "Jane Doe"}
+
+    nmec_dict = {
+        "12345": {"name": "John Doe", "email": "john@example.com"},
+        "67890": {"name": "Jane Doe", "email": "jane@example.com"}
+    }
     exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict))
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
-    
+
     exam1 = Exam(exam_config_id=exam_config.id, batch_number=1)
     exam2 = Exam(exam_config_id=exam_config.id, batch_number=2)
     session.add(exam1)
@@ -44,16 +48,23 @@ async def setup_data(session):
     await session.commit()
     await session.refresh(exam1)
     await session.refresh(exam2)
-    
+
+    wr = WaitingRoom(exam_config_id=exam_config.id, state=WaitingRoomState.CLOSED)
+    session.add(wr)
+    await session.commit()
+    await session.refresh(wr)
+
     return {
         "subject_id": subject.id,
         "exam_config_id": exam_config.id,
-        "exam_ids": [exam1.id, exam2.id]
+        "exam_ids": [exam1.id, exam2.id],
+        "waiting_room_id": wr.id,
     }
 
 @pytest.mark.asyncio
-async def test_get_warnings_by_exam_config_id(client, mock_auth_user, setup_data, session):
+async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_data, session):
     app.dependency_overrides[get_current_user_info] = mock_auth_user
+    waiting_room_id = setup_data["waiting_room_id"]
     exam_config_id = setup_data["exam_config_id"]
     exam_ids = setup_data["exam_ids"]
 
@@ -78,23 +89,24 @@ async def test_get_warnings_by_exam_config_id(client, mock_auth_user, setup_data
         student_list="",
         exam_list=[exam_ids[1]]
     )
-    
+
     session.add_all([warning1, warning2, warning3])
     await session.commit()
 
-    response = await client.get(f"/api/warnings/exam_config/{exam_config_id}")
-    
+    response = await client.get(f"/api/warnings/{waiting_room_id}")
+
     assert response.status_code == 200
     data = response.json()
-    
-    # We expect 4 items in the response list:
+    warnings = data["warnings"]
+
+    # We expect 4 items in the warnings list:
     # 1 for warning1
     # 2 for warning2
     # 1 for warning3
-    assert len(data) == 4
-    
+    assert len(warnings) == 4
+
     # Assert WarningType.multiple_students_to_exam handling
-    w1_res = next(w for w in data if w["exam_id"] == exam_ids[0] and len(w["students"]) == 2)
+    w1_res = next(w for w in warnings if w["exam_id"] == exam_ids[0] and len(w["students"]) == 2)
     assert w1_res["batch_number"] == 1
     assert w1_res["students"][0]["nmec"] == 12345
     assert w1_res["students"][0]["name"] == "John Doe"
@@ -103,25 +115,31 @@ async def test_get_warnings_by_exam_config_id(client, mock_auth_user, setup_data
 
     # Assert WarningType.multiple_exams_to_student handling
     # Should result in two entries for the same student, different exams
-    w2_res1 = next(w for w in data if w["exam_id"] == exam_ids[0] and len(w["students"]) == 1)
-    w2_res2 = next(w for w in data if w["exam_id"] == exam_ids[1] and len(w["students"]) == 1)
-    
+    w2_res1 = next(w for w in warnings if w["exam_id"] == exam_ids[0] and len(w["students"]) == 1)
+    w2_res2 = next(w for w in warnings if w["exam_id"] == exam_ids[1] and len(w["students"]) == 1)
+
     assert w2_res1["batch_number"] == 1
     assert w2_res1["students"][0]["nmec"] == 12345
-    
+
     assert w2_res2["batch_number"] == 2
     assert w2_res2["students"][0]["nmec"] == 12345
 
     # Assert WarningType.exam_correction_no_student handling
-    w3_res = next(w for w in data if w["exam_id"] == exam_ids[1] and len(w["students"]) == 0)
+    w3_res = next(w for w in warnings if w["exam_id"] == exam_ids[1] and len(w["students"]) == 0)
     assert w3_res["batch_number"] == 2
     assert w3_res["students"] == []
+
+    # Assert students list: both students are in warnings, so both should appear
+    students = data["students"]
+    student_nmecs = {s["nmec"] for s in students}
+    assert "12345" in student_nmecs
+    assert "67890" in student_nmecs
 
 @pytest.mark.asyncio
 async def test_get_warnings_unauthorized(client, session, setup_data):
     # Missing auth override means 403 / 401 depending on your auth mock
     # Wait, client without override might fail with 401 Unauthorized
-    
+
     # We can override with a student or random user
     async def override_unauthorized_user():
         return User(
@@ -132,8 +150,8 @@ async def test_get_warnings_unauthorized(client, session, setup_data):
             groups=[] # Not a regent
         )
     app.dependency_overrides[get_current_user_info] = override_unauthorized_user
-    
-    exam_config_id = setup_data["exam_config_id"]
-    response = await client.get(f"/api/warnings/exam_config/{exam_config_id}")
-    
+
+    waiting_room_id = setup_data["waiting_room_id"]
+    response = await client.get(f"/api/warnings/{waiting_room_id}")
+
     assert response.status_code == 403
