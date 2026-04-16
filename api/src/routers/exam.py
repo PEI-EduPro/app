@@ -23,6 +23,10 @@ import traceback
 import cv2
 from src import utils
 import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -340,27 +344,68 @@ async def notify_student_via_email(
     subject_name = subject.name
     
     student_email = exam.student_email  # NEEDS IMPLEMENTATION
-    name = exam.name
+    student_name = exam.student_name                    # NEEDS IMPLEMENTATION
     nmec = exam.nmec
     grade = exam.grade
     fraction = exam_config.fraction
     relative_weights = exam.relative_weights
 
-    message = f"A sua nota da disciplina de {subject_name} foi de <b>{grade:.2f}</b> valores.\n"
-    message += f"\nAluno:\n- Nome: {name}\n- NMEC: {nmec}\n"
-    message += f"\nEm anexo encontram-se dois ficheiros, respetivamente a sua folha de resposta e a folha de resposta correspondente à versão do seu exame."
-    message += f"\nSe detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.\n"
-    message += f"\nA distribuição de cotação por cada pergunta foi:"
+    message = f"A sua nota da disciplina de {subject_name} foi de <b>{grade:.2f}</b> valores.<br>"
+    message += f"<br>Aluno:<br>- Nome: {student_name}<br>- NMEC: {nmec}<br>"
+    message += f"<br>Em anexo encontram-se dois ficheiros, respetivamente a sua folha de resposta e a folha de resposta correspondente à versão do seu exame."
+    message += f"<br>Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
+    message += f"<br>A distribuição de cotação por cada pergunta foi:"
     # Pergunta 1 - X valores
     # Sendo q X é calculado tipo relative_weight/sum_of_unique_relative_weights*20
     # for q_num in sorted(relative_weights.keys()):
     #     weight = relative_weights[q_num]
     #     valor_pergunta = (weight / total_weight_sum) * 20
-    #     message += f"- Pergunta {q_num}: {valor_pergunta:.2f} valores\n"
+    #     message += f"- Pergunta {q_num}: {valor_pergunta:.2f} valores<br>"
 
     sorted_indices = sorted([int(k) for k in exam.relative_weights.keys()])
     for idx in sorted_indices:
         val = exam.relative_weights[str(idx)]
-        message += f"- Pergunta {idx + 1}: {val:.2f} valores\n"
+        message += f"- Pergunta {idx + 1}: {val:.2f} valores<br>"
 
-    message += f"\nSendo que a cada questão errada descontava {fraction}% da cotação dessa pergunta."
+    message += f"<br>Sendo que a cada questão errada descontava {fraction}% da cotação dessa pergunta."
+
+    msg = MIMEMultipart()
+    msg['From'] = settings.SENDER_EMAIL
+    msg['To'] = student_email
+    msg['Subject'] = f"Nota de {subject_name} - {nmec} | {student_name}"
+
+    html_body = f"""
+    <html>
+        <body>
+            <p>{message}</p>
+        </body>
+    </html>
+    """
+    msg.attach(MIMEText(html_body, 'html'))
+
+    # Attachments
+    # Student answer grid
+    '''Raw table (no omr coloring)'''
+
+    # VER COM O PEDRO
+    # if exam.capture_path and os.path.exists(exam.capture_path):
+    #     with open(exam.capture_path, "rb") as f:
+    #         part = MIMEApplication(f.read(), Name=os.path.basename(exam.capture_path))
+    #         part['Content-Disposition'] = f'attachment; filename="{os.path.basename(exam.capture_path)}"'
+    #         msg.attach(part)
+
+    # Correct answer grid
+    '''T.B.D (Talvez mande o PDF que os profs recebem para não ter de gerar um pdf só para o aluno)'''
+    
+    # Send via SMTP
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", settings.EMAIL_NOTIFIER_PORT)
+        server.starttls() # Segurança
+        server.login(settings.SENDER_EMAIL, settings.EMAIL_CODE)
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        logger.error(f"Erro ao enviar email: {e}")
+        raise HTTPException(status_code=500, detail="Falha no servidor de email")
+
+    return {"message": "Email enviado com sucesso"}
