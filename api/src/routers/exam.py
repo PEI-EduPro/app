@@ -71,7 +71,7 @@ async def get_subject_exam_configs(
 
 @router.post("/generate")
 async def generate_exams(
-    exam_specs: ExamGenerateRequest,
+    exam_specs: dict,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
@@ -79,25 +79,38 @@ async def generate_exams(
     Generate exams based on specifications.
     Returns a ZIP file containing the generated exam PDFs.
     """
-    verify_permission(user_info, [f"/s{exam_specs.subject_id}/generate_exams", f"/s{exam_specs.subject_id}/regent"])
+    subject_id = exam_specs.get("subject_id")
+    if not subject_id:
+        raise HTTPException(status_code=400, detail="subject_id is required in exam_specs")
+
+    verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     try:
+        num_variations = exam_specs.get("num_variations", 1)
+        professors = exam_specs.get("professors", [])
+        student_tuples = exam_specs.get("student_tuples", [])  # List of (nmec, name, email)
+        vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
+
         zip_bytes = await exam.create_configs_and_exams(
             session,
-            exam_specs.model_dump(),
-            exam_specs.num_variations,
-            exam_specs.student_tuples
+            exam_specs,
+            num_variations,
+            student_tuples
         )
 
-        exam_config_id = await exam.get_latest_exam_config_id(session, exam_specs.subject_id)
+        # Create waiting room if vigilant_keycloak_ids provided
+        if not vigilant_keycloak_ids:
+            vigilant_keycloak_ids = []
+        # Get the created exam_config_id from the service
+        exam_config_id = await exam.get_latest_exam_config_id(session, subject_id)
 
         await waiting_room_service.create_waiting_room_service(
             session=session,
             exam_config_id=exam_config_id,
             regent_keycloak_id=user_info.user_id,
-            vigilant_keycloak_ids=exam_specs.vigilant_keycloak_ids
+            vigilant_keycloak_ids=vigilant_keycloak_ids
         )
 
-        logger.info(f"Successfully generated {exam_specs.num_variations} exam variations.")
+        logger.info(f"Successfully generated {num_variations} exam variations.")
 
         return Response(
             content=zip_bytes,

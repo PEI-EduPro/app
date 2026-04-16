@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import JSONResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.core.db import get_session
@@ -372,4 +373,11 @@ async def evaluate_exam_batch(
             logger.error(traceback.format_exc())
             results.append({"exam_id": exam_instance.id, "status": "error", "detail": str(e)})
 
+    has_errors = any(r["status"] == "error" for r in results)
+    has_success = any(r["status"] == "success" for r in results)
+
+    if has_errors and not has_success:
+        raise HTTPException(status_code=422, detail=results)
+    if has_errors:
+        return JSONResponse(status_code=207, content={"results": results})
     return {"results": results}
