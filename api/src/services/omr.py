@@ -44,8 +44,8 @@ async def evaluate_exam(
     qr_w = qr_x_max - qr_x_min
     qr_h = qr_y_max - qr_y_min
     
-    # Calculate the horizontal center line of the QR code
-    qr_cy = qr_y_min + (qr_h / 2.0)
+    # Calculate the horizontal center of the QR code
+    qr_cx = qr_x_min + (qr_w / 2.0)
 
     # 2. Preprocess the image for Grid Extraction
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -72,25 +72,25 @@ async def evaluate_exam(
             aspect_ratio = w / float(h) if h > 0 else 0
             
             # Center of the current contour
-            c_cy = y + (h / 2.0)
-            y_diff = abs(qr_cy - c_cy)
+            c_cx = x + (w / 2.0)
+            x_diff = abs(qr_cx - c_cx)
             
             # SPATIAL LOGIC: 
-            # 1. To the right: Grid's X starts after the QR code (allowing slight margin of error)
-            # 2. Aligned: Grid's center Y is roughly aligned with the QR code's center Y
-            # 3. Size: Grid is strictly larger than the QR code (replaces brittle image_area % check)
+            # 1. Below: Grid's Y starts after the QR code (allowing slight margin of error)
+            # 2. Aligned: Grid's center X is roughly aligned with the QR code's center X
+            # 3. Size: Grid is strictly larger than the QR code
             # 4. Shape: Grid is horizontally wide
             
-            is_to_the_right = x > (qr_x_max - (qr_w * 0.5)) 
-            is_aligned_horizontally = y_diff < (qr_h * 2.0)
+            is_below = y > (qr_y_max - (qr_h * 0.5))
+            is_aligned_horizontally = x_diff < (qr_w * 2.0)
             is_larger_than_qr = area > (qr_w * qr_h * 2.0)
             
-            if is_to_the_right and is_aligned_horizontally and is_larger_than_qr and aspect_ratio > 3.0:
+            if is_below and is_aligned_horizontally and is_larger_than_qr and aspect_ratio > 3.0:
                 targetCnt = approx
                 break
 
     if targetCnt is None:
-        raise Exception("Found the QR Code, but could not locate the adjacent answer grid.")
+        raise Exception("Found the QR Code, but could not locate the answer grid below it.")
 
     # 4. Apply the perspective transform (Bird's-eye view) directly on the grid
     paper = four_point_transform(image, targetCnt.reshape(4, 2))
