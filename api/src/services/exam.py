@@ -612,8 +612,9 @@ async def process_student_list_csv(
     for row in reader:
         nmec = row.get("nmec")
         name = row.get("name")
+        email = row.get("email")
         if nmec and name:
-            nmec_dict[nmec] = name
+            nmec_dict[nmec] = {"name": name, "email": email or ""}
 
     nmec_name_list = json.dumps(nmec_dict)
 

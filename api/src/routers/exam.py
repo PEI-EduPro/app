@@ -26,6 +26,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.application import MIMEApplication
+from email.mime.image import MIMEImage
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -328,7 +329,7 @@ async def get_exam_info(
         "questions": questions,
     }
 
-@router.post("{exam_id}/notify-student")
+@router.post("/{exam_id}/notify-student")
 async def notify_student_via_email(
     exam_id: int,
     user_info: User = Depends(get_current_user_info),
@@ -338,41 +339,210 @@ async def notify_student_via_email(
     Notifies the associated student via email about their grade.
     The email consists of a message indicating the grade and 2 attachments (their answer grid, and the corresponding correction)
     """
-    exam = get_exam_by_id(session, exam_id)
-    exam_config = get_exam_config_by_id(exam.exam_config)
-    subject = get_subject_by_id(exam_config.subject_id)
+
+    exam = await get_exam_by_id(session, exam_id)
+
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+
+    # Check if exam has been manually validated
+    if not exam.validated:
+        raise HTTPException(status_code=400, detail="Exam has not been validated yet.")
+    
+    exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
+
+    # Verify user permissions
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    exam_name = exam_config.exam_name
+    subject = await get_subject_by_id(session, exam_config.subject_id)
     subject_name = subject.name
     
-    student_email = exam.student_email  # NEEDS IMPLEMENTATION
-    student_name = exam.student_name                    # NEEDS IMPLEMENTATION
     nmec = exam.nmec
+    student_email = exam.student_email
+    student_name = exam.student_name
     grade = exam.grade
     fraction = exam_config.fraction
     relative_weights = exam.relative_weights
+    details = exam.results_details
+    answer_key = exam.answer_key
 
-    message = f"A sua nota da disciplina de {subject_name} foi de <b>{grade:.2f}</b> valores.<br>"
-    message += f"<br>Aluno:<br>- Nome: {student_name}<br>- NMEC: {nmec}<br>"
-    message += f"<br>Em anexo encontram-se dois ficheiros, respetivamente a sua folha de resposta e a folha de resposta correspondente à versão do seu exame."
-    message += f"<br>Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
-    message += f"<br>A distribuição de cotação por cada pergunta foi:"
-    # Pergunta 1 - X valores
-    # Sendo q X é calculado tipo relative_weight/sum_of_unique_relative_weights*20
-    # for q_num in sorted(relative_weights.keys()):
-    #     weight = relative_weights[q_num]
-    #     valor_pergunta = (weight / total_weight_sum) * 20
-    #     message += f"- Pergunta {q_num}: {valor_pergunta:.2f} valores<br>"
+    #message = f"A sua nota do <b>EXAM_NAME</b> da disciplina de <b>{subject_name}</b> foi de <b>{grade:.2f}</b> valores.<br><br>"
+    message = "Identificação do aluno:"
+    # Centering a table in email usually requires margin: auto and a specific width
+    message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
+    message += '<tr style="background-color: #f2f2f2;">'
+    message += '<th style="padding: 10px;">Nome</th>'
+    message += '<th style="padding: 10px;">NMEC</th>'
+    message += '<th style="padding: 10px;">Nota</th></tr>'
 
-    sorted_indices = sorted([int(k) for k in exam.relative_weights.keys()])
+    message += f"<tr><td style='padding: 10px;'>{student_name}</td>"
+    message += f"<td style='padding: 10px;'>{nmec}</td>"
+    message += f"<td style='padding: 10px;'>{grade:.2f}</td></tr>"
+    message += "</table><br>"
+
+    message += "<br>Distribuição de cotações por questão:<br><br>"
+
+    message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
+
+    sorted_indices = sorted([int(k) for k in relative_weights.keys()])
+
+    # First row: Question numbers
+    message += '<tr style="background-color: #f2f2f2;">'
+    message += '<th style="padding: 8px;">Pergunta</th>'
+
     for idx in sorted_indices:
-        val = exam.relative_weights[str(idx)]
-        message += f"- Pergunta {idx + 1}: {val:.2f} valores<br>"
+        q_num = f"{idx + 1:02d}"
+        message += f"<th style='padding: 8px;'>{q_num}</th>"
 
-    message += f"<br>Sendo que a cada questão errada descontava {fraction}% da cotação dessa pergunta."
+    message += "</tr>"
+
+    # Second row: Values
+    message += "<tr>"
+    message += '<th style="padding: 8px;">Cotação</th>'
+
+    for idx in sorted_indices:
+        val = relative_weights[str(idx)]
+        message += f"<td style='padding: 8px;'>{val:.2f}</td>"
+
+    message += "</tr>"
+
+    # Third row: Penalties
+    message += "<tr>"
+    message += f'<th style="padding: 8px;">Desconto por questão errada ({fraction}%)</th>'
+
+    for idx in sorted_indices:
+        val = relative_weights[str(idx)]*fraction/100
+        message += f"<td style='padding: 8px;'>{val:.2f}</td>"
+
+    message += "</tr>"
+
+    message += "</table><br>"
+
+    message += "A sua tabela de resposta:<br><br>"
+
+    message += "<p>METER AQUI FOTO DA TABELA DO ALUNO</p><br>"
+
+    # === CORRECT_TABLE_CORRECT_TABLE_CORRECT_TABLE ===
+
+    message += "As respostas solução à sua versão do exame são:"
+
+    # Start the HTML table
+    message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
+
+    # 1. Build the Header Row (Empty cell, then 01, 02, 03...)
+    message += '<tr style="background-color: #f2f2f2;"><th></th>'
+    for q in range(len(answer_key)):
+        message += f"<th style='padding: 8px;'>{q + 1:02d}</th>"
+    message += "</tr>"
+
+    # 2. Build the Data Rows (A, B, C, D)
+    for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
+        message += f"<tr><th style='padding: 8px;'>{row_label}</th>"
+        
+        for q_idx in range(len(answer_key)):
+            # Mark 'X' if the answer matches the row index (0=A, 1=B, 2=C, 3=D)
+            cell = "X" if answer_key.get(str(q_idx)) == row_idx else ""
+            message += f"<td>{cell}</td>"
+                
+        message += "</tr>"
+
+    message += "</table><br>"
+
+    # === CORRECT_TABLE_CORRECT_TABLE_CORRECT_TABLE ===
+
+    message += "Das suas respostas resultaram as seguintes cotações:<br><br>"
+
+    message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
+
+    sorted_indices = sorted([int(k) for k in details.keys()])
+
+    # First row: Question numbers
+    message += '<tr style="background-color: #f2f2f2;">'
+    message += '<th style="padding: 8px;">Pergunta</th>'
+
+    for idx in sorted_indices:
+        q_num = f"{idx + 1:02d}"
+        message += f"<th style='padding: 8px;'>{q_num}</th>"
+
+    message += "</tr>"
+
+    # Second row: Correct answers
+    message += "<tr>"
+    message += '<th style="padding: 8px;">Respostas corretas</th>'
+
+    for idx in sorted_indices:
+        val = details[str(idx)]["correct"]
+        message += f"<td style='padding: 8px;'>{val}</td>"
+
+    message += "</tr>"
+
+    # Third row: Incorrect answers
+    message += "<tr>"
+    message += '<th style="padding: 8px;">Respostas incorretas</th>'
+
+    for idx in sorted_indices:
+        val = details[str(idx)]["incorrect"]
+        message += f"<td style='padding: 8px;'>{val}</td>"
+
+    message += "</tr>"
+
+    # Fourth row: Resulting score (optional but useful)
+    message += "<tr>"
+    message += '<th style="padding: 8px;">Cotação obtida</th>'
+
+    for idx in sorted_indices:
+        correct = details[str(idx)]["correct"]
+        incorrect = details[str(idx)]["incorrect"]
+
+        weight = relative_weights.get(str(idx), 0)
+
+        penalty = weight * fraction / 100
+
+        score = correct * weight - incorrect * penalty
+
+        message += f"<td style='padding: 8px;'>{score:.2f}</td>"
+
+    message += "</tr>"
+
+    # Fifth row: Cumulative score
+    message += "<tr>"
+    message += '<th style="padding: 8px;">Cotação acumulada</th>'
+
+    cumulative_score = 0.0
+    for idx in sorted_indices:
+        correct = details[str(idx)]["correct"]
+        incorrect = details[str(idx)]["incorrect"]
+
+        weight = relative_weights.get(str(idx), 0)
+        penalty = weight * fraction / 100
+        score = correct * weight - incorrect * penalty
+        
+        cumulative_score += score
+
+        message += f"<td style='padding: 8px;'>{cumulative_score:.2f}</td>"
+
+    message += "</tr>"
+
+    message += "</table>"
+    #message += f"Sendo que a cada questão errada descontava {fraction}% da cotação dessa pergunta."
+
+    message += f"<br>Em anexo encontram-se dois ficheiros, respetivamente a sua folha de resposta e a folha de resposta correspondente à versão do seu exame.<br>"
+    message += f"<br>Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
+    message += "<br>Continuação de um bom ano letivo.<br>"
+    message += "<b>EduPro @ UA</b>"
+
+    # Imagem
+    message += """
+    <br><br>
+    <img src="cid:signature_image"
+        style="width:100%; height:auto; display:block; margin:auto;">
+    """
 
     msg = MIMEMultipart()
-    msg['From'] = settings.SENDER_EMAIL
+    msg['From'] = os.getenv("SENDER_EMAIL")
     msg['To'] = student_email
-    msg['Subject'] = f"Nota de {subject_name} - {nmec} | {student_name}"
+    msg['Subject'] = f"Nota de {exam_name} de {subject_name} - {nmec} | {student_name}"
 
     html_body = f"""
     <html>
@@ -382,6 +552,15 @@ async def notify_student_via_email(
     </html>
     """
     msg.attach(MIMEText(html_body, 'html'))
+
+    # Attach signature image inline
+    img_path = os.path.join(os.path.dirname(__file__), "..", "img", "signature.jpg")
+
+    with open(img_path, "rb") as img:
+        mime_image = MIMEImage(img.read())
+        mime_image.add_header("Content-ID", "<signature_image>")
+        mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
+        msg.attach(mime_image)
 
     # Attachments
     # Student answer grid
@@ -399,13 +578,13 @@ async def notify_student_via_email(
     
     # Send via SMTP
     try:
-        server = smtplib.SMTP("smtp.gmail.com", settings.EMAIL_NOTIFIER_PORT)
+        server = smtplib.SMTP("smtp.gmail.com", int(os.getenv("EMAIL_NOTIFIER_PORT")))
         server.starttls() # Segurança
-        server.login(settings.SENDER_EMAIL, settings.EMAIL_CODE)
+        server.login(os.getenv("SENDER_EMAIL"), os.getenv("EMAIL_CODE"))
         server.send_message(msg)
         server.quit()
     except Exception as e:
-        logger.error(f"Erro ao enviar email: {e}")
-        raise HTTPException(status_code=500, detail="Falha no servidor de email")
+        logger.error(f"Erro ao enviar email: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
 
     return {"message": "Email enviado com sucesso"}

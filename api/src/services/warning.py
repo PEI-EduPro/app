@@ -70,7 +70,7 @@ async def calculate_and_persist_warnings(
                 exam_list=[exam_id]
             ))
 
-    # Write exam.nmec for clean 1:1 associations
+    # Write exam.nmec, student_name, student_email for clean 1:1 associations
     for exam_id, students in exam_to_students.items():
         if len(students) == 1:
             student_nmec = next(iter(students))
@@ -79,6 +79,12 @@ async def calculate_and_persist_warnings(
                 if exam:
                     try:
                         exam.nmec = int(student_nmec)
+                        student_data = nmec_to_name.get(student_nmec, {})
+                        if isinstance(student_data, dict):
+                            exam.student_name = student_data.get("name")
+                            exam.student_email = student_data.get("email")
+                        elif isinstance(student_data, str):
+                            exam.student_name = student_data
                         session.add(exam)
                     except (ValueError, TypeError):
                         pass

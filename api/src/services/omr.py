@@ -220,6 +220,7 @@ async def evaluate_exam(
     # Persist results to the database
     exam.grade = total_exam_score
     exam.results = json.dumps(answered_dict)
+    exam.results_details = answers_details
     exam.capture_path = image_path
 
     session.add(exam)
