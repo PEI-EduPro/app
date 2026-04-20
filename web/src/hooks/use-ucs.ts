@@ -62,12 +62,14 @@ const useGetUcRegent = (ucId: number) =>
   });
 
 const useDeleteUcById = (ucId: number) => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   return useMutation({
     mutationKey: ["deleteUc", ucId],
     mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}/`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["uc"] });
       toast.success("Unidade curricular eliminada com sucesso!", {
         position: "top-right",
       });

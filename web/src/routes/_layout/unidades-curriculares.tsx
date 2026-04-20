@@ -1,7 +1,16 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
+import { CustomTable } from "@/components/custom-table";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,17 +24,125 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useGetUc, useDeleteUcById } from "@/hooks/use-ucs";
+import { useGetUc, useDeleteUcById, useGetUcProfessors, useGetUcRegent, useUpdateUc } from "@/hooks/use-ucs";
+import { useGetProfessors } from "@/hooks/use-users";
 import { encodeId } from "@/lib/id-encoder";
-import type { WaitingRoomStatusT } from "@/lib/types";
+import type { UserI, WaitingRoomStatusT } from "@/lib/types";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { LoaderCircle, Plus, Search, Trash2 } from "lucide-react";
+import { LoaderCircle, Plus, Search, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 
 export const Route = createFileRoute("/_layout/unidades-curriculares")({
   component: UCS,
 });
+
+const formatUserName = (user: UserI) =>
+  user?.first_name && user?.last_name
+    ? `${user.first_name} ${user.last_name}`
+    : user?.firstName && user?.lastName
+      ? `${user.firstName} ${user.lastName}`
+      : user?.username || "";
+
+function EditUcForm({
+  ucId,
+  ucName,
+  initialProfs,
+  initialRegent,
+  allProfessors,
+  onClose,
+}: {
+  ucId: number;
+  ucName: string;
+  initialProfs: { id: string; nome: string; email: string }[];
+  initialRegent: { id: string; nome: string; email: string } | undefined;
+  allProfessors: { id: string; nome: string; email: string }[];
+  onClose: () => void;
+}) {
+  const { mutate: updateUc } = useUpdateUc(ucId);
+  const [profsSelection, setProfsSelection] = useState(initialProfs);
+  const [regentSelection, setRegentSelection] = useState(initialRegent);
+
+  function handleSave() {
+    if (regentSelection) {
+      updateUc({ regent_keycloak_id: regentSelection.id, professor_keycloak_ids: profsSelection.map((p) => p.id) });
+    }
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-background rounded-xl shadow-2xl w-full max-w-3xl m-4 max-h-[90vh] overflow-y-auto p-8 flex flex-col gap-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <span className="font-rubik text-2xl font-bold">{ucName}</span>
+          <Button variant="ghost" size="icon" className="cursor-pointer" onClick={onClose}><X /></Button>
+        </div>
+        <div className="flex flex-row gap-8">
+          <div className="flex-1 flex flex-col gap-2">
+            <span className="text-lg font-medium">Regente</span>
+            <Select value={regentSelection?.id} onValueChange={(e) => {
+              const option = allProfessors.find((p) => p.id === e);
+              if (option) setRegentSelection(option);
+            }}>
+              <SelectTrigger className="shadow-none w-full"><SelectValue placeholder="Selecione um docente" /></SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {allProfessors.map((p) => <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>)}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 flex flex-col gap-2">
+            <span className="text-lg font-medium">Professores</span>
+            <CustomTable
+              data={allProfessors.filter((p) => p.id !== regentSelection?.id)}
+              isSelectable
+              rowSelection={profsSelection}
+              rowNumber={5}
+              onChange={(e) => setProfsSelection(e as { id: string; nome: string; email: string }[])}
+            />
+          </div>
+        </div>
+        <div className="flex justify-end gap-3">
+          <Button variant="secondary" className="cursor-pointer" onClick={onClose}>Cancelar</Button>
+          <Button className="cursor-pointer" onClick={handleSave}>Guardar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditUcModal({ ucId, ucName, onClose }: { ucId: number; ucName: string; onClose: () => void }) {
+  const { data: professors = [], isLoading: loadingProfs } = useGetUcProfessors(ucId);
+  const { data: regent, isLoading: loadingRegent } = useGetUcRegent(ucId);
+  const { data: allProfessors = [] } = useGetProfessors();
+
+  const allProfessorsData = allProfessors.map((p) => ({ id: p.id, nome: formatUserName(p), email: p.email || "" }));
+
+  if (loadingProfs || loadingRegent) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm" onClick={onClose}>
+        <LoaderCircle className="animate-spin size-16 text-primary" />
+      </div>
+    );
+  }
+
+  const initialProfs = professors.map((p) => ({ id: p.id, nome: formatUserName(p), email: p.email || "" }));
+  const initialRegent = regent ? { id: regent.id, nome: formatUserName(regent), email: regent.email || "" } : undefined;
+
+  return (
+    <EditUcForm
+      key={`${ucId}-${regent?.id}-${professors.map(p => p.id).join(',')}`}
+      ucId={ucId}
+      ucName={ucName}
+      initialProfs={initialProfs}
+      initialRegent={initialRegent}
+      allProfessors={allProfessorsData}
+      onClose={onClose}
+    />
+  );
+}
+
 
 interface UCCardProps {
   srcImage?: string;
@@ -35,6 +152,7 @@ interface UCCardProps {
   index?: number;
   selectionMode?: boolean;
   onSelect?: (id: number) => void;
+  onEdit?: (id: number, name: string) => void;
 }
 
 function UCCard({
@@ -45,6 +163,7 @@ function UCCard({
   index = 0,
   selectionMode = false,
   onSelect,
+  onEdit,
 }: UCCardProps) {
   const isMobile = useIsMobile();
 
@@ -65,6 +184,30 @@ function UCCard({
           <span className="hidden md:block px-3 pb-3 font-medium text-foreground line-clamp-2">
             {label}
           </span>
+          <div className="flex md:hidden items-center gap-3 p-2">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
+              <img src={srcImage || "/card-image.png"} className="w-full h-full object-cover" />
+            </div>
+            <span className="text-sm font-medium leading-snug line-clamp-2 text-foreground">{label}</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (onEdit) {
+    return (
+      <div
+        onClick={() => onEdit(id, label)}
+        className="w-full md:w-fit animate-fade-in-up h-fit cursor-pointer"
+        style={{ animationDelay: `${index * 0.07}s` }}
+      >
+        <Card className="w-full md:w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 border-0 shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:shadow-md cursor-pointer group">
+          <div className="relative overflow-hidden">
+            <img src={srcImage || "/card-image.png"} className="hidden md:block w-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            <div className="hidden md:block absolute inset-0 bg-linear-to-t from-[#2E2B50]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </div>
+          <span className="hidden md:block px-3 pb-3 font-medium text-foreground line-clamp-2">{label}</span>
           <div className="flex md:hidden items-center gap-3 p-2">
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
               <img src={srcImage || "/card-image.png"} className="w-full h-full object-cover" />
@@ -155,6 +298,7 @@ function UCS() {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedUcId, setSelectedUcId] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editUc, setEditUc] = useState<{ id: number; name: string } | null>(null);
 
   const { mutate: deleteUc } = useDeleteUcById(selectedUcId ?? 0);
 
@@ -297,6 +441,7 @@ function UCS() {
                     index={index}
                     selectionMode={selectionMode}
                     onSelect={handleUcSelect}
+                    onEdit={isManager && !selectionMode ? (id, name) => setEditUc({ id, name }) : undefined}
                   />
                 ))
               ))}
@@ -324,6 +469,10 @@ function UCS() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {editUc && (
+        <EditUcModal ucId={editUc.id} ucName={editUc.name} onClose={() => setEditUc(null)} />
+      )}
     </div>
   );
 }
