@@ -1,13 +1,25 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { useGetUc } from "@/hooks/use-ucs";
+import { useGetUc, useDeleteUcById } from "@/hooks/use-ucs";
 import { encodeId } from "@/lib/id-encoder";
 import type { WaitingRoomStatusT } from "@/lib/types";
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { LoaderCircle, Plus, Search } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { LoaderCircle, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
 
@@ -21,6 +33,8 @@ interface UCCardProps {
   id: number;
   waitingRoomStatus?: WaitingRoomStatusT;
   index?: number;
+  selectionMode?: boolean;
+  onSelect?: (id: number) => void;
 }
 
 function UCCard({
@@ -29,8 +43,38 @@ function UCCard({
   id,
   waitingRoomStatus,
   index = 0,
+  selectionMode = false,
+  onSelect,
 }: UCCardProps) {
   const isMobile = useIsMobile();
+
+  if (selectionMode) {
+    return (
+      <div
+        onClick={() => onSelect?.(id)}
+        className="w-full md:w-fit animate-fade-in-up h-fit cursor-pointer"
+        style={{ animationDelay: `${index * 0.07}s` }}
+      >
+        <Card className="w-full md:w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 border-2 border-destructive/40 bg-destructive/5 hover:bg-destructive/10 hover:border-destructive hover:-translate-y-1 active:translate-y-0 shadow-md hover:shadow-xl group">
+          <div className="relative overflow-hidden">
+            <img
+              src={srcImage || "/card-image.png"}
+              className="hidden md:block w-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          </div>
+          <span className="hidden md:block px-3 pb-3 font-medium text-foreground line-clamp-2">
+            {label}
+          </span>
+          <div className="flex md:hidden items-center gap-3 p-2">
+            <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
+              <img src={srcImage || "/card-image.png"} className="w-full h-full object-cover" />
+            </div>
+            <span className="text-sm font-medium leading-snug line-clamp-2 text-foreground">{label}</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <Link
@@ -95,6 +139,7 @@ function UCCard({
 
 function UCS() {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
   const { data, isLoading } = useGetUc({ enabled: !isMobile });
   const { data: waitingRooms = [], isLoading: waitingRoomsLoading } =
     useGetWaitingRooms({ enabled: isMobile });
@@ -107,6 +152,11 @@ function UCS() {
   const [stateFilter, setStateFilter] = useState<WaitingRoomStatusT | "all">(
     "all",
   );
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedUcId, setSelectedUcId] = useState<number | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const { mutate: deleteUc } = useDeleteUcById(selectedUcId ?? 0);
 
   const filteredData = data?.filter((el) =>
     el.name.toLowerCase().includes(search.toLowerCase()),
@@ -120,6 +170,20 @@ function UCS() {
     return matchesSearch && matchesState;
   });
 
+  function handleUcSelect(id: number) {
+    setSelectedUcId(id);
+    setConfirmOpen(true);
+  }
+
+  function handleConfirmDelete() {
+    if (selectedUcId !== null) {
+      deleteUc(selectedUcId);
+    }
+    setSelectionMode(false);
+    setSelectedUcId(null);
+    setConfirmOpen(false);
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-4 md:px-6 w-full">
       <div className="shrink-0">
@@ -127,14 +191,37 @@ function UCS() {
         <div className="font-rubik flex justify-center text-lg md:text-5xl mb-7 md:mb-8 font-bold text-foreground animate-fade-in-up">
           Unidades Curriculares
         </div>
-        <div className="relative w-full max-w-sm mx-auto mb-4 md:mb-12 animate-fade-in-up">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
+        <div className="flex items-center gap-2 w-full md:px-47.5 mx-auto mb-4 md:mb-12 animate-fade-in-up">
+          {isManager && !isMobile && (
+            <div className="flex gap-2 shrink-0">
+              <Button
+                size="sm"
+                onClick={() => navigate({ to: "/nova-uc" })}
+                className="gap-1 cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                Nova UC
+              </Button>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setSelectionMode((v) => !v)}
+                className="gap-1 cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4" />
+                {selectionMode ? "Cancelar" : "Eliminar UC"}
+              </Button>
+            </div>
+          )}
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Pesquisar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
         {isMobile && (
           <div className="flex gap-2 mb-6 overflow-x-auto pb-1 animate-fade-in-up">
@@ -194,7 +281,7 @@ function UCS() {
                 ))
               ))
             : data &&
-              (filteredData?.length === 0 && !isManager ? (
+              (filteredData?.length === 0 ? (
                 <div className="col-span-full flex flex-col items-center gap-4 animate-fade-in">
                   <span className="text-2xl text-muted-foreground">
                     Nenhuma unidade curricular encontrada.
@@ -208,26 +295,35 @@ function UCS() {
                     id={el.id}
                     key={index}
                     index={index}
+                    selectionMode={selectionMode}
+                    onSelect={handleUcSelect}
                   />
                 ))
               ))}
-
-          {isManager && !isLoading && !isMobile && (
-            <Link
-              to="/nova-uc"
-              className="w-fit animate-fade-in-up"
-              style={{ animationDelay: `${(data?.length || 0) * 0.07}s` }}
-            >
-              <Card className="w-80 h-57.5 flex-row justify-center items-center border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 hover:-translate-y-1 cursor-pointer shadow-none group/add">
-                <Plus className="text-primary h-10 w-10 transition-transform duration-300 group-hover/add:rotate-90" />
-                <span className="text-xl font-medium text-primary">
-                  Criar Unidade Curricular
-                </span>
-              </Card>
-            </Link>
-          )}
         </div>
       )}
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+              <Trash2 />
+            </AlertDialogMedia>
+            <AlertDialogTitle className="font-medium text-2xl">Eliminar Unidade Curricular</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium text-xl">
+              Esta ação irá eliminar permanentemente esta unidade curricular. Deseja continuar?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+            <AlertDialogCancel variant="outline" size="lg" className="cursor-pointer text-xl" onClick={() => { setSelectionMode(false); setSelectedUcId(null); }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction size="lg" variant="destructive" className="cursor-pointer text-xl" onClick={handleConfirmDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
