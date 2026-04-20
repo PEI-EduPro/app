@@ -1,0 +1,17 @@
+services:
+  api:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${API_PORT}:80"
+    volumes:
+      - exam_images:/app/images
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  exam_images:

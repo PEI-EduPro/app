@@ -1,37 +1,95 @@
-
-name: template-project
+name: edupro
 
 services:
   db:
     image: postgres:18-alpine
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-myuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
-      POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - db_data:/var/lib/postgresql
+    restart: unless-stopped
+
+  keycloak-db:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: ${KC_DB_NAME}
+      POSTGRES_USER: ${KC_DB_USER}
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD}
+    volumes:
+      - keycloak_db_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${KC_DB_USER} -d ${KC_DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:24.0.1
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KC_DB_NAME}
+      KC_DB_USERNAME: ${KC_DB_USER}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    command: start --hostname ${KC_HOSTNAME} --hostname-port ${KC_HOSTNAME_PORT} --hostname-path /keycloak --hostname-admin ${KC_HOSTNAME} --proxy-headers forwarded --http-enabled=true
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  keycloak-config-cli:
+    image: adorsys/keycloak-config-cli:latest-24.0.1
+    environment:
+      KEYCLOAK_URL: http://keycloak:8080
+      KEYCLOAK_USER: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_AVAILABILITYCHECK_ENABLED: "true"
+      KEYCLOAK_AVAILABILITYCHECK_TIMEOUT: "120s"
+      IMPORT_MANAGED_ONLY: "false"
+      IMPORT_VAR_SUBSTITUTION_ENABLED: "true"
+    volumes:
+      - ./keycloak-config:/config
+    depends_on:
+      - keycloak
+    restart: on-failure
+    profiles:
+      - setup
 
   api:
-    build: ../api
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-myuser}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
-      POSTGRES_SERVER: ${POSTGRES_SERVER:-db}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    volumes:
+      - exam_images:/app/images
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
 
   web:
     build: 
       context: ../web
+      dockerfile: Dockerfile
     ports:
-      - "80:80"
+      - "${WEB_PORT}:80"
+      - "${SSL_PORT}:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro  #muda isto se quiseres local
+      - ./nginx_certs:/certs:ro
     depends_on:
       - api
     restart: unless-stopped
 
 volumes:
   db_data:
+  keycloak_db_data:
+  exam_images:

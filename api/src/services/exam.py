@@ -4,6 +4,9 @@ import os
 import shutil
 import tempfile
 import subprocess
+import csv
+import io
+import json
 from typing import Tuple, List, Dict
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
@@ -24,7 +27,8 @@ TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
 
 async def create_configs(
     session: AsyncSession,
-    exam_specs: dict
+    exam_specs: dict,
+    student_tuples: List[tuple] = None
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
@@ -40,7 +44,7 @@ async def create_configs(
             count_result = await session.exec(
                 select(func.count(Question.id)).where(Question.topic_id == topic.id)
             )
-            available_questions = count_result.one()
+            available_questions = count_result.one_or_none() or 0
             requested_questions = exam_specs["number_questions"].get(topic_name, 0)
             
             if requested_questions > available_questions:
@@ -49,9 +53,18 @@ async def create_configs(
                     f"but {requested_questions} were requested."
                 )
 
+    # Convert student_tuples to JSON string if provided
+    nmec_name_list = None
+    if student_tuples:
+        import json
+        student_dict = {str(nmec): {"name": name, "email": email} for nmec, name, email in student_tuples}
+        nmec_name_list = json.dumps(student_dict)
+
     exam_config = ExamConfig(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
+        nmec_name_list=nmec_name_list,
+        exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None)
         #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
@@ -86,7 +99,7 @@ def _compute_normalized_weights(topic_configs: List[TopicConfig]) -> Dict[int, f
     norm = 20.0 / total_mass
     return {tc.topic_id: tc.relative_weight * norm for tc in topic_configs}
 
-
+# put the exam batch number rendered in the LaTeX
 async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
@@ -144,6 +157,10 @@ async def generate_exams_from_configs(
                 f.write(formatted_date)
 
         for var_num in range(1, num_variations + 1):
+            for f in os.listdir(TEMPLATES_DIR):
+                if f.endswith(".tex"):
+                    shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+
             # Gather questions for this variation
             all_questions = []
             for t_conf in topic_configs:
@@ -172,6 +189,34 @@ async def generate_exams_from_configs(
             # Generate T-variants.tex content and get answer positions
             questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
             all_answers_maps[var_num] = answers_map
+            answer_key = dict()
+            for k,v in answers_map.items():
+                val = ord(v)-65
+                k = k-1
+                answer_key[k] = val
+            # Transform:
+            # {
+            #     1: 'C',
+            #     2: 'A',
+            #     3: 'D'
+            # }
+            # into:
+            # {
+            #     0: 2,
+            #     1: 0,
+            #     2: 3
+            # }
+            relative_weights = {}
+            for i, q in enumerate(all_questions):
+                weight = topic_weights.get(q.topic_id, 1.0)
+                relative_weights[i] = weight
+            # Associate questions with relative weights
+            # {
+            #     0: 1,
+            #     1: 1,
+            #     2: 2
+            # }
+            
             num_questions = len(all_questions)
 
             # Write variant questions file
@@ -181,9 +226,16 @@ async def generate_exams_from_configs(
             # Update Rules.tex with actual number of questions and fraction
             _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
+            # Save exam to DB
+            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num, answer_key=answer_key, relative_weights=relative_weights)
+            session.add(new_exam)
+            await session.commit()
+            await session.refresh(new_exam)
+            exam_id_str = str(new_exam.id)
+
             # Generate exam PDF (blank answer grid)
             _write_blank_answers(tmpdir, num_questions)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year)
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
             if exam_pdf:
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
@@ -191,16 +243,11 @@ async def generate_exams_from_configs(
             # Generate answer key PDF (marked grid)
             ''' Temporarily disable this because of the new all_solutions.pdf
             _write_answer_key(tmpdir, answers_map, num_questions)
-            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year)
+            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
             if key_pdf:
                 with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
                     f.write(key_pdf)
             '''
-
-            # Save exam to DB
-            new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex)
-            session.add(new_exam)
-            await session.commit()
 
         # Generate single solutions PDF with all variations
         _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title)
@@ -301,7 +348,7 @@ def _write_blank_answers(workdir: str, num_questions: int):
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
 \\begin{{minipage}}{{0.15\\textwidth}}
-\\qrcode[height=0.75in]{{\\tttnumber}}
+\\qrcode[height=0.75in]{{\\qrcodecontent}}
 \\end{{minipage}}%
 \\begin{{minipage}}{{0.80\\textwidth}}
 \\scriptsize
@@ -333,7 +380,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
 \\begin{{minipage}}{{0.15\\textwidth}}
-\\qrcode[height=0.75in]{{\\tttnumber}}
+\\qrcode[height=0.75in]{{\\qrcodecontent}}
 \\end{{minipage}}%
 \\begin{{minipage}}{{0.80\\textwidth}}
 \\scriptsize
@@ -417,12 +464,13 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
         f.write(content)
 
 
-def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26") -> bytes | None:
+def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26", qrcode_content: str = "0") -> bytes | None:
     """Compile LaTeX to PDF, return PDF bytes or None on failure."""
     main_path = os.path.join(workdir, main_file)
     with open(main_path, "r") as f:
         content = f.read()
     content = content.replace("\\newcommand\\tttnumber{0}", f"\\newcommand\\tttnumber{{{var_num}}}")
+    content = content.replace("\\newcommand\\qrcodecontent{0}", f"\\newcommand\\qrcodecontent{{{qrcode_content}}}")
     content = content.replace("#FOOTER", "")
     content = content.replace("Exame Época Normal", exam_title)
     with open(main_path, "w") as f:
@@ -482,11 +530,12 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    num_variations: int = 1
+    num_variations: int = 1,
+    student_tuples: List[tuple] = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    exam_config, topic_configs = await create_configs(session, exam_specs)
-    exam_title = exam_specs.get("exam_title", "Exame Época Normal")
+    exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples)
+    exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
@@ -494,19 +543,245 @@ async def create_configs_and_exams(
 
 
 async def get_exam_configs_by_subject(
-    session: AsyncSession, 
+    session: AsyncSession,
     subject_id: int
 ) -> List[ExamConfig]:
     """
-    Get all exam configurations for a specific subject, 
+    Get all exam configurations for a specific subject,
     including topic configurations and their topic details.
     """
     statement = (
         select(ExamConfig)
         .where(ExamConfig.subject_id == subject_id)
         .options(
-            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic)
+            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic),
+            selectinload(ExamConfig.exams)
         )
     )
     result = await session.exec(statement)
     return list(result.all())
+
+
+async def get_exam_by_id(
+    session: AsyncSession,
+    exam_id: int
+) -> Exam | None:
+    """
+    Get a specific exam by ID.
+    """
+    statement = (
+        select(Exam)
+        .where(Exam.id == exam_id)
+    )
+    result = await session.exec(statement)
+    return result.first()
+
+
+async def get_exam_config_by_id(
+    session: AsyncSession,
+    exam_config_id: int
+) -> ExamConfig | None:
+    """
+    Get a specific exam configuration by ID.
+    """
+    statement = (
+        select(ExamConfig)
+        .where(ExamConfig.id == exam_config_id)
+        .options(
+            selectinload(ExamConfig.exams),
+            selectinload(ExamConfig.topic_configs).selectinload(TopicConfig.topic)
+        )
+    )
+    result = await session.exec(statement)
+    return result.first()
+
+
+async def process_student_list_csv(
+    session: AsyncSession,
+    exam_config_id: int,
+    file_contents: bytes
+):
+    """
+    Parse the CSV file contents and store the student list.
+    """
+    csv_text = file_contents.decode("utf-8")
+    reader = csv.DictReader(io.StringIO(csv_text))
+
+    nmec_dict = {}
+
+    for row in reader:
+        nmec = row.get("nmec")
+        name = row.get("name")
+        if nmec and name:
+            nmec_dict[nmec] = name
+
+    nmec_name_list = json.dumps(nmec_dict)
+
+    await store_student_list(session, exam_config_id, nmec_name_list)
+
+
+async def store_student_list(
+    session: AsyncSession,
+    exam_config_id: int,
+    nmec_name_list: str
+):
+    """
+    Store the student list (nmec and names) for a given exam configuration.
+     This will be used to associate generated exams with students.
+     """
+    # This function would typically update the ExamConfig with the provided nmec_dict
+    # For example, you could add a new column to ExamConfig to store this information as JSON
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    exam_config.nmec_name_list = nmec_name_list
+    session.add(exam_config)
+    await session.commit()
+
+
+async def get_subject_id_by_exam_config_id(
+    exam_config_id:int,
+    session: AsyncSession
+):
+    """Get subject's id by exam config id"""
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    return exam_config.subject_id
+
+
+async def get_student_list(
+    session: AsyncSession,
+    exam_config_id: int
+):
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+    
+    return exam_config.nmec_name_list
+
+
+async def get_exams_by_config_id(
+    session: AsyncSession,
+    exam_config_id: int
+):
+    statement = select(Exam).where(Exam.exam_config_id == exam_config_id)
+    result = await session.exec(statement)
+    exams = result.all()
+    
+    if not exams:
+        raise ValueError("No exams found for this configuration.")
+    
+    return exams
+
+
+async def delete_exam_config(
+    session: AsyncSession,
+    exam_config_id: int
+) -> bool:
+    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    result = await session.exec(statement)
+    exam_config = result.first()
+    
+    if not exam_config:
+        return False
+        
+    await session.delete(exam_config)
+    await session.commit()
+    return True
+
+
+async def get_latest_exam_config_id(session: AsyncSession, subject_id: int) -> int:
+    """Get the ID of the most recently created exam config for a subject."""
+    stmt = select(ExamConfig).where(ExamConfig.subject_id == subject_id).order_by(ExamConfig.id.desc()).limit(1)
+    result = await session.exec(stmt)
+    exam_config = result.first()
+    if not exam_config:
+        raise ValueError(f"No exam config found for subject {subject_id}")
+    return exam_config.id
+
+
+async def correct_by_hand(
+    session: AsyncSession,
+    exam_id: int,
+    grid: dict,
+) -> Exam:
+    """
+    Update exam results from a manually-provided grid and recompute the grade server-side.
+    `grid` is a dict like {"0": {"A": false, "B": true, ...}, ...}
+    """
+    exam_instance = await get_exam_by_id(session, exam_id)
+    if not exam_instance:
+        raise ValueError("Exam not found.")
+
+    exam_config = await get_exam_config_by_id(session, exam_instance.exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+
+    answer_key = {int(k): v for k, v in exam_instance.answer_key.items()}
+    relative_weights = {int(k): v for k, v in exam_instance.relative_weights.items()}
+    fraction = exam_config.fraction
+    sum_weights = sum(relative_weights.values()) or 1
+
+    # Normalise grid keys to uppercase option letters
+    normalised_grid = {
+        str(q_idx): {opt.upper(): val for opt, val in opts.items()}
+        for q_idx, opts in grid.items()
+    }
+
+    total_score = 0.0
+    for q_idx, correct_opt_idx in answer_key.items():
+        q_weight = relative_weights.get(q_idx, 0)
+        q_value = (q_weight / sum_weights) * 20.0
+        penalty_per_wrong = q_value * (fraction / 100.0)
+
+        opts = normalised_grid.get(str(q_idx), {})
+        correct_letter = chr(ord('A') + correct_opt_idx)
+
+        num_correct = 1 if opts.get(correct_letter, False) else 0
+        num_wrong = sum(1 for letter, marked in opts.items() if marked and letter != correct_letter)
+
+        total_score += (num_correct * q_value) - (num_wrong * penalty_per_wrong)
+
+    exam_instance.results = json.dumps(normalised_grid)
+    exam_instance.grade = max(0.0, total_score)
+
+    session.add(exam_instance)
+    await session.commit()
+    await session.refresh(exam_instance)
+    return exam_instance
+
+
+
+def build_exam_questions(exam: Exam, fraction: float) -> list:
+    """Build the questions list for exam info responses."""
+    if not (exam.results and exam.answer_key and exam.relative_weights):
+        return []
+
+    answered_dict = json.loads(exam.results)
+    answer_key = {int(k): v for k, v in exam.answer_key.items()}
+    relative_weights = {int(k): v for k, v in exam.relative_weights.items()}
+    sum_weights = sum(relative_weights.values()) or 1
+
+    questions = []
+    for q_idx in sorted(answer_key.keys()):
+        q_weight = relative_weights.get(q_idx, 0)
+        q_value = round((q_weight / sum_weights) * 20.0, 4)
+        correct_answer = chr(ord('a') + answer_key[q_idx])
+        answers = {k.lower(): v for k, v in answered_dict.get(str(q_idx), {}).items()}
+
+        questions.append({
+            "question_number": q_idx,
+            "correct_answer": correct_answer,
+            "discount": fraction,
+            "value": q_value,
+            "answers": answers,
+        })
+
+    return questions

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
 import { type NewExamConfigI, type ExamConfigI } from "@/lib/types";
+import { toast } from "sonner";
 
 const saveFile = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
@@ -29,9 +30,6 @@ const useAddExamConfig = () => {
 
       queryClient.invalidateQueries({ queryKey: ["examConfig"] });
     },
-    onError: (error) => {
-      console.error("Exam generation and download failed:", error.message);
-    },
   });
 };
 
@@ -42,4 +40,22 @@ const useGetExamConfig = (ucId: number) =>
     enabled: !!ucId,
   });
 
-export { useAddExamConfig, useGetExamConfig };
+const useDeleteExamConfig = (ucId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => apiClient.delete(`/exams/config/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["examConfig", ucId] });
+      toast.success("Configuração de exame eliminada com sucesso!", {
+        position: "top-right",
+      });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+      });
+    },
+  });
+};
+
+export { useAddExamConfig, useGetExamConfig, useDeleteExamConfig };

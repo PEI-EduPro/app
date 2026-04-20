@@ -28,6 +28,29 @@ import {
 } from "@/components/ui/table";
 import { useState } from "react";
 
+const normalizeString = (str: string) => {
+  return str
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+};
+
+const accentInsensitiveFilter = (
+  row: any,
+  columnId: string,
+  filterValue: string,
+) => {
+  const cellValue = row.getValue(columnId);
+  if (!cellValue) return false;
+  return normalizeString(String(cellValue)).includes(
+    normalizeString(filterValue),
+  );
+};
+
+const globalFilterFn = (row: any, _columnId: string, filterValue: string) => {
+  return ["nome", "nmec"].some((key) => accentInsensitiveFilter(row, key, filterValue));
+};
+
 interface CustomTableProps {
   isSelectable?: boolean;
   data: Record<string, string>[];
@@ -37,8 +60,9 @@ interface CustomTableProps {
 }
 
 export function CustomTable(props: CustomTableProps) {
-  const { isSelectable, data, rowNumber = 10, rowSelection, onChange } = props;
+  const { isSelectable, data, rowNumber = 10, rowSelection = [], onChange } = props;
   const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: rowNumber });
 
   const keys = data[0]
     ? Object.keys(data[0]).filter((key) => key !== "id")
@@ -84,6 +108,7 @@ export function CustomTable(props: CustomTableProps) {
     cell: ({ row }: { row: Row<Record<string, string>> }) => (
       <div>{row.getValue(key)}</div>
     ),
+    filterFn: undefined,
   })) as ColumnDef<Record<string, string>>[];
 
   const columns = isSelectable ? [selectColumn, ...dataColumns] : dataColumns;
@@ -97,18 +122,20 @@ export function CustomTable(props: CustomTableProps) {
                 acc[el.id] = true;
                 return acc;
               },
-              {} as Record<string, boolean>
-            )
+              {} as Record<string, boolean>,
+            ),
           )
         : updater;
 
     const selectedIds = Object.keys(newSelection).filter(
-      (key) => newSelection[key]
+      (key) => newSelection[key],
     );
     const selectedRows = data.filter((row) => selectedIds.includes(row.id));
 
     onChange(selectedRows);
   };
+
+  const [filterValue, setFilterValue] = useState("");
 
   const table = useReactTable({
     data: isSelectable ? data : rowSelection,
@@ -120,21 +147,20 @@ export function CustomTable(props: CustomTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: handleRowSelectionChange,
+    globalFilterFn,
     state: {
       sorting,
+      globalFilter: filterValue,
+      pagination,
       rowSelection: rowSelection.reduce(
         (acc, el) => {
           acc[el.id] = true;
           return acc;
         },
-        {} as Record<string, boolean>
+        {} as Record<string, boolean>,
       ),
     },
-    initialState: {
-      pagination: {
-        pageSize: rowNumber,
-      },
-    },
+    onPaginationChange: setPagination,
   });
 
   return (
@@ -142,11 +168,9 @@ export function CustomTable(props: CustomTableProps) {
       {isSelectable && (
         <div className="flex items-center py-4">
           <Input
-            placeholder="Filtrar por nome..."
-            value={(table.getColumn("nome")?.getFilterValue() as string) ?? ""}
-            onChange={(event) =>
-              table.getColumn("nome")?.setFilterValue(event.target.value)
-            }
+            placeholder="Filtrar por nome ou nmec..."
+            value={filterValue}
+            onChange={(event) => setFilterValue(event.target.value)}
           />
         </div>
       )}
@@ -162,7 +186,7 @@ export function CustomTable(props: CustomTableProps) {
                         ? null
                         : flexRender(
                             header.column.columnDef.header,
-                            header.getContext()
+                            header.getContext(),
                           )}
                     </TableHead>
                   );
@@ -181,7 +205,7 @@ export function CustomTable(props: CustomTableProps) {
                     <TableCell key={cell.id}>
                       {flexRender(
                         cell.column.columnDef.cell,
-                        cell.getContext()
+                        cell.getContext(),
                       )}
                     </TableCell>
                   ))}
@@ -193,7 +217,7 @@ export function CustomTable(props: CustomTableProps) {
                   colSpan={columns.length}
                   className="h-24 text-center"
                 >
-                  No results.
+                  Nenhum resultado encontrado
                 </TableCell>
               </TableRow>
             )}
@@ -204,6 +228,7 @@ export function CustomTable(props: CustomTableProps) {
         <div className="flex flex-row justify-between w-full">
           <Button
             className="cursor-pointer"
+            type="button"
             variant="outline"
             size="sm"
             onClick={() => table.previousPage()}
@@ -213,9 +238,12 @@ export function CustomTable(props: CustomTableProps) {
           </Button>
           <Button
             className="cursor-pointer"
+            type="button"
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
+            onClick={() => {
+              table.nextPage();
+            }}
             disabled={!table.getCanNextPage()}
           >
             Próximo

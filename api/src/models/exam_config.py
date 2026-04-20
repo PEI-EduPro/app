@@ -1,19 +1,20 @@
 # src/models/exam_config.py
-from typing import Optional, List
+from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
 from src.models.topic_config import TopicConfigDTO
 
 
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
-    
+
     id: Optional[int] = Field(default=None, primary_key=True)
     #creator_keycloak_id: str = Field(max_length=255)
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
-    
+    nmec_name_list: Optional[str] # nmec (string): {name: string, email: string}
+    exam_name: Optional[str] = Field(default=None, max_length=255)
+
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     exams: List["Exam"] = Relationship(back_populates="exam_config")
@@ -24,12 +25,15 @@ class ExamConfigCreate(SQLModel):
     # creator_keycloak_id: str  # Commented out
     fraction: int = 0
     subject_id: int
+    nmec_list: Optional[str] #dict{nmec : nome}
+    exam_name: Optional[str] = None
 
 class ExamConfigUpdate(SQLModel):
     """Schema for updating exam configuration"""
     # creator_keycloak_id: Optional[str] = None  # Commented out
     fraction: Optional[int] = None
     subject_id: Optional[int] = None
+    nmec_list: Optional[str] #dict{nmec : nome}
 
 class ExamConfigRead(SQLModel):
     """Schema for reading exam configuration data"""
@@ -37,15 +41,7 @@ class ExamConfigRead(SQLModel):
     # creator_keycloak_id: str  # Commented out
     fraction: int
     subject_id: int
-
-class ExamConfigPublic(SQLModel):
-    """Schema for public exam config data (limited info)"""
-    id: int
-    topic_id: int
-    # Potentially remove creator_keycloak_id from public schema if not needed
-    # creator_keycloak_id: str
-    num_questions: int
-    relative_weight: float
+    
 
 class ExamConfigResponse(SQLModel):
     id: int
@@ -53,3 +49,18 @@ class ExamConfigResponse(SQLModel):
     fraction: int
     #creator_keycloak_id: str
     topic_configs: List[TopicConfigDTO]
+    nmec_name_list: Optional[str]
+    num_variations: int
+
+
+class ExamGenerateRequest(SQLModel):
+    subject_id: int
+    fraction: int
+    exam_name: Optional[str] = None
+    topics: List[str]
+    number_questions: Dict[str, int]
+    relative_quotations: Dict[str, float]
+    num_variations: int = 1
+    professors: List[str] = []
+    student_tuples: List[Tuple[int, str, str]] = []
+    vigilant_keycloak_ids: List[str] = []

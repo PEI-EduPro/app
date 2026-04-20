@@ -26,6 +26,14 @@ import { ExamConfigCard } from "./exam-config-card";
 import { useAddExamConfig } from "@/hooks/use-exams";
 import type { NewExamConfigI } from "@/lib/types";
 import { useGetUCTopics } from "@/hooks/use-questions";
+import { encodeId } from "@/lib/id-encoder";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar } from "./ui/calendar";
+import { format, toDate } from "date-fns";
+import { useGetProfessors } from "@/hooks/use-users";
+import { useKeycloak } from "@/hooks/use-keycloak";
+import { MultiSelect } from "./multi-select";
+import { Upload } from "lucide-react";
 
 type TopicSelection = {
   id: string;
@@ -33,51 +41,65 @@ type TopicSelection = {
 };
 
 export type NovoExameFormT = {
+  fraction: number;
+  exam_title: string;
   topics: TopicSelection[];
   number_questions: Record<string, number>;
   relative_quotations: Record<string, number>;
   number_exams: number;
-  fraction: number;
-  exam_title: string;
+  vigilantes: string[];
   exam_date: string;
   semester: string;
   academic_year: string;
+  students_csv: File | null;
 };
 
-export const NovoExameForm = (props: {
-  examData?: NovoExameFormT;
-  ucID: number;
-  ucName: string;
-}) => {
-  const { examData = null, ucID, ucName } = props;
+export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
+  const { ucID, ucName } = props;
   const [formStep, setFormStep] = useState<number>(0);
   const [validatedData, setValidatedData] = useState<NovoExameFormT | null>(
-    null
+    null,
   );
-  const totalSteps = 5;
+  const totalSteps = 6;
   const navigate = useNavigate();
 
   const { mutate, isPending } = useAddExamConfig();
   const { data: topics } = useGetUCTopics(ucID);
+  const { data: professors } = useGetProfessors();
+
+  const keycloack = useKeycloak();
 
   const form = useForm<NovoExameFormT>({
-    defaultValues: {
-      topics: examData?.topics || [],
-      number_questions: examData?.number_questions || {},
-      relative_quotations: examData?.relative_quotations || {},
-      number_exams: examData?.number_exams || 1,
-      fraction: examData?.fraction || 0,
-      exam_title: examData?.exam_title || "Exame Época Normal",
-      exam_date: examData?.exam_date || new Date().toISOString().split('T')[0],
-      semester: examData?.semester || "1",
-      academic_year: examData?.academic_year || "2025/26",
-    },
+    mode: "onChange",
   });
 
-  const { handleSubmit, control, reset, watch, setValue, getValues } = form;
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [
+    `${currentYear - 1}/${String(currentYear).slice(-2)}`,
+    `${currentYear}/${String(currentYear + 1).slice(-2)}`,
+  ];
+
+  const {
+    handleSubmit,
+    control,
+    reset,
+    watch,
+    setValue,
+    getValues,
+    formState,
+  } = form;
+
+  async function parseStudentsCsv(file: File): Promise<string[][]> {
+    const text = await file.text();
+    return text
+      .trim()
+      .split("\n")
+      .slice(1)
+      .map((line) => line.split(",").map((v) => v.trim()));
+  }
 
   const validateAndNormalizeData = (
-    formData: NovoExameFormT
+    formData: NovoExameFormT,
   ): NovoExameFormT => {
     const validated: NovoExameFormT = {
       ...formData,
@@ -93,6 +115,8 @@ export const NovoExameForm = (props: {
           : 0,
       number_questions: { ...formData.number_questions },
       relative_quotations: { ...formData.relative_quotations },
+      students_csv: formData.students_csv,
+      vigilantes: [...(formData.vigilantes ?? [])],
     };
 
     formData.topics?.forEach((topic) => {
@@ -136,7 +160,7 @@ export const NovoExameForm = (props: {
       Object.keys(validated.relative_quotations).forEach((key) => {
         setValue(
           `relative_quotations.${key}`,
-          validated.relative_quotations[key]
+          validated.relative_quotations[key],
         );
       });
     }
@@ -149,7 +173,7 @@ export const NovoExameForm = (props: {
   };
 
   const onSubmit = async (formData: NovoExameFormT) => {
-    const finalData = validatedData || validateAndNormalizeData(formData);
+    const finalData = validateAndNormalizeData(formData);
 
     const novoExameData: NewExamConfigI = {
       subject_id: ucID,
@@ -162,6 +186,10 @@ export const NovoExameForm = (props: {
       exam_date: finalData.exam_date,
       semester: finalData.semester,
       academic_year: finalData.academic_year,
+      student_tuples: finalData.students_csv
+        ? await parseStudentsCsv(finalData.students_csv)
+        : [],
+      vigilant_keycloak_ids: finalData.vigilantes,
     };
 
     finalData.topics.forEach((topic) => {
@@ -173,21 +201,27 @@ export const NovoExameForm = (props: {
           finalData.relative_quotations[topic.id];
       }
     });
-
-    const loadingToast = toast.loading("A gerar exames...");
-
+    toast.loading("A gerar exame...", { position: "top-right" });
     mutate(novoExameData, {
       onSuccess: () => {
-        toast.dismiss(loadingToast);
-        toast.success("Exame criado com sucesso!");
+        toast.dismiss();
+        toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
         reset();
-        navigate({ to: "/detalhes-uc", search: { ucId: ucID } });
+        navigate({
+          to: "/exames-uc",
+          search: { ucId: encodeId(ucID), ucName },
+        });
       },
-      onError: (error) => {
-        toast.dismiss(loadingToast);
-        toast.error(`Erro ao gerar exame: ${error.message}`);
+      onError: () => {
+        toast.dismiss();
+        toast.error(
+          "Um erro ocorreu ao gerar exame, tente novamente mais tarde.",
+          {
+            position: "top-right",
+          },
+        );
       },
     });
   };
@@ -204,14 +238,14 @@ export const NovoExameForm = (props: {
       topic_configs: formData.topics.map((topic) => ({
         topic_id: parseInt(topic.id),
         topic_name: topic.nome,
-        number_questions: formData.number_questions[topic.id] || 1,
+        num_questions: formData.number_questions[topic.id] || 1,
         relative_weight: formData.relative_quotations[topic.id] || 1,
       })),
     };
   };
 
   return (
-    <div className="w-full space-y-4">
+    <div className="w-full flex flex-col flex-1 min-h-0 space-y-4">
       <div className="flex items-center justify-center">
         {Array.from({ length: totalSteps }).map((_, index) => (
           <div key={index} className="flex items-center">
@@ -219,53 +253,58 @@ export const NovoExameForm = (props: {
               className={cn(
                 "w-4 h-4 rounded-full transition-all duration-300 ease-in-out",
                 index <= formStep ? "bg-primary" : "bg-primary/30",
-                index < formStep && "bg-primary"
+                index < formStep && "bg-primary",
               )}
             />
             {index < totalSteps - 1 && (
               <div
                 className={cn(
                   "w-8 h-0.5",
-                  index < formStep ? "bg-primary" : "bg-primary/30"
+                  index < formStep ? "bg-primary" : "bg-primary/30",
                 )}
               />
             )}
           </div>
         ))}
       </div>
-      <Card className="border-none shadow-none">
-        <CardContent>
+      <Card className="border-none shadow-none flex flex-col flex-1 min-h-0">
+        <CardContent className="flex flex-col flex-1 min-h-0">
           {formStep === 0 && (
             // Selecionar tópicos
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col flex-1 min-h-0"
+              >
                 <FormField
                   control={control}
                   name="topics"
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-center block text-lg">
+                    <FormItem className="flex flex-col flex-1 min-h-0 gap-y-4">
+                      <FormLabel className="text-center block text-lg gap-1">
                         Tópicos
                       </FormLabel>
                       {topics && (
                         <CustomTable
                           isSelectable
-                          data={topics.map((topic) => ({
-                            id: topic[0].id.toString(),
-                            nome: topic[0].name,
-                          }))}
+                          data={topics
+                            .filter((topic) => topic[1] > 0)
+                            .map((topic) => ({
+                              id: topic[0].id.toString(),
+                              nome: topic[0].name,
+                            }))}
                           onChange={field.onChange}
-                          rowSelection={field.value}
+                          rowSelection={field.value ?? []}
+                          rowNumber={12}
                         />
                       )}
                     </FormItem>
                   )}
                 />
 
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     disabled
@@ -274,9 +313,8 @@ export const NovoExameForm = (props: {
                   </Button>
                   <Button
                     disabled={!(watch("topics")?.length > 0)}
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -289,91 +327,113 @@ export const NovoExameForm = (props: {
           {formStep === 1 && (
             // Selecionar número de questões por módulo
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col flex-1 min-h-0"
+              >
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
                     Número de questões por tópico
                   </FormLabel>
 
-                  {watch("topics")?.map((topic) => {
-                    const maxQuestions = topics
-                      ?.map((t) =>
-                        t[0].id.toString() === topic.id ? t[1] : 0
-                      )
-                      .filter((n) => n !== 0)[0] || 1;
-                    
-                    return (
-                    <FormItem
-                      key={topic.id}
-                      className="flex items-center gap-x-4"
-                    >
-                      <FormLabel className="flex-shrink-0 w-140">
-                        {topic.nome} (max: {maxQuestions})
-                      </FormLabel>
-                      <FormControl className="flex-1">
-                        <Input
-                          type="number"
-                          min="1"
-                          max={maxQuestions}
-                          placeholder="1"
-                          value={watch(`number_questions.${topic.id}`) || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
+                  <div className="min-h-0 overflow-y-auto flex flex-col gap-1 flex-1">
+                    {watch("topics")?.map((topic) => {
+                      const maxQuestions =
+                        topics
+                          ?.map((t) =>
+                            t[0].id.toString() === topic.id ? t[1] : 0,
+                          )
+                          .filter((n) => n !== 0)[0] || 1;
 
-                            // Allow empty value for backspacing
-                            if (value === "") {
-                              setValue(`number_questions.${topic.id}`, NaN);
-                              return;
-                            }
+                      return (
+                        <FormItem
+                          key={topic.id}
+                          className="flex items-center gap-x-4"
+                        >
+                          <FormLabel className="shrink-0 w-fit">
+                            {topic.nome} (max: {maxQuestions})
+                          </FormLabel>
+                          <div className="flex-1 border-b-2 border-dashed border-gray-300 mb-0.5" />
+                          <FormControl className="flex-1">
+                            <Input
+                              className="max-w-22"
+                              type="number"
+                              min="1"
+                              max={maxQuestions}
+                              placeholder="1"
+                              value={
+                                watch(`number_questions.${topic.id}`) || ""
+                              }
+                              onChange={(e) => {
+                                const value = e.target.value;
 
-                            const numValue = parseInt(value);
-                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
-                            setValue(`number_questions.${topic.id}`, clampedValue);
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
+                                // Allow empty value for backspacing
+                                if (value === "") {
+                                  setValue(`number_questions.${topic.id}`, NaN);
+                                  return;
+                                }
 
-                            // Only validate and set to 1 on blur if empty
-                            if (value === "") {
-                              setValue(`number_questions.${topic.id}`, 1);
-                              return;
-                            }
+                                const numValue = parseInt(value);
+                                const clampedValue = Math.min(
+                                  Math.max(isNaN(numValue) ? 1 : numValue, 1),
+                                  maxQuestions,
+                                );
+                                setValue(
+                                  `number_questions.${topic.id}`,
+                                  clampedValue,
+                                );
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value;
 
-                            const numValue = parseInt(value);
-                            const clampedValue = Math.min(Math.max(isNaN(numValue) ? 1 : numValue, 1), maxQuestions);
-                            setValue(`number_questions.${topic.id}`, clampedValue);
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              !/[0-9]/.test(e.key) &&
-                              ![
-                                "Backspace",
-                                "Delete",
-                                "Tab",
-                                "Escape",
-                                "Enter",
-                                "ArrowLeft",
-                                "ArrowRight",
-                                "ArrowUp",
-                                "ArrowDown",
-                                "Home",
-                                "End",
-                              ].includes(e.key) &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )})}
+                                // Only validate and set to 1 on blur if empty
+                                if (value === "") {
+                                  setValue(`number_questions.${topic.id}`, 1);
+                                  return;
+                                }
+
+                                const numValue = parseInt(value);
+                                const clampedValue = Math.min(
+                                  Math.max(isNaN(numValue) ? 1 : numValue, 1),
+                                  maxQuestions,
+                                );
+                                setValue(
+                                  `number_questions.${topic.id}`,
+                                  clampedValue,
+                                );
+                              }}
+                              onKeyDown={(e) => {
+                                if (
+                                  !/[0-9]/.test(e.key) &&
+                                  ![
+                                    "Backspace",
+                                    "Delete",
+                                    "Tab",
+                                    "Escape",
+                                    "Enter",
+                                    "ArrowLeft",
+                                    "ArrowRight",
+                                    "ArrowUp",
+                                    "ArrowDown",
+                                    "Home",
+                                    "End",
+                                  ].includes(e.key) &&
+                                  !e.ctrlKey &&
+                                  !e.metaKey
+                                ) {
+                                  e.preventDefault();
+                                }
+                              }}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      );
+                    })}
+                  </div>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -381,9 +441,8 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -396,80 +455,14 @@ export const NovoExameForm = (props: {
           {formStep === 2 && (
             // Selecionar cotações relativas e número de exames
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col flex-1 min-h-0"
+              >
+                <div className="space-y-4 flex flex-col flex-1 min-h-0">
                   <FormLabel className="text-center block text-lg">
                     Cotações relativas por tópico
                   </FormLabel>
-                  {watch("topics")?.map((topic) => (
-                    <FormItem
-                      key={topic.id}
-                      className="flex items-center gap-x-4"
-                    >
-                      <FormLabel className="flex-shrink-0 w-140">
-                        {topic.nome}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          placeholder="1"
-                          value={watch(`relative_quotations.${topic.id}`) || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-
-                            // Allow empty value for backspacing
-                            if (value === "") {
-                              setValue(`relative_quotations.${topic.id}`, NaN);
-                              return;
-                            }
-
-                            const numValue = parseInt(value);
-                            setValue(
-                              `relative_quotations.${topic.id}`,
-                              isNaN(numValue) || numValue < 1 ? 1 : numValue
-                            );
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
-
-                            // Only validate and set to 1 on blur if empty
-                            if (value === "") {
-                              setValue(`relative_quotations.${topic.id}`, 1);
-                              return;
-                            }
-
-                            const numValue = parseInt(value);
-                            if (isNaN(numValue) || numValue < 1) {
-                              setValue(`relative_quotations.${topic.id}`, 1);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              !/[0-9]/.test(e.key) &&
-                              ![
-                                "Backspace",
-                                "Delete",
-                                "Tab",
-                                "Escape",
-                                "Enter",
-                                "ArrowLeft",
-                                "ArrowRight",
-                                "ArrowUp",
-                                "ArrowDown",
-                                "Home",
-                                "End",
-                              ].includes(e.key) &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  ))}
 
                   <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h4 className="font-semibold text-blue-800 mb-2">
@@ -482,12 +475,90 @@ export const NovoExameForm = (props: {
                       importância na nota final.
                     </p>
                   </div>
+
+                  <div className="overflow-y-auto min-h-0 flex flex-col gap-1 flex-1">
+                    {watch("topics")?.map((topic) => (
+                      <FormItem
+                        key={topic.id}
+                        className="flex items-center gap-x-4"
+                      >
+                        <FormLabel className="shrink-0 w-fit">
+                          {topic.nome}
+                        </FormLabel>
+                        <div className="flex-1 border-b-2 border-dashed border-gray-300 mb-0.5" />
+                        <FormControl className="flex-1">
+                          <Input
+                            className="max-w-22"
+                            type="number"
+                            min="1"
+                            placeholder="1"
+                            value={
+                              watch(`relative_quotations.${topic.id}`) || ""
+                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+
+                              // Allow empty value for backspacing
+                              if (value === "") {
+                                setValue(
+                                  `relative_quotations.${topic.id}`,
+                                  NaN,
+                                );
+                                return;
+                              }
+
+                              const numValue = parseInt(value);
+                              setValue(
+                                `relative_quotations.${topic.id}`,
+                                isNaN(numValue) || numValue < 1 ? 1 : numValue,
+                              );
+                            }}
+                            onBlur={(e) => {
+                              const value = e.target.value;
+
+                              // Only validate and set to 1 on blur if empty
+                              if (value === "") {
+                                setValue(`relative_quotations.${topic.id}`, 1);
+                                return;
+                              }
+
+                              const numValue = parseInt(value);
+                              if (isNaN(numValue) || numValue < 1) {
+                                setValue(`relative_quotations.${topic.id}`, 1);
+                              }
+                            }}
+                            onKeyDown={(e) => {
+                              if (
+                                !/[0-9]/.test(e.key) &&
+                                ![
+                                  "Backspace",
+                                  "Delete",
+                                  "Tab",
+                                  "Escape",
+                                  "Enter",
+                                  "ArrowLeft",
+                                  "ArrowRight",
+                                  "ArrowUp",
+                                  "ArrowDown",
+                                  "Home",
+                                  "End",
+                                ].includes(e.key) &&
+                                !e.ctrlKey &&
+                                !e.metaKey
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="flex justify-between">
+                <div className="flex justify-between mt-4">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -495,9 +566,8 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
                     size="sm"
-                    className="font-medium"
+                    className="cursor-pointer"
                     onClick={handleNextStep}
                   >
                     Próximo
@@ -510,8 +580,11 @@ export const NovoExameForm = (props: {
           {formStep === 3 && (
             // Final step: Number of exams and discount
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-4">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col flex-1 min-h-0"
+              >
+                <div className="space-y-4 flex-1 min-h-0 overflow-y-auto">
                   <FormLabel className="text-center block text-lg">
                     Configurações finais
                   </FormLabel>
@@ -521,14 +594,16 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="exam_title"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Título do exame
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
                             type="text"
                             placeholder="Ex: Teste Teórico 1"
+                            className="w-fit"
                             {...field}
                           />
                         </FormControl>
@@ -541,15 +616,42 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="exam_date"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Data do exame
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                          />
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                id="date-picker-simple"
+                                className="justify-start font-normal"
+                              >
+                                {field.value ? (
+                                  format(field.value, "dd/MM/yyyy")
+                                ) : (
+                                  <span>Escolha uma data</span>
+                                )}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent
+                              className="w-auto p-0"
+                              align="start"
+                            >
+                              <Calendar
+                                mode="single"
+                                selected={toDate(field.value)}
+                                onSelect={(date) => {
+                                  field.onChange(
+                                    date ? format(date, "yyyy-MM-dd") : "",
+                                  );
+                                }}
+                              />
+                            </PopoverContent>
+                          </Popover>
                         </FormControl>
                       </FormItem>
                     )}
@@ -560,11 +662,15 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="semester"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Semestre
+                          <span className="text-red-500">*</span>
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione o semestre" />
@@ -584,19 +690,26 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="academic_year"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Ano letivo
+                          <span className="text-red-500">*</span>
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               <SelectValue placeholder="Selecione o ano" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="2024/25">2024/25</SelectItem>
-                            <SelectItem value="2025/26">2025/26</SelectItem>
+                            {yearOptions.map((year) => (
+                              <SelectItem key={year} value={year}>
+                                {year}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                       </FormItem>
@@ -610,12 +723,14 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="number_exams"
                     render={() => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0 flex items-center gap-1">
                           Número de exames
+                          <span className="text-red-500">*</span>
                         </FormLabel>
                         <FormControl>
                           <Input
+                            className="max-w-18.25"
                             type="number"
                             min="1"
                             placeholder="1"
@@ -632,7 +747,7 @@ export const NovoExameForm = (props: {
                               const numValue = parseInt(value);
                               setValue(
                                 `number_exams`,
-                                isNaN(numValue) || numValue < 1 ? 1 : numValue
+                                isNaN(numValue) || numValue < 1 ? 1 : numValue,
                               );
                             }}
                             onBlur={(e) => {
@@ -684,12 +799,11 @@ export const NovoExameForm = (props: {
                     control={control}
                     name="fraction"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-x-4">
-                        <FormLabel className="flex-shrink-0 w-140">
-                          Desconto (%)
-                        </FormLabel>
+                      <FormItem className="flex items-center justify-between">
+                        <FormLabel className="shrink-0">Desconto (%)</FormLabel>
                         <FormControl>
                           <Input
+                            className="w-fit"
                             type="number"
                             min="0"
                             max="100"
@@ -746,7 +860,7 @@ export const NovoExameForm = (props: {
                     <p className="text-sm text-amber-700">
                       Para cada questão errada, será descontado{" "}
                       <span className="font-bold">
-                        {getDisplayData().fraction || 0}%
+                        {watch("fraction") || 0}%
                       </span>{" "}
                       do valor da questão.<br></br>
                       Exemplo: Se uma questão vale 2 valores e o desconto é de
@@ -758,8 +872,7 @@ export const NovoExameForm = (props: {
 
                 <div className="flex justify-between">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -767,10 +880,16 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
+                    className="cursor-pointer"
                     size="sm"
-                    className="font-medium"
                     onClick={handleNextStep}
+                    disabled={
+                      !watch("exam_title") ||
+                      !watch("exam_date") ||
+                      !watch("academic_year") ||
+                      !watch("number_exams") ||
+                      !watch("semester")
+                    }
                   >
                     Próximo
                   </Button>
@@ -781,18 +900,21 @@ export const NovoExameForm = (props: {
 
           {formStep === 4 && (
             <Form {...form}>
-              <form onSubmit={handleSubmit(onSubmit)} className="grid gap-y-4">
-                <div className="space-y-6">
-                  <FormLabel className="text-center block text-2xl font-bold text-primary">
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col flex-1 min-h-0"
+              >
+                <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
+                  <FormLabel className="text-center block text-lg">
                     Resumo do Exame
                   </FormLabel>
-                  <ExamConfigCard examConfigData={getDisplayData()} />
+                  <div className="flex flex-col gap-1">
+                    <ExamConfigCard examConfigData={getDisplayData()} />
+                  </div>
                 </div>
-
                 <div className="flex justify-between pt-4">
                   <Button
-                    type="button"
-                    className="bg-white text-black font-medium"
+                    className="cursor-pointer"
                     variant="outline"
                     size="sm"
                     onClick={handlePreviousStep}
@@ -800,13 +922,187 @@ export const NovoExameForm = (props: {
                     Retroceder
                   </Button>
                   <Button
-                    type="button"
+                    className="cursor-pointer"
                     size="sm"
-                    className="font-medium"
-                    disabled={isPending}
-                    onClick={() => {
-                      handleSubmit(onSubmit)();
+                    onClick={handleNextStep}
+                  >
+                    Próximo
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          )}
+
+          {formStep === 5 && (
+            <Form {...form}>
+              <form
+                onSubmit={handleSubmit(onSubmit)}
+                className="flex flex-col flex-1 min-h-0"
+              >
+                <div className="space-y-6 flex-1 min-h-0 overflow-y-auto">
+                  <FormLabel className="text-center block text-lg">
+                    Vigilantes e Alunos
+                  </FormLabel>
+                  <div className="flex flex-col gap-1">
+                    <FormField
+                      key="LKad71ZM"
+                      control={control}
+                      name="vigilantes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="flex items-center gap-1">
+                            Professores Vigilantes
+                            <span className="text-red-500">*</span>
+                          </FormLabel>
+                          <FormControl>
+                            <MultiSelect
+                              emptyIndicator="Nenhum resultado encontrado"
+                              value={field.value}
+                              onValueChange={(e) => {
+                                field.onChange(e);
+                              }}
+                              placeholder="Selecione varios docentes"
+                              options={
+                                professors
+                                  ?.map((p) => ({
+                                    value: p.id,
+                                    label:
+                                      p.firstName && p.lastName
+                                        ? `${p.firstName} ${p.lastName}`
+                                        : p.username || p.id,
+                                  }))
+                                  .filter(
+                                    (e) =>
+                                      e.value !==
+                                      keycloack.keycloak.tokenParsed?.sub,
+                                  ) || []
+                              }
+                              popoverClassName="w-[650px]"
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={control}
+                    name="students_csv"
+                    rules={{
+                      validate: (file) => {
+                        if (!file) return true;
+                        return new Promise((resolve) => {
+                          const reader = new FileReader();
+                          reader.onload = (ev) => {
+                            const text = ev.target?.result as string;
+                            const lines = text
+                              .split("\n")
+                              .filter((l) => l.trim());
+                            for (let i = 0; i < lines.length; i++) {
+                              const cols = lines[i].split(",");
+                              if (
+                                cols.length < 3 ||
+                                cols.some((c) => !c.trim())
+                              ) {
+                                resolve(
+                                  `Linha ${i + 1} inválida. Formato esperado: nmec, nome, email`,
+                                );
+                                return;
+                              }
+                            }
+                            resolve(true);
+                          };
+                          reader.readAsText(file as File);
+                        });
+                      },
                     }}
+                    render={({
+                      field: { onChange, value },
+                      fieldState: { error },
+                    }) => (
+                      <FormItem>
+                        <FormLabel className="flex items-center gap-1">
+                          Alunos (CSV)
+                          <span className="text-red-500">*</span>
+                        </FormLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Formato esperado: <code>nmec, nome, email</code> (uma
+                          linha por aluno)
+                        </p>
+                        <FormControl>
+                          <div
+                            className="relative border border-[#e5e5e5] rounded-lg p-8 text-center cursor-pointer"
+                            onClick={() => {
+                              const el = document?.getElementById(
+                                "file-upload-yI1i8RdV",
+                              ) as HTMLInputElement | null;
+                              el?.click();
+                            }}
+                          >
+                            <input
+                              multiple
+                              type="file"
+                              id="file-upload-yI1i8RdV"
+                              onChange={(e) =>
+                                onChange(e.target.files?.[0] ?? null)
+                              }
+                              accept=".csv"
+                              className="hidden"
+                            />
+
+                            {!value ? (
+                              <div className="flex flex-col items-center space-y-3">
+                                <Upload className="w-6 h-6 text-gray-400" />
+                                <div className="text-sm text-gray-500">
+                                  Clique{" "}
+                                  <span className="text-[#41B5C0] font-medium">
+                                    aqui
+                                  </span>{" "}
+                                  para selecionar um ficheiro
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-1">
+                                <span>{value.name}</span>
+                              </div>
+                            )}
+                          </div>
+                        </FormControl>
+                        {error && (
+                          <p className="text-sm text-destructive">
+                            {error.message}
+                          </p>
+                        )}
+                        {value && !error && (
+                          <p className="text-sm text-green-600">
+                            {(value as File).name} carregado com sucesso.
+                          </p>
+                        )}
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-between pt-4">
+                  <Button
+                    className="cursor-pointer"
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePreviousStep}
+                  >
+                    Retroceder
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="cursor-pointer"
+                    type="submit"
+                    disabled={
+                      isPending ||
+                      !formState.isValid ||
+                      !watch("students_csv") ||
+                      !watch("vigilantes") ||
+                      watch("vigilantes").length == 0
+                    }
                   >
                     {isPending ? "A gerar..." : "Gerar Exame"}
                   </Button>

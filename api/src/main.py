@@ -39,7 +39,8 @@ app = FastAPI(
     title="Education Platform API",
     description="Backend API with Keycloak authentication",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    root_path="/api"
 )
 
 app.add_middleware(
@@ -51,13 +52,15 @@ app.add_middleware(
 )
 
 # Include routers
-from src.routers import user, subject, topic, question, question_option, exam
-app.include_router(user.router, prefix="/api/users", tags=["users"])
-app.include_router(subject.router, prefix="/api/subjects", tags=["subjects"])
-app.include_router(topic.router, prefix="/api/topics", tags=["topics"])
-app.include_router(question.router, prefix="/api/questions", tags=["questions"])
-app.include_router(question_option.router, prefix="/api/question-options", tags=["question-options"])
-app.include_router(exam.router, prefix="/api/exams", tags=["exams"])
+from src.routers import user, subject, topic, question, question_option, exam, waiting_room, warning
+app.include_router(user.router, prefix="/users", tags=["users"])
+app.include_router(subject.router, prefix="/subjects", tags=["subjects"])
+app.include_router(topic.router, prefix="/topics", tags=["topics"])
+app.include_router(question.router, prefix="/questions", tags=["questions"])
+app.include_router(question_option.router, prefix="/question-options", tags=["question-options"])
+app.include_router(exam.router, prefix="/exams", tags=["exams"])
+app.include_router(waiting_room.router, prefix="/waiting-rooms", tags=["waiting-rooms"])
+app.include_router(warning.router, prefix="/warnings", tags=["warnings"])
 
 @app.get("/health")
 async def health_check():

@@ -19,11 +19,16 @@ class Subject(SQLModel, table=True):
 # Used for POST /subject input
 class SubjectCreateRequest(BaseModel):
     name: str
+    regent_keycloak_id: str
+    student_keycloak_ids: List[str] = []
+    professor_keycloak_ids: List[str] = []
 
 # Used for POST /subject output
 class SubjectCreateResponse(BaseModel):
     id: int
     name: str
+    message: str
+    regent_username: str | None = None
 
 # Used for GET /subject output
 class SubjectRead(BaseModel):
@@ -37,6 +42,8 @@ class SubjectRead(BaseModel):
 class SubjectUpdate(BaseModel):
     name: Optional[str] = None
     regent_keycloak_id: Optional[str] = None
+    student_keycloak_ids: Optional[List[str]] = None
+    professor_keycloak_ids: Optional[List[str]] = None
 
 # --- Student DTOs ---
 

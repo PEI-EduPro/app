@@ -33,7 +33,7 @@ export function ExamConfigCard({
           <h3 className="text-lg font-semibold mb-3">Tópicos Selecionados</h3>
           <div className="space-y-2">
             {topic_configs?.map((topic) => {
-              const numQuestions = topic.number_questions || 1;
+              const numQuestions = topic.num_questions || 1;
               const relativeQuotation = topic.relative_weight || 1;
 
               return (
@@ -65,8 +65,8 @@ export function ExamConfigCard({
               <p className="text-xl font-bold">
                 {topic_configs
                   ?.reduce(
-                    (total, topic) => total + (topic.number_questions || 1),
-                    0
+                    (total, topic) => total + (topic.num_questions || 1),
+                    0,
                   )
                   .toString() || "0"}
               </p>

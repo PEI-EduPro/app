@@ -18,10 +18,15 @@ class Question(SQLModel, table=True):
     )
 
 # Question schemas
+class QuestionOptionCreateNested(SQLModel):
+    option_text: str
+    value: bool = False
+
 class QuestionCreate(SQLModel):
     """Schema for creating a new question"""
     topic_id: int
     question_text: str = "Empty Question"
+    question_options: List[QuestionOptionCreateNested] = []
 
 class QuestionUpdate(SQLModel):
     """Schema for updating question data"""

@@ -1,7 +1,26 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import {
+  useDeleteUcById,
+  useGetUcById,
+  useGetUcProfessors,
+  useGetUcRegent,
+  useUpdateUc,
+} from "@/hooks/use-ucs";
+import { useGetProfessors } from "@/hooks/use-users";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  ClipboardList,
+  FileQuestionMark,
+  LoaderCircle,
+  Trash2Icon,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { z } from "zod";
+import type { UserI } from "@/lib/types";
+import { decodeId } from "@/lib/id-encoder";
+import { useKeycloak } from "@/hooks/use-keycloak";
 import {
   Select,
   SelectContent,
@@ -10,338 +29,293 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useDeleteUcById, useGetUcById } from "@/hooks/use-ucs";
-import { cn } from "@/lib/utils";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { Input } from "@/components/ui/input";
 import {
-  BookOpen,
-  ClipboardList,
-  FileQuestionMark,
-  Pencil,
-} from "lucide-react";
-import { useState } from "react";
-import { z } from "zod";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 const detalheUCSearchSchema = z.object({
-  ucId: z.number(),
+  ucId: z.string(),
 });
 
 export const Route = createFileRoute("/_layout/detalhes-uc")({
   validateSearch: detalheUCSearchSchema,
   component: RouteComponent,
+  beforeLoad: ({ search }) => ({
+    ucId: decodeId(search.ucId),
+  }),
 });
 
 function RouteComponent() {
-  const data: Record<string, string>[] = [
-    {
-      id: "m5gr84i9",
-      nome: "Ken",
-      email: "ken99@example.com",
-    },
-    {
-      id: "3u1reuv4",
-      nome: "Abe",
-      email: "Abe45@example.com",
-    },
-    {
-      id: "derv1ws0",
-      nome: "Monserrat",
-      email: "Monserrat44@example.com",
-    },
-    {
-      id: "5kma53ae",
-      nome: "Silas",
-      email: "Silas22@example.com",
-    },
-    {
-      id: "bhqecj4p",
-      nome: "Carmella",
-      email: "carmella@example.com",
-    },
-    {
-      id: "a8k2x9mn",
-      nome: "Patricia",
-      email: "patricia12@example.com",
-    },
-    {
-      id: "q7w3e5rt",
-      nome: "Marcus",
-      email: "marcus88@example.com",
-    },
-    {
-      id: "z9x8c7vb",
-      nome: "Diana",
-      email: "diana.rose@example.com",
-    },
-    {
-      id: "p4l5m6nk",
-      nome: "Roberto",
-      email: "roberto.silva@example.com",
-    },
-    {
-      id: "h3j4k5lm",
-      nome: "Sofia",
-      email: "sofia.lima@example.com",
-    },
-    {
-      id: "t6y7u8io",
-      nome: "Gabriel",
-      email: "gabriel.santos@example.com",
-    },
-    {
-      id: "r2e3w4qa",
-      nome: "Isabella",
-      email: "isabella92@example.com",
-    },
-    {
-      id: "n8m9b0vc",
-      nome: "Lucas",
-      email: "lucas.oliveira@example.com",
-    },
-    {
-      id: "f5g6h7jk",
-      nome: "Mariana",
-      email: "mariana.costa@example.com",
-    },
-    {
-      id: "d1s2a3zx",
-      nome: "Felipe",
-      email: "felipe.alves@example.com",
-    },
-    {
-      id: "v4b5n6mc",
-      nome: "Juliana",
-      email: "juliana.pereira@example.com",
-    },
-    {
-      id: "w7e8r9ty",
-      nome: "Rafael",
-      email: "rafael.cardoso@example.com",
-    },
-    {
-      id: "i0o9p8lk",
-      nome: "Beatriz",
-      email: "beatriz.martins@example.com",
-    },
-    {
-      id: "u6j7h8gf",
-      nome: "Thiago",
-      email: "thiago.ribeiro@example.com",
-    },
-    {
-      id: "y5t4r3ew",
-      nome: "Amanda",
-      email: "amanda.ferreira@example.com",
-    },
-    {
-      id: "q1w2e3rt",
-      nome: "Bruno",
-      email: "bruno.rocha@example.com",
-    },
-    {
-      id: "a9s8d7fg",
-      nome: "Larissa",
-      email: "larissa.souza@example.com",
-    },
-    {
-      id: "z6x5c4vb",
-      nome: "Rodrigo",
-      email: "rodrigo.gomes@example.com",
-    },
-    {
-      id: "m3n4b5vc",
-      nome: "Camila",
-      email: "camila.dias@example.com",
-    },
-    {
-      id: "k8l9p0oi",
-      nome: "Daniel",
-      email: "daniel.barbosa@example.com",
-    },
-    {
-      id: "j7h6g5fd",
-      nome: "Fernanda",
-      email: "fernanda.araujo@example.com",
-    },
-    {
-      id: "x2c3v4bn",
-      nome: "Gustavo",
-      email: "gustavo.monteiro@example.com",
-    },
-    {
-      id: "s1a2q3we",
-      nome: "Aline",
-      email: "aline.mendes@example.com",
-    },
-  ];
-
   const { ucId } = Route.useSearch();
+  const realId = decodeId(ucId);
+  const { keycloak } = useKeycloak();
+  const isManager =
+    (keycloak.tokenParsed?.realm_access?.roles || []).find(
+      (e) => e == "manager",
+    ) != undefined;
 
-  const { data: ucData } = useGetUcById(ucId);
-  
-  const { mutate } = useDeleteUcById(ucId);
+  const { data: ucData } = useGetUcById(realId);
+
+  const { data: professors = [], isLoading: loadingProfs } =
+    useGetUcProfessors(realId);
+  const { data: regent, isLoading: loadingRegent } = useGetUcRegent(realId);
+
+  const { data: allProfessors = [] } = useGetProfessors();
+
+  const { mutate: deleteUc } = useDeleteUcById(realId);
+  const { mutate: updateUc } = useUpdateUc(realId);
 
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [profsSelection, setProfsSelection] = useState(data);
-  const [alunosSelection, setAlunosSelection] = useState(data);
-  const [regente, setRegente] = useState<
-    { value: string; label: string } | undefined
-  >({ value: "p1", label: "Joao Rafael" });
 
-  const options = [
-    { value: "p1", label: "Joao Rafael" },
-    { value: "p2", label: "Maria Silva" },
-    { value: "p3", label: "Pedro Santos" },
-  ];
+  const formatUserName = (user: UserI) =>
+    user?.first_name && user?.last_name
+      ? `${user.first_name} ${user.last_name}`
+      : user?.firstName && user?.lastName
+        ? `${user.firstName} ${user.lastName}`
+        : user?.username || "";
+
+  const professorsData = professors.map((p) => ({
+    id: p.id,
+    nome: formatUserName(p),
+    email: p.email || "",
+  }));
+
+  const allProfessorsData = allProfessors.map((p) => ({
+    id: p.id,
+    nome: formatUserName(p),
+    email: p.email || "",
+  }));
+
+  const [profsSelection, setProfsSelection] = useState<
+    { id: string; nome: string; email: string }[]
+  >([]);
+
+  const [regentSelection, setRegentSelection] = useState<{
+    id: string;
+    nome: string;
+    email: string;
+  }>();
+
+  useEffect(() => {
+    setProfsSelection(professorsData);
+    if (regent) {
+      setRegentSelection({
+        id: regent.id,
+        nome: formatUserName(regent),
+        email: regent.email || "",
+      });
+    }
+  }, [professors, regent, isEditing]);
 
   return (
-    <div className="py-3.5 px-6 w-full">
-        <AppBreadcrumb
-          page={ucData?.name || "Detalhes"}
-          crumbs={[
-            { name: "Unidades Curriculares", link: "/unidades-curriculares" }
-          ]}
-        />
-      <div className="flex flex-row gap-[20px] items-center justify-center text-5xl mb-35">
-        <span className="font-rubik">{ucData?.name || "Carregando..."}</span>
-        <Pencil
-          className={`cursor-pointer size-[50px] ${isEditing ? "fill-black stroke-1 stroke-white" : ""}`}
-          onClick={() => {
-            if (isEditing) {
-              setAlunosSelection(data);
-              setProfsSelection(data);
-            }
-            setIsEditing(!isEditing);
-          }}
-        />
-      </div>
-      <div className="flex flex-col gap-[60px] items-center">
-        <div className="flex flex-col gap-[60px] w-[1050px]">
-          <div className="flex flex-row gap-[60px] w-full">
-            <div className="w-full flex flex-1 flex-col gap-[30px]">
-              <div>
-                {isEditing ? (
-                  <>
-                    <span className="text-[26px] font-medium">Regente</span>
-                    <Select
-                      value={regente?.value}
-                      onValueChange={(e) =>
-                        setRegente(
-                          options.find((el) => el.value === e) || undefined
-                        )
-                      }
-                    >
-                      <SelectTrigger className="shadow-none w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          {options.map((option, index) => (
-                            <SelectItem
-                              key={`option.value${index}`}
-                              value={option.value}
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </>
-                ) : (
-                  <>
-                    <span className="text-[26px] font-medium">Regente</span>
-                    <Input
-                      className={cn("shadow-none")}
-                      value={regente?.label}
-                      readOnly
-                    />
-                  </>
-                )}
-              </div>
-              <div>
-                <span className="text-[26px] font-medium">Professores</span>
-                <CustomTable
-                  data={data}
-                  isSelectable={isEditing}
-                  rowSelection={profsSelection}
-                  onChange={(e) => {
-                    setProfsSelection(e);
-                  }}
-                />
-              </div>
-            </div>
-            <div className="w-full flex-1 h-inherit">
-              <span className="text-[26px] font-medium">Alunos</span>
-              <CustomTable
-                data={data}
-                rowNumber={15}
-                isSelectable={isEditing}
-                rowSelection={alunosSelection}
-                onChange={(e) => {
-                  setAlunosSelection(e);
+    <div className="py-3.5 px-6 w-full flex flex-col items-center">
+      <AppBreadcrumb
+        page={ucData?.name || "Detalhes"}
+        crumbs={[
+          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
+        ]}
+      />
+      <div className="w-262.5">
+        <div className="relative flex flex-row text-5xl mb-25 items-center">
+          {isEditing && (
+            <div className="absolute left-0">
+              <Button
+                size="lg"
+                className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                variant="secondary"
+                onClick={() => {
+                  setIsEditing(false);
                 }}
-              />
+              >
+                Cancelar
+              </Button>
             </div>
+          )}
+          <span className="font-rubik w-full flex justify-center">
+            {ucData?.name || "Carregando..."}
+          </span>
+          <div className="absolute right-0">
+            <Button
+              size="lg"
+              className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+              onClick={() => {
+                if (!isEditing) {
+                  setIsEditing(true);
+                } else if (regentSelection) {
+                  updateUc({
+                    regent_keycloak_id: regentSelection.id,
+                    professor_keycloak_ids: profsSelection.map((a) => a.id),
+                  });
+                  setIsEditing(false);
+                }
+              }}
+            >
+              {ucData && isEditing ? "Guardar" : "Editar"}
+            </Button>
           </div>
-          <div className="flex justify-between">
-            {isEditing ? (
-              <>
-                <Button
-                  className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
-                  size="lg"
-                  variant="destructive"
-                  onClick={() => mutate(ucId)}
-                >
-                  Apagar Unidade Curricular
-                </Button>
-                <Button
-                  size="lg"
-                  className="h-auto w-auto font-medium text-2xl py-[10px] cursor-pointer"
-                  onClick={() => {
-                    setIsEditing(false);
-                  }}
-                >
-                  Guardar
-                </Button>
-              </>
+        </div>
+
+        <div className="flex flex-col gap-15 items-center">
+          <div className="flex flex-col gap-15 w-full">
+            {loadingProfs || loadingRegent ? (
+              <div className="flex justify-center items-center w-full h-40">
+                <LoaderCircle className="animate-spin size-16" />
+              </div>
             ) : (
-              <>
-                {/* Ligar este botão "Manuais" quando estiver funcional */}
-                <Link
-                  to="/detalhes-uc"
-                  search={{ ucId: ucId }}>
-                  <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#41B5C0] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                    <span className="w-fit font-medium text-[26px]">
-                      Manuais
-                    </span>
-                    <BookOpen className="size-[50px]" />
-                  </Button>
-                </Link>
-                <Link
-                  to="/banco-questoes"
-                  search={{ ucId: ucId }}
-                >
-                  <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                    <span className="w-fit font-medium text-[26px]">
-                      Banco de Perguntas
-                    </span>
-                    <FileQuestionMark className="size-[50px]" />
-                  </Button>
-                </Link>
-                <Link
-                  to="/exames-uc"
-                  search={{ ucId: ucId, ucName: ucData?.name || "" }}
-                >
-                  <Button className="cursor-pointer flex flex-row gap-[20px] h-auto w-auto px-[16px] py-[18px] bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
-                    <span className="w-fit font-medium text-[26px]">
-                      Exames
-                    </span>
-                    <ClipboardList className="size-[50px]" />
-                  </Button>
-                </Link>
-              </>
+              <div className="flex flex-row gap-15">
+                <div className="w-full flex flex-1 flex-col gap-7.5">
+                  <div>
+                    <span className="text-[26px] font-medium">Regente</span>
+
+                    {isEditing && isManager ? (
+                      <Select
+                        value={
+                          regentSelection?.id ?? "Nenhum resultado encontrado"
+                        }
+                        onValueChange={(e) => {
+                          const option = allProfessors.find((el) => el.id == e);
+                          if (option) {
+                            setRegentSelection({
+                              id: option.id,
+                              email: option.email || "",
+                              nome: `${option.firstName} ${option.lastName}`,
+                            });
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="shadow-none w-full">
+                          <SelectValue placeholder="Selecione um docente" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            {allProfessorsData.map((prof) => (
+                              <SelectItem key={prof.id} value={prof.id}>
+                                {prof.nome}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    ) : (
+                      <Input
+                        readOnly
+                        className="shadow-none"
+                        value={
+                          regentSelection?.nome ?? "Nenhum resultado encontrado"
+                        }
+                      />
+                    )}
+                  </div>
+                </div>
+                <div className="w-full flex-1 h-inherit">
+                  <div>
+                    <span className="text-[26px] font-medium">Professores</span>
+                    <CustomTable
+                      data={
+                        isEditing
+                          ? allProfessorsData.filter(
+                              (el) => el.id !== regentSelection?.id,
+                            )
+                          : professorsData
+                      }
+                      isSelectable={isEditing}
+                      rowSelection={profsSelection}
+                      rowNumber={10}
+                      onChange={(e) => {
+                        setProfsSelection(
+                          e as { id: string; nome: string; email: string }[],
+                        );
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
+            <div className="flex justify-between">
+              {isEditing ? (
+                <>
+                  {isManager && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                          size="lg"
+                          variant="destructive"
+                        >
+                          Apagar Unidade Curricular
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                            <Trash2Icon />
+                          </AlertDialogMedia>
+                          <AlertDialogTitle className="font-medium text-2xl">
+                            Apagar Unidade Curricular
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="font-medium text-xl">
+                            {` Esta ação irá apagar permanentemente a unidade curricular ${ucData?.name}. Deseja continuar?`}
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                          <AlertDialogCancel
+                            variant="outline"
+                            className="cursor-pointer text-xl"
+                            size="lg"
+                          >
+                            Cancelar
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            size="lg"
+                            variant="destructive"
+                            className="cursor-pointer text-xl"
+                            onClick={() => deleteUc(realId)}
+                          >
+                            Apagar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </>
+              ) : (
+                <>
+                  {!isManager && (
+                    <>
+                      <Link to="/banco-questoes" search={{ ucId: ucId }}>
+                        <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#3263A8] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
+                          <span className="w-fit font-medium text-[26px]">
+                            Banco de Perguntas
+                          </span>
+                          <FileQuestionMark className="size-12.5" />
+                        </Button>
+                      </Link>
+                      <Link
+                        to="/exames-uc"
+                        search={{ ucId: ucId, ucName: ucData?.name || "" }}
+                      >
+                        <Button className="cursor-pointer flex flex-row gap-5 h-auto w-auto px-4 py-4.5 bg-[#2E2B50] border border-[#ffffff] shadow-[0px_4px_4px_0px_rgba(0,0,0,0.25)] active:shadow-none">
+                          <span className="w-fit font-medium text-[26px]">
+                            Exames
+                          </span>
+                          <ClipboardList className="size-12.5" />
+                        </Button>
+                      </Link>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>

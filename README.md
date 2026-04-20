@@ -1,21 +1,71 @@
 ## Running the Project Locally
 
-From the **repository root (`/app`)** run:
-
-### Start Everything
+### First change directory to deployment
 ```bash
-sudo docker compose up --build
+cd deployment
 ```
 
-### Stop Everything
+###
+On first setup (to configure Keycloak realm):
+1. Run the setup profile: `sudo docker compose --profile setup -f docker-compose.dev.yml up --build`
+2. Wait for Keycloak and keycloak-config-cli to complete the configuration
+3. Stop the services (Ctrl+C)
+4. Restart without the setup profile: `sudo docker compose -f docker-compose.dev.yml up`
+
+**Note:** The `setup` profile runs the keycloak-config-cli to import the realm configuration. On subsequent runs, use the normal command without `--profile setup` to preserve the configured data.
+
+### Run Everything (Default)
 ```bash
+sudo docker compose -f docker-compose.dev.yml up --build
+```
+
+### Run with Setup Profile (First Time Only)
+```bash
+sudo docker compose --profile setup -f docker-compose.dev.yml up --build
+```
+
+### Run Specific Components
+
+**Database only:**
+```bash
+sudo docker compose -f docker-compose.db.yml up
+```
+
+**Database + API:**
+```bash
+sudo docker compose -f docker-compose.db.yml -f docker-compose.api.yml up
+```
+
+**Database + Keycloak:**
+```bash
+sudo docker compose -f docker-compose.db.yml -f docker-compose.keycloak.yml up
+
+# Down with
 sudo docker compose down
 ```
 
-### Clean Reset (removes all data)
+**Everything except frontend:**
 ```bash
-sudo docker compose down -v
+sudo docker compose -f docker-compose.db.yml -f docker-compose.keycloak.yml -f docker-compose.api.yml up
+
+# Down with
+sudo docker compose --profile setup down
 ```
+
+### Docker Compose Structure
+- `docker-compose.dev.yml` - Main file (includes all components)
+- `docker-compose.db.yml` - App database
+- `docker-compose.keycloak.yml` - Keycloak + DB + config
+- `docker-compose.api.yml` - Backend API
+- `docker-compose.fe.yml` - Frontend
+
+
+### API Documentation
+
+**Development environment only** (API port exposed directly):
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
 
 ---
 

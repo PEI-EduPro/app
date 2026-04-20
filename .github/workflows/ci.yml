@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build images
+        working-directory: deployment
+        run: docker compose build
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Run tests
+        run: ./run_tests.sh

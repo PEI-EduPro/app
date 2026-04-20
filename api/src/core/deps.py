@@ -32,11 +32,15 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
     username = token_info.get("preferred_username")
     email = token_info.get("email")
     realm_roles = token_info.get("realm_access", {}).get("roles", [])
-    groups = token_info.get("groups", []) # Groups are typically here in the token
-
-    # Optional: Fetch more details from userinfo endpoint if needed
-    # user_info = await keycloak_client.get_userinfo(token) # Add this method if needed
-    # groups = user_info.get("groups", groups) # Fallback or additional check
+    
+    # FETCH FRESH GROUPS: Do not trust the token's group claims as they may be stale.
+    # We query the Admin API to get the current real-time groups.
+    try:
+        groups = await keycloak_client.get_user_group_paths(user_id)
+        logger.debug(f"Fetched fresh groups for {username}: {groups}")
+    except Exception as e:
+        logger.warning(f"Could not fetch fresh groups, falling back to token claims: {e}")
+        groups = token_info.get("groups", [])
 
     logger.info(f"Authenticated user: {username}, roles: {realm_roles}, groups: {groups}")
     user = User(user_id=user_id,username=username,email=email,realm_roles=realm_roles,groups=groups)
@@ -86,6 +90,36 @@ def require_subject_student(subject_id: str):
 def require_edit_question_bank(subject_id: str):
     group_name = f"/s{subject_id}/edit_question_bank"
     return require_group(group_name)
+
+from typing import List
+
+def verify_permission(user_info: User, permissions: List[str], allow_manager: bool = False) -> bool:
+    """
+    Verify if a user has at least one of the specified permissions.
+    `permissions` should be a list of group paths like ['/s1/regent', '/s1/add_students'], or roles like ['manager'].
+    If a permission is just a subject prefix like '/s1', it checks if the user is in ANY group for that subject.
+    If `allow_manager` is True, a user with the 'manager' realm role will always pass.
+    """
+    if allow_manager and "manager" in user_info.realm_roles:
+        return True
+        
+    for permission in permissions:
+        if permission in user_info.realm_roles:
+            return True
+            
+        if permission in user_info.groups:
+            return True
+            
+        # Check if we are looking for ANY group in a subject (e.g., permission = "/s1")
+        if permission.startswith("/s") and len(permission.split("/")) == 2:
+            if any(g.startswith(permission + "/") for g in user_info.groups):
+                return True
+            
+    logger.warning(f"User {user_info.username} denied access. Missing one of permissions: {permissions}")
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail=f"Access denied."
+    )
 
 
 async def verify_regent_exists(regent_keycloak_id: str):

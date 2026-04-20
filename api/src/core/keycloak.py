@@ -21,12 +21,11 @@ class KeycloakClient:
         try:
             self.admin_client = KeycloakAdmin(
                 server_url=settings.KEYCLOAK_SERVER_URL,
-                username=None, # Do not use username/password for service accounts
-                password=None, # Do not use username/password for service accounts
-                realm_name=settings.KEYCLOAK_REALM, # 'master'
-                client_id=settings.KEYCLOAK_CLIENT_ID, # 'api-backend'
-                client_secret_key=settings.KEYCLOAK_CLIENT_SECRET, # Secret for 'api-backend'
-                verify=True # Set to False if using self-signed certificates in dev
+                username=settings.KEYCLOAK_ADMIN_USERNAME,
+                password=settings.KEYCLOAK_ADMIN_PASSWORD,
+                realm_name=settings.KEYCLOAK_REALM,
+                user_realm_name="master",
+                verify=True
             )
             
             logger.info("Keycloak Admin client (via Service Account) initialized successfully.")
@@ -56,7 +55,7 @@ class KeycloakClient:
             )
             
             # Manual issuer verification
-            expected_issuer = f"{settings.KEYCLOAK_SERVER_URL}/realms/{settings.KEYCLOAK_REALM}"
+            expected_issuer = f"{settings.KEYCLOAK_ISSUER_URL}/realms/{settings.KEYCLOAK_REALM}"
             actual_issuer = token_info.get('iss', '')
             
             if actual_issuer != expected_issuer:
@@ -296,23 +295,30 @@ class KeycloakClient:
         try:
             loop = asyncio.get_event_loop()
             
-            # 1. Find the group ID
-            # get_group_by_path returns the group object or raises error if not found
-            # Note: Depending on python-keycloak version, we might need to search for it if get_group_by_path isn't available
-            # We will use a safe search approach:
+            # 1. Find or create the group
             group_id = None
             groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
             
-            # This is a naive search. For production with thousands of groups, use search params.
-            # Since our groups are flat "s{id}/regent", we search for that name.
             for g in groups:
                 if g['name'] == group_path:
                     group_id = g['id']
                     break
             
             if not group_id:
-                logger.error(f"Group {group_path} not found.")
-                return False
+                logger.info(f"Group {group_path} not found, creating it.")
+                await loop.run_in_executor(
+                    None,
+                    lambda: self.admin_client.create_group({"name": group_path})
+                )
+                groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+                for g in groups:
+                    if g['name'] == group_path:
+                        group_id = g['id']
+                        break
+                
+                if not group_id:
+                    logger.error(f"Failed to create group {group_path}")
+                    return False
 
             # 2. Remove existing members (The old regent)
             members = await loop.run_in_executor(
@@ -340,6 +346,21 @@ class KeycloakClient:
             logger.error(f"Failed to update regent: {e}")
             logger.exception(e)
             return False
+
+    async def get_users_by_role(self, role_name: str) -> list[dict]:
+        """
+        Get all users with a specific realm role.
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            users = await loop.run_in_executor(
+                None,
+                lambda: self.admin_client.get_realm_role_members(role_name)
+            )
+            return users
+        except Exception as e:
+            logger.error(f"Failed to get users with role {role_name}: {e}")
+            return []
 
     async def delete_subject_groups(self, subject_id: str) -> bool:
         """
@@ -409,6 +430,35 @@ class KeycloakClient:
             logger.error(f"Failed to fetch students for subject {subject_id}: {e}")
             return []
 
+    async def get_subject_professors(self, subject_id: str) -> list[dict]:
+        """Fetch all users in the subject's professors group"""
+        group_name = f"s{subject_id}/professors"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                return []
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+        except Exception as e:
+            logger.error(f"Failed to fetch professors: {e}")
+            return []
+
+    async def get_subject_regent(self, subject_id: str) -> dict:
+        """Fetch the regent (should be single user in regent group)"""
+        group_name = f"s{subject_id}/regent"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError("Regent group not found")
+            loop = asyncio.get_event_loop()
+            members = await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+            if not members:
+                raise ValueError("No regent assigned")
+            return members[0]
+        except Exception as e:
+            logger.error(f"Failed to fetch regent: {e}")
+            raise e
+
     async def add_students_to_subject(self, subject_id: str, student_ids: list[str]) -> None:
         """Add a list of users to the subject's student group"""
         group_name = f"s{subject_id}/students"
@@ -430,6 +480,68 @@ class KeycloakClient:
                     # Continue adding others even if one fails
         except Exception as e:
             logger.error(f"Error in add_students_to_subject: {e}")
+            raise e
+
+    async def add_professors_to_subject(self, subject_id: str, professor_ids: list[str]) -> None:
+        """Add a list of users to the subject's professors group"""
+        group_name = f"s{subject_id}/professors"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+
+            loop = asyncio.get_event_loop()
+            for user_id in professor_ids:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=user_id: self.admin_client.group_user_add(uid, group_id)
+                    )
+                    logger.info(f"Added user {user_id} to {group_name}")
+                except Exception as e:
+                    logger.error(f"Failed to add user {user_id} to group: {e}")
+        except Exception as e:
+            logger.error(f"Error in add_professors_to_subject: {e}")
+            raise e
+
+    async def replace_subject_students(self, subject_id: str, student_ids: list[str]) -> None:
+        """Replace all students in subject with new list"""
+        group_name = f"s{subject_id}/students"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+            
+            loop = asyncio.get_event_loop()
+            current_members = await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+            
+            for member in current_members:
+                await loop.run_in_executor(None, lambda m=member: self.admin_client.group_user_remove(m['id'], group_id))
+            
+            for user_id in student_ids:
+                await loop.run_in_executor(None, lambda uid=user_id: self.admin_client.group_user_add(uid, group_id))
+        except Exception as e:
+            logger.error(f"Error replacing students: {e}")
+            raise e
+
+    async def replace_subject_professors(self, subject_id: str, professor_ids: list[str]) -> None:
+        """Replace all professors in subject with new list"""
+        group_name = f"s{subject_id}/professors"
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                raise ValueError(f"Group {group_name} does not exist.")
+            
+            loop = asyncio.get_event_loop()
+            current_members = await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+            
+            for member in current_members:
+                await loop.run_in_executor(None, lambda m=member: self.admin_client.group_user_remove(m['id'], group_id))
+            
+            for user_id in professor_ids:
+                await loop.run_in_executor(None, lambda uid=user_id: self.admin_client.group_user_add(uid, group_id))
+        except Exception as e:
+            logger.error(f"Error replacing professors: {e}")
             raise e
 
 
@@ -560,6 +672,88 @@ class KeycloakClient:
             logger.error(f"Error removing professor: {e}")
             return False
 
+    async def get_user_group_paths(self, user_id: str) -> list[str]:
+        """
+        Fetch the current, real-time list of group paths for a user from the Admin API.
+        Used to overcome stale claims in the JWT.
+        """
+        try:
+            loop = asyncio.get_event_loop()
+            user_groups = await loop.run_in_executor(
+                None,
+                lambda: self.admin_client.get_user_groups(user_id=user_id)
+            )
+            # Extract the 'path' attribute from each group object
+            # Keycloak returns structure like: [{'id': '...', 'name': 'regent', 'path': '/s1/regent'}]
+            return [g.get('path') for g in user_groups if g.get('path')]
+        except Exception as e:
+            logger.error(f"Failed to fetch fresh groups for user {user_id}: {e}")
+            # Fallback: Return empty list or raise depending on strictness. 
+            # Returning empty list is safer than crashing, but denies access.
+            return []
+
+    async def create_waiting_room_groups(
+        self,
+        waiting_room_id: int,
+        regent_keycloak_id: str,
+        vigilant_ids: list[str]
+    ) -> bool:
+        """
+        Creates the waiting room groups in Keycloak.
+        Creates w{id}/regent and w{id}/vigilant and assigns users.
+        """
+        logger.info(f"Creating groups for waiting room ID: {waiting_room_id}")
+
+        try:
+            loop = asyncio.get_event_loop()
+
+            base_group_name = f"w{waiting_room_id}"
+            subgroups = ["regent", "vigilant"]
+
+            subgroup_ids = {}
+            for sub_name in subgroups:
+                full_group_name = base_group_name + "/" + sub_name
+                logger.debug(f"Attempting to create subgroup: {full_group_name}")
+
+                subgroup_id = await loop.run_in_executor(
+                    None,
+                    lambda name=full_group_name: self.admin_client.create_group({"name": name})
+                )
+                logger.info(f"Created subgroup: {full_group_name} with ID: {subgroup_id}")
+                subgroup_ids[full_group_name] = subgroup_id
+
+            # Assign regent
+            regent_group_name = f"{base_group_name}/regent"
+            regent_group_id = subgroup_ids.get(regent_group_name)
+
+            if regent_group_id:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=regent_keycloak_id, gid=regent_group_id: self.admin_client.group_user_add(uid, gid)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to add regent {regent_keycloak_id} to waiting room {waiting_room_id}: {e}")
+
+            # Assign vigilants
+            vigilant_group_name = f"{base_group_name}/vigilant"
+            vigilant_group_id = subgroup_ids.get(vigilant_group_name)
+
+            if vigilant_group_id:
+                for v_id in vigilant_ids:
+                    try:
+                        await loop.run_in_executor(
+                            None,
+                            lambda uid=v_id, gid=vigilant_group_id: self.admin_client.group_user_add(uid, gid)
+                        )
+                    except Exception as e:
+                        logger.error(f"Failed to add vigilant {v_id} to waiting room {waiting_room_id}: {e}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Keycloak Admin API error during waiting room group creation: {e}")
+            raise e
 
 keycloak_client = KeycloakClient()
 

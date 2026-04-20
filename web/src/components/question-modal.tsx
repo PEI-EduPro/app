@@ -1,6 +1,11 @@
 import { useState, useEffect } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
+import { toast } from "sonner";
 
 interface Question {
   id: number;
@@ -24,14 +29,14 @@ export default function QuestionModal({
   onCreate,
   onUpdate,
   editingQuestion,
-  topicId
+  topicId,
 }: QuestionModalProps) {
   const [questionText, setQuestionText] = useState("");
   const [options, setOptions] = useState<{ id: number; value: string }[]>([
     { id: 1, value: "" },
     { id: 2, value: "" },
     { id: 3, value: "" },
-    { id: 4, value: "" }
+    { id: 4, value: "" },
   ]);
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null);
   const [showError, setShowError] = useState(false);
@@ -42,11 +47,11 @@ export default function QuestionModal({
     if (editingQuestion?.question) {
       const q = editingQuestion.question;
       setQuestionText(q.text);
-      
+
       // Convert options object to array
       const optionsArray = Object.entries(q.options).map(([key, value]) => ({
         id: parseInt(key),
-        value
+        value,
       }));
       setOptions(optionsArray);
       setCorrectAnswer(q.answer);
@@ -56,7 +61,7 @@ export default function QuestionModal({
         { id: 1, value: "" },
         { id: 2, value: "" },
         { id: 3, value: "" },
-        { id: 4, value: "" }
+        { id: 4, value: "" },
       ]);
       setCorrectAnswer(null);
     }
@@ -67,22 +72,22 @@ export default function QuestionModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!questionText.trim()) {
       setShowQuestionError(true);
       return;
     }
-    
+
     // Check for empty options
-    const emptyOptions = options.filter(opt => !opt.value.trim());
-    
+    const emptyOptions = options.filter((opt) => !opt.value.trim());
+
     if (correctAnswer === null || emptyOptions.length > 0) {
       setShowError(true);
       return;
     }
 
     // Check for duplicate options
-    const optionValues = options.map(opt => opt.value.trim().toLowerCase());
+    const optionValues = options.map((opt) => opt.value.trim().toLowerCase());
     const hasDuplicates = optionValues.length !== new Set(optionValues).size;
     if (hasDuplicates) {
       setShowDuplicateError(true);
@@ -91,14 +96,14 @@ export default function QuestionModal({
 
     // Convert options array back to object
     const optionsObject: { [key: number]: string } = {};
-    options.forEach(opt => {
+    options.forEach((opt) => {
       optionsObject[opt.id] = opt.value.trim();
     });
 
     const questionData: Omit<Question, "id"> = {
       text: questionText.trim(),
       options: optionsObject,
-      answer: correctAnswer
+      answer: correctAnswer,
     };
 
     if (editingQuestion) {
@@ -106,31 +111,31 @@ export default function QuestionModal({
     } else if (topicId) {
       onCreate(questionData);
     }
-    
+
     onClose();
   };
 
   const handleOptionChange = (id: number, value: string) => {
-    setOptions(options.map(opt => 
-      opt.id === id ? { ...opt, value } : opt
-    ));
+    setOptions(options.map((opt) => (opt.id === id ? { ...opt, value } : opt)));
     setShowDuplicateError(false);
   };
 
   const addOption = () => {
-    const newId = Math.max(...options.map(opt => opt.id)) + 1;
+    const newId = Math.max(...options.map((opt) => opt.id)) + 1;
     setOptions([...options, { id: newId, value: "" }]);
   };
 
   const removeOption = (id: number) => {
     if (options.length <= 2) {
-      alert("A questão deve ter pelo menos 2 opções");
+      toast.error("A questão deve ter pelo menos 2 opções", {
+        position: "top-right",
+      });
       return;
     }
-    
-    const newOptions = options.filter(opt => opt.id !== id);
+
+    const newOptions = options.filter((opt) => opt.id !== id);
     setOptions(newOptions);
-    
+
     // Reset correct answer if it was the removed option
     if (correctAnswer === id) {
       setCorrectAnswer(null);
@@ -147,21 +152,22 @@ export default function QuestionModal({
             <h2 className="text-2xl font-semibold">
               {editingQuestion ? "Editar Questão" : "Nova Questão"}
             </h2>
-            <button
+            <Button
+              variant="ghost"
               onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              className="cursor-pointer"
             >
-              <X size={24} />
-            </button>
+              <X className="!h-[25px] !w-[25px]" />
+            </Button>
           </div>
 
           <form onSubmit={handleSubmit}>
             {/* Question Text */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Label className="block text-sm font-medium text-gray-700 mb-2">
                 Texto da Questão
-              </label>
-              <textarea
+              </Label>
+              <Textarea
                 value={questionText}
                 onChange={(e) => {
                   setQuestionText(e.target.value);
@@ -174,7 +180,9 @@ export default function QuestionModal({
               {showQuestionError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
                   <p className="text-sm text-red-700">
-                    Por favor, insira o <span className="font-medium">texto da questão</span> antes de continuar.
+                    Por favor, insira o{" "}
+                    <span className="font-medium">texto da questão</span> antes
+                    de continuar.
                   </p>
                 </div>
               )}
@@ -183,23 +191,26 @@ export default function QuestionModal({
             {/* Options */}
             <div className="mb-6">
               <div className="flex items-center justify-between mb-4">
-                <label className="block text-sm font-medium text-gray-700">
+                <Label className="block text-sm font-medium text-gray-700">
                   Opções de Resposta
-                </label>
-                <button
-                  type="button"
+                </Label>
+                <Button
+                  variant="ghost"
                   onClick={addOption}
-                  className="flex items-center gap-2 text-sm text-[#3263A8] hover:text-[#2a5390]"
+                  className="flex items-center gap-2 text-sm text-[#3263A8] hover:text-[#2a5390] cursor-pointer"
                 >
                   <Plus size={16} />
                   Adicionar Opção
-                </button>
+                </Button>
               </div>
-              
+
               <div className="space-y-3">
                 {options.map((option, index) => (
-                  <div key={option.id} className="flex items-center gap-3 group">
-                    <input
+                  <div
+                    key={option.id}
+                    className="flex items-center gap-3 group"
+                  >
+                    <Input
                       type="radio"
                       id={`option-${option.id}`}
                       name="correct-answer"
@@ -208,37 +219,39 @@ export default function QuestionModal({
                         setCorrectAnswer(option.id);
                         setShowError(false);
                       }}
-                      className={`h-5 w-5 ${showError ? 'accent-red-500 border-red-500' : 'text-blue-600'}`}
-                      style={showError ? { accentColor: '#ef4444' } : {}}
+                      className={`h-5 w-5 ${showError ? "accent-red-500 border-red-500" : "text-blue-600"}`}
+                      style={showError ? { accentColor: "#ef4444" } : {}}
                     />
-                    <label
+                    <Label
                       htmlFor={`option-${option.id}`}
                       className="flex-1 flex items-center gap-3"
                     >
                       <span className="w-8 text-sm font-medium text-gray-500">
                         {index + 1}.
                       </span>
-                    <input
-                      type="text"
-                      value={option.value}
-                      onChange={(e) => handleOptionChange(option.id, e.target.value)}
-                      className={`flex-1 px-3 py-2 border rounded-lg outline-none transition
-                        ${correctAnswer === option.id 
-                          ? "border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                          : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      <Input
+                        value={option.value}
+                        onChange={(e) =>
+                          handleOptionChange(option.id, e.target.value)
+                        }
+                        className={`flex-1 px-3 py-2 border rounded-lg outline-none transition
+                        ${
+                          correctAnswer === option.id
+                            ? "border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                            : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         }`}
-                      placeholder={`Opção ${index + 1}`}
-                    />
-                    </label>
+                        placeholder={`Opção ${index + 1}`}
+                      />
+                    </Label>
                     {options.length > 2 && (
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
                         onClick={() => removeOption(option.id)}
-                        className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                        className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                         title="Remover opção"
                       >
                         <Trash2 size={16} />
-                      </button>
+                      </Button>
                     )}
                   </div>
                 ))}
@@ -246,14 +259,20 @@ export default function QuestionModal({
               {showError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
                   <p className="text-sm text-red-700">
-                    Por favor, <span className="font-medium">preencha todas as opções</span> e selecione a <span className="font-medium">resposta correta</span>.
+                    Por favor,{" "}
+                    <span className="font-medium">
+                      preencha todas as opções
+                    </span>{" "}
+                    e selecione a{" "}
+                    <span className="font-medium">resposta correta</span>.
                   </p>
                 </div>
               )}
               {showDuplicateError && (
                 <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
                   <p className="text-sm text-red-700">
-                    Não é permitido ter <span className="font-medium">opções duplicadas</span>.
+                    Não é permitido ter{" "}
+                    <span className="font-medium">opções duplicadas</span>.
                   </p>
                 </div>
               )}
@@ -266,19 +285,16 @@ export default function QuestionModal({
 
             {/* Actions */}
             <div className="flex gap-3 justify-end">
-              <button
-                type="button"
+              <Button
+                variant="destructive"
                 onClick={onClose}
-                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="cursor-pointer"
               >
                 Cancelar
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 bg-black text-white rounded-lg hover:bg-[#2e2e2e] transition-colors"
-              >
+              </Button>
+              <Button type="submit" className="cursor-pointer">
                 {editingQuestion ? "Guardar" : "Criar"}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
