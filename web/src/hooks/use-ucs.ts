@@ -11,7 +11,7 @@ const useGetUc = ({ enabled = true }: { enabled?: boolean } = {}) =>
     enabled,
   });
 
-const useAddUc = () => {
+const useAddUc = (onSuccess?: () => void) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -19,6 +19,7 @@ const useAddUc = () => {
     mutationKey: ["addUc"],
     mutationFn: (props: NewUcI) => apiClient.post("/subjects/", props),
     onSuccess: () => {
+      onSuccess?.();
       navigate({ to: "/unidades-curriculares" });
       queryClient.invalidateQueries({ queryKey: ["uc"] });
       toast.success("Unidade curricular criada com sucesso!", {

@@ -116,10 +116,10 @@ function RouteComponent() {
                         <AlertDialogMedia className="bg-destructive/10 text-destructive">
                           <Trash2Icon />
                         </AlertDialogMedia>
-                        <AlertDialogTitle className="font-medium text-xl">
+                        <AlertDialogTitle>
                           Fechar Exame
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="font-medium">
+                        <AlertDialogDescription>
                           Ao fechar o exame nenhum outro utilizador conseguirá
                           fazer scan a mais nenhum código QR. Deseja continuar?
                         </AlertDialogDescription>

@@ -255,12 +255,12 @@ function BancoQuestões() {
           ]}
         />
         <div className="w-262.5">
-          <div className="relative flex flex-col justify-start text-5xl mb-7 items-center">
+          <div className="relative flex flex-col justify-start mb-7 items-center">
             <div className="text-center flex flex-col">
-              <div className="text-5xl">
+              <div className="typography-h1">
                 {subjectData?.name || "UNIDADE CURRICULAR"}
               </div>
-              <h1 className="text-3xl mt-4 text-[#3263A8]">
+              <h1 className="typography-h2 mt-4 text-[#3263A8]">
                 Banco de questões
               </h1>
               <div className="relative w-full min-w-sm mx-auto animate-fade-in-up flex flex-row items-center gap-2 mt-6">
@@ -276,7 +276,7 @@ function BancoQuestões() {
             <div className="absolute right-0">
               <Button
                 size="lg"
-                className="h-auto w-auto font-medium text-2xl py-2.5 cursor-pointer"
+                className="h-auto w-auto font-medium py-2.5 cursor-pointer"
                 onClick={() => {
                   const hasQuestions = topics.some(
                     (t) => Object.keys(t.questions).length > 0,
@@ -380,17 +380,17 @@ function BancoQuestões() {
                         <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                           <Trash2Icon />
                         </AlertDialogMedia>
-                        <AlertDialogTitle className="font-medium text-2xl">
+                        <AlertDialogTitle>
                           Apagar Tópico
                         </AlertDialogTitle>
-                        <AlertDialogDescription className="font-medium text-xl">
+                        <AlertDialogDescription>
                           Deseja apagar este tópico e todas as suas questões?
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="w-full! flex flex-row justify-between!">
                         <AlertDialogCancel
                           variant="outline"
-                          className="cursor-pointer text-xl"
+                          className="cursor-pointer"
                           size="lg"
                         >
                           Cancelar
@@ -398,7 +398,7 @@ function BancoQuestões() {
                         <AlertDialogAction
                           size="lg"
                           variant="destructive"
-                          className="cursor-pointer text-xl"
+                          className="cursor-pointer"
                           onClick={() => deleteTopicMutation.mutate(topic.id)}
                         >
                           Apagar
@@ -589,17 +589,17 @@ function QuestionItem({
               <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                 <Trash2Icon />
               </AlertDialogMedia>
-              <AlertDialogTitle className="font-medium text-2xl">
+              <AlertDialogTitle>
                 Apagar Questão
               </AlertDialogTitle>
-              <AlertDialogDescription className="font-medium text-xl">
+              <AlertDialogDescription>
                 Deseja apagar esta questão?
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="w-full! flex flex-row justify-between!">
               <AlertDialogCancel
                 variant="outline"
-                className="cursor-pointer text-xl"
+                className="cursor-pointer"
                 size="lg"
               >
                 Cancelar
@@ -607,7 +607,7 @@ function QuestionItem({
               <AlertDialogAction
                 size="lg"
                 variant="destructive"
-                className="cursor-pointer text-xl"
+                className="cursor-pointer"
                 onClick={onDelete}
               >
                 Apagar

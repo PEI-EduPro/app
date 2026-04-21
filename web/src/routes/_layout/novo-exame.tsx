@@ -40,7 +40,7 @@ function NovoExame() {
           },
         ]}
       />
-      <div className="flex justify-center text-5xl mb-4">Novo Exame</div>
+      <div className="flex justify-center mb-4 typography-h1">Novo Exame</div>
       <div className="flex flex-col items-center flex-1 min-h-0">
         <div className="w-175 flex flex-col flex-1 min-h-0">
           <NovoExameForm ucID={realId} ucName={ucName} />

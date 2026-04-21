@@ -51,8 +51,8 @@ function RouteComponent() {
               />
             </div>
             <div className="flex flex-col gap-2.5 items-center">
-              <span className="font-rubik text-5xl">{ucData?.name}</span>
-              <span className="font-rubik text-4xl text-primary">
+              <span className="font-rubik typography-h1">{ucData?.name}</span>
+              <span className="font-rubik typography-h2 text-primary">
                 {checked ? "Salas" : "Exames"}
               </span>
             </div>

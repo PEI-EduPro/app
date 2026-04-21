@@ -104,10 +104,10 @@ export default function ExamCard({
               <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                 <Trash2Icon />
               </AlertDialogMedia>
-              <AlertDialogTitle className="font-medium text-2xl">
+              <AlertDialogTitle>
                 Apagar Configuração de Exame
               </AlertDialogTitle>
-              <AlertDialogDescription className="font-medium text-xl">
+              <AlertDialogDescription>
                 Esta ação irá apagar permanentemente a configuração de exame.
                 Deseja continuar?
               </AlertDialogDescription>
@@ -115,7 +115,7 @@ export default function ExamCard({
             <AlertDialogFooter className="w-full! flex flex-row justify-between!">
               <AlertDialogCancel
                 variant="outline"
-                className="cursor-pointer text-xl"
+                className="cursor-pointer"
                 size="lg"
               >
                 Cancelar
@@ -123,7 +123,7 @@ export default function ExamCard({
               <AlertDialogAction
                 size="lg"
                 variant="destructive"
-                className="cursor-pointer text-xl"
+                className="cursor-pointer"
                 onClick={() => deleteMutation.mutate(id)}
               >
                 Apagar

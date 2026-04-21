@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+body {
+  overflow: hidden;
+}
+
 /* Palette:
    #E3F6A2 – lime highlight
    #9EE78F – green accent
@@ -134,12 +138,41 @@
     font-family: "Nunito Sans", sans-serif;
   }
 
+  html {
+    font-size: 17px;
+  }
+
   .font-rubik {
     font-family: Rubik, sans-serif;
   }
 
   .font-nunito {
     font-family: "Nunito Sans", sans-serif;
+  }
+
+  /* shadcn typography scale */
+  .typography-h1 {
+    @apply scroll-m-20 text-5xl font-extrabold tracking-tight lg:text-6xl;
+  }
+
+  .typography-h2 {
+    @apply scroll-m-20 text-4xl font-semibold tracking-tight;
+  }
+
+  .typography-h3 {
+    @apply scroll-m-20 text-3xl font-semibold tracking-tight;
+  }
+
+  .typography-h4 {
+    @apply scroll-m-20 text-2xl font-semibold tracking-tight;
+  }
+
+  .typography-lead {
+    @apply text-2xl text-muted-foreground;
+  }
+
+  .typography-muted {
+    @apply text-sm text-muted-foreground;
   }
 }
 
