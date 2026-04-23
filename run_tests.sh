@@ -28,25 +28,9 @@ export POSTGRES_PORT=5433
 docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v --remove-orphans
 docker network rm edupro-test_default 2>/dev/null || true
 
-# Start services with setup profile to configure Keycloak realm
-echo -e "${GREEN}Starting infrastructure with setup profile (configuring Keycloak realm)...${NC}"
-docker compose -p edupro-test --profile setup -f deployment/docker-compose.test.yml up -d --force-recreate
-
-# Wait for keycloak-config-cli to complete
-echo -e "${GREEN}Waiting for Keycloak configuration to complete...${NC}"
-timeout=180
-counter=0
-while ! docker ps -a --filter "name=edupro-test-keycloak-config-cli" --filter "status=exited" | grep -q "edupro-test-keycloak-config-cli"; do
-    sleep 2
-    ((counter+=2))
-    if [ $counter -ge $timeout ]; then
-        echo -e "${RED}Timeout waiting for Keycloak configuration!${NC}"
-        docker logs edupro-test-keycloak-config-cli 2>&1 || true
-        exit 1
-    fi
-    echo -n "."
-done
-echo -e "\n${GREEN}Keycloak configuration complete!${NC}"
+# Start services (Keycloak will auto-import realm on startup)
+echo -e "${GREEN}Starting test infrastructure...${NC}"
+docker compose -p edupro-test -f deployment/docker-compose.test.yml up -d --force-recreate
 
 # Wait for DB (Port 5433)
 echo "Waiting for Test Database (port 5433)..."
