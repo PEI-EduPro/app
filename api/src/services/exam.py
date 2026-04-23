@@ -817,9 +817,9 @@ async def notify_student(session: AsyncSession, exam: Exam):
     details = exam.results_details
     answer_key = exam.answer_key
 
-    #message = f"A sua nota do <b>EXAM_NAME</b> da disciplina de <b>{subject_name}</b> foi de <b>{grade:.2f}</b> valores.<br><br>"
+    # Student Identification Table (Name, NMEC, and Grade)
     message = "Identificação do aluno:"
-    # Centering a table in email usually requires margin: auto and a specific width
+    
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
     message += '<tr style="background-color: #f2f2f2;">'
     message += '<th style="padding: 10px;">Nome</th>'
@@ -831,6 +831,7 @@ async def notify_student(session: AsyncSession, exam: Exam):
     message += f"<td style='padding: 10px;'>{grade:.2f}</td></tr>"
     message += "</table><br>"
 
+    # Exam Score Distribution Table (Question Value, and Penalty)
     message += "<br>Distribuição de cotações por questão:<br><br>"
 
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
@@ -869,33 +870,28 @@ async def notify_student(session: AsyncSession, exam: Exam):
 
     message += "</table><br>"
 
+    # Student Answer Grid (Real Image taken by the regent when correcting the exam)
     message += "A sua tabela de resposta:<br><br>"
 
-    #message += "<p>METER AQUI FOTO DA TABELA DO ALUNO</p><br>"
     if exam.capture_path and os.path.exists(exam.capture_path):
         message += '<img src="cid:student_capture" style="max-width: 80%; height: auto; display: block; margin: auto; border: 1px solid #ccc;"><br>'
     else:
         message += '<p><i>[Imagem da tabela de resposta indisponível]</i></p><br>'
 
-    # === CORRECT_TABLE_CORRECT_TABLE_CORRECT_TABLE ===
-
+    # Exam Correct Answer Grid
     message += "As respostas solução à sua versão do exame são:<br><br>"
 
-    # Start the HTML table
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
 
-    # 1. Build the Header Row (Empty cell, then 01, 02, 03...)
     message += '<tr style="background-color: #f2f2f2;"><th></th>'
     for q in range(len(answer_key)):
         message += f"<th style='padding: 8px;'>{q + 1:02d}</th>"
     message += "</tr>"
 
-    # 2. Build the Data Rows (A, B, C, D)
     for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
         message += f"<tr><th style='padding: 8px;'>{row_label}</th>"
         
         for q_idx in range(len(answer_key)):
-            # Mark 'X' if the answer matches the row index (0=A, 1=B, 2=C, 3=D)
             cell = "X" if answer_key.get(str(q_idx)) == row_idx else ""
             message += f"<td>{cell}</td>"
                 
@@ -903,8 +899,7 @@ async def notify_student(session: AsyncSession, exam: Exam):
 
     message += "</table><br>"
 
-    # === CORRECT_TABLE_CORRECT_TABLE_CORRECT_TABLE ===
-
+    # Details regarding comparison between the student's actual answer and the correct exam answers
     message += "Das suas respostas resultaram as seguintes cotações:<br><br>"
 
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
@@ -979,14 +974,13 @@ async def notify_student(session: AsyncSession, exam: Exam):
     message += "</tr>"
 
     message += "</table>"
-    #message += f"Sendo que a cada questão errada descontava {fraction}% da cotação dessa pergunta."
-
-    message += f"<br>Em anexo encontram-se dois ficheiros, respetivamente a sua folha de resposta e a folha de resposta correspondente à versão do seu exame.<br>"
+    
+    # Disclaimer and Greeting
     message += f"<br>Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
     message += "<br>Continuação de um bom ano letivo.<br>"
     message += "<b>EduPro @ UA</b>"
 
-    # Imagem
+    # EduPro Signatura Image
     message += """
     <br><br>
     <img src="cid:signature_image"
@@ -1016,20 +1010,6 @@ async def notify_student(session: AsyncSession, exam: Exam):
         mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
         msg.attach(mime_image)
 
-    # Attachments
-    # Student answer grid
-    '''Raw table (no omr coloring)'''
-
-    # VER COM O PEDRO
-    # if exam.capture_path and os.path.exists(exam.capture_path):
-    #     with open(exam.capture_path, "rb") as f:
-    #         part = MIMEApplication(f.read(), Name=os.path.basename(exam.capture_path))
-    #         part['Content-Disposition'] = f'attachment; filename="{os.path.basename(exam.capture_path)}"'
-    #         msg.attach(part)
-
-    # Correct answer grid
-    '''T.B.D (Talvez mande o PDF que os profs recebem para não ter de gerar um pdf só para o aluno)'''
-    
     # Send via SMTP
     try:
         server = smtplib.SMTP("smtp.gmail.com", int(os.getenv("EMAIL_NOTIFIER_PORT")))

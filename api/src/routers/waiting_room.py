@@ -412,7 +412,7 @@ async def notify_students_via_email(
     # assoc = "exam_id:student_nmec"
     for assoc in associations:
         exam_id = int(assoc.split(":")[0])
-        exam = await exam_service.get_exam_by_id(exam_id)
+        exam = await exam_service.get_exam_by_id(session, exam_id)
 
         # Nota: Exames NÃO validados serão enviados na mesma (dar address ao risco da foto do aluno conter perguntas do teste em caso de falha no OMR)
         if exam:
