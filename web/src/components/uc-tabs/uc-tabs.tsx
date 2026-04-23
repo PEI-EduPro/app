@@ -11,7 +11,7 @@ interface UcTabsProps {
 
 export default function UcTabs({ realId, ucName }: UcTabsProps) {
   return (
-    <Tabs defaultValue="banco-perguntas">
+    <Tabs defaultValue="banco-perguntas" className="mb-7.5">
       <TabsList>
         <TabsTrigger className="cursor-pointer" value="banco-perguntas">
           Banco de Perguntas
