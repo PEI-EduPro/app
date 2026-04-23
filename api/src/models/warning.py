@@ -32,6 +32,17 @@ class ExamWarningResponse(BaseModel):
     students: List[StudentWarningInfo]
 
 
+class StudentSummary(BaseModel):
+    nmec: str
+    name: str
+    email: str
+
+
+class WarningsWithStudentsResponse(BaseModel):
+    warnings: List[ExamWarningResponse]
+    students: List[StudentSummary]
+
+
 class WarningAssignment(BaseModel):
     exam_id: int
     student_nmec: str

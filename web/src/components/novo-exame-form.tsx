@@ -238,7 +238,7 @@ export const NovoExameForm = (props: { ucID: number; ucName: string }) => {
       topic_configs: formData.topics.map((topic) => ({
         topic_id: parseInt(topic.id),
         topic_name: topic.nome,
-        number_questions: formData.number_questions[topic.id] || 1,
+        num_questions: formData.number_questions[topic.id] || 1,
         relative_weight: formData.relative_quotations[topic.id] || 1,
       })),
     };

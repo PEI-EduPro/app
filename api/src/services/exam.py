@@ -543,7 +543,7 @@ async def create_configs_and_exams(
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
     exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples)
-    exam_title = exam_specs.get("exam_title", "Exame Época Normal")
+    exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
@@ -714,6 +714,58 @@ async def get_latest_exam_config_id(session: AsyncSession, subject_id: int) -> i
     if not exam_config:
         raise ValueError(f"No exam config found for subject {subject_id}")
     return exam_config.id
+
+
+async def correct_by_hand(
+    session: AsyncSession,
+    exam_id: int,
+    grid: dict,
+) -> Exam:
+    """
+    Update exam results from a manually-provided grid and recompute the grade server-side.
+    `grid` is a dict like {"0": {"A": false, "B": true, ...}, ...}
+    """
+    exam_instance = await get_exam_by_id(session, exam_id)
+    if not exam_instance:
+        raise ValueError("Exam not found.")
+
+    exam_config = await get_exam_config_by_id(session, exam_instance.exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found.")
+
+    answer_key = {int(k): v for k, v in exam_instance.answer_key.items()}
+    relative_weights = {int(k): v for k, v in exam_instance.relative_weights.items()}
+    fraction = exam_config.fraction
+    sum_weights = sum(relative_weights.values()) or 1
+
+    # Normalise grid keys to uppercase option letters
+    normalised_grid = {
+        str(q_idx): {opt.upper(): val for opt, val in opts.items()}
+        for q_idx, opts in grid.items()
+    }
+
+    total_score = 0.0
+    for q_idx, correct_opt_idx in answer_key.items():
+        q_weight = relative_weights.get(q_idx, 0)
+        q_value = (q_weight / sum_weights) * 20.0
+        penalty_per_wrong = q_value * (fraction / 100.0)
+
+        opts = normalised_grid.get(str(q_idx), {})
+        correct_letter = chr(ord('A') + correct_opt_idx)
+
+        num_correct = 1 if opts.get(correct_letter, False) else 0
+        num_wrong = sum(1 for letter, marked in opts.items() if marked and letter != correct_letter)
+
+        total_score += (num_correct * q_value) - (num_wrong * penalty_per_wrong)
+
+    exam_instance.results = json.dumps(normalised_grid)
+    exam_instance.grade = max(0.0, total_score)
+
+    session.add(exam_instance)
+    await session.commit()
+    await session.refresh(exam_instance)
+    return exam_instance
+
 
 
 def build_exam_questions(exam: Exam, fraction: float) -> list:

@@ -1,0 +1,154 @@
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useNavigate } from "@tanstack/react-router";
+import { Search, Plus } from "lucide-react";
+import { useGetExamConfig } from "@/hooks/use-exams";
+import { useMemo, useState } from "react";
+import ExamCard from "./exam-card";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { encodeId } from "@/lib/id-encoder";
+import { useGetUCTopics } from "@/hooks/use-questions";
+import { NoQuestionsAlertDialog } from "./no-questions-alert-dialog";
+
+export default function ExamesUcExams({
+  realId,
+  ucName,
+}: {
+  realId: number;
+  ucName: string;
+}) {
+  const navigate = useNavigate();
+  const { data: examConfigs } = useGetExamConfig(realId);
+  const { data: topics } = useGetUCTopics(realId);
+
+  const [search, setSearch] = useState("");
+  const [noQuestionsAlertOpen, setNoQuestionsAlertOpen] = useState(false);
+  const [filterField, setFilterField] = useState<
+    "all" | "name" | "num_variations" | "fraction" | "num_questions"
+  >("all");
+
+  const filtered = useMemo(() => {
+    if (!examConfigs) return [];
+    const q = search.toLowerCase();
+    return examConfigs.filter((el, index) => {
+      if (!q) return true;
+      const name = `Exame ${index + 1}`;
+      const totalQuestions =
+        el.topic_configs?.reduce((s, t) => s + (t.num_questions || 0), 0) ?? 0;
+      if (filterField === "all")
+        return (
+          name.toLowerCase().includes(q) ||
+          String(el.num_variations).includes(q) ||
+          String(el.fraction).includes(q) ||
+          String(totalQuestions).includes(q)
+        );
+      if (filterField === "name") return name.toLowerCase().includes(q);
+      if (filterField === "num_variations")
+        return !isNaN(Number(q)) && el.num_variations >= Number(q);
+      if (filterField === "fraction") return String(el.fraction).includes(q);
+      return String(totalQuestions).includes(q);
+    });
+  }, [examConfigs, search, filterField]);
+
+  const indexMap = useMemo(() => {
+    if (!examConfigs) return new Map<number, number>();
+    return new Map(examConfigs.map((el, i) => [el.id, i]));
+  }, [examConfigs]);
+
+  return (
+    <>
+      <div className="flex gap-2 mb-12">
+        <Select
+          value={filterField}
+          onValueChange={(v) => {
+            setFilterField(v as typeof filterField);
+            setSearch("");
+          }}
+        >
+          <SelectTrigger className="w-44 shrink-0">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os campos</SelectItem>
+            <SelectItem value="name">Nome</SelectItem>
+            <SelectItem value="num_variations">Variações</SelectItem>
+            <SelectItem value="fraction">Desconto (%)</SelectItem>
+            <SelectItem value="num_questions">Nº Questões</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder={
+              filterField === "all"
+                ? "Pesquisar exames..."
+                : filterField === "name"
+                  ? "ex: Exame 1"
+                  : filterField === "num_variations"
+                    ? "mínimo de variações"
+                    : filterField === "fraction"
+                      ? "ex: 25"
+                      : "ex: 10"
+            }
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        {search && (
+          <Button
+            variant="ghost"
+            onClick={() => setSearch("")}
+            className="text-muted-foreground shrink-0"
+          >
+            Limpar
+          </Button>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto flex flex-col gap-3 pt-2">
+        {filtered.map((el) => (
+          <ExamCard
+            id={el.id}
+            name={`Exame ${(indexMap.get(el.id) ?? 0) + 1}`}
+            ucId={encodeId(realId)}
+            key={el.id}
+            examConfig={el}
+          />
+        ))}
+        {filtered.length === 0 && examConfigs && examConfigs.length > 0 && (
+          <p className="text-center text-muted-foreground py-8">
+            Nenhum exame encontrado.
+          </p>
+        )}
+        <Card
+          className="flex-row justify-center items-center gap-2 px-5 py-4 border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 hover:-translate-y-1 cursor-pointer shadow-none group/add"
+          onClick={() => {
+            if (!topics?.some((t) => t[1] > 0)) {
+              setNoQuestionsAlertOpen(true);
+            } else {
+              navigate({ to: "/novo-exame", search: { ucId: encodeId(realId), ucName } });
+            }
+          }}
+        >
+          <Plus className="text-primary h-8 w-8 transition-transform duration-300 group-hover/add:rotate-90" />
+          <span className="text-base font-medium text-primary">
+            Criar Exame
+          </span>
+        </Card>
+        <NoQuestionsAlertDialog
+          open={noQuestionsAlertOpen}
+          onOpenChange={setNoQuestionsAlertOpen}
+          ucId={realId}
+        />
+      </div>
+    </>
+  );
+}

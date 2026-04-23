@@ -63,3 +63,8 @@ class ExamPublic(SQLModel):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
+
+
+class CorrectByHandRequest(SQLModel):
+    """Schema for manual exam correction request"""
+    grid: Dict[str, Dict[str, bool]]

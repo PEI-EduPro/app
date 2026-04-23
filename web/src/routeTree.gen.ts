@@ -18,6 +18,7 @@ import { Route as LayoutNovaUcRouteImport } from './routes/_layout/nova-uc'
 import { Route as LayoutMobile_scan_testeRouteImport } from './routes/_layout/mobile_scan_teste'
 import { Route as LayoutMobile_evaluate_testsRouteImport } from './routes/_layout/mobile_evaluate_tests'
 import { Route as LayoutExamesUcRouteImport } from './routes/_layout/exames-uc'
+import { Route as LayoutExamesCorrecaoRouteImport } from './routes/_layout/exames-correcao'
 import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
 import { Route as LayoutBancoQuestoesRouteImport } from './routes/_layout/banco-questoes'
 
@@ -67,6 +68,11 @@ const LayoutExamesUcRoute = LayoutExamesUcRouteImport.update({
   path: '/exames-uc',
   getParentRoute: () => LayoutRoute,
 } as any)
+const LayoutExamesCorrecaoRoute = LayoutExamesCorrecaoRouteImport.update({
+  id: '/exames-correcao',
+  path: '/exames-correcao',
+  getParentRoute: () => LayoutRoute,
+} as any)
 const LayoutDetalhesUcRoute = LayoutDetalhesUcRouteImport.update({
   id: '/detalhes-uc',
   path: '/detalhes-uc',
@@ -83,6 +89,7 @@ export interface FileRoutesByFullPath {
   '/$': typeof SplatRoute
   '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
+  '/exames-correcao': typeof LayoutExamesCorrecaoRoute
   '/exames-uc': typeof LayoutExamesUcRoute
   '/mobile_evaluate_tests': typeof LayoutMobile_evaluate_testsRoute
   '/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
@@ -95,6 +102,7 @@ export interface FileRoutesByTo {
   '/$': typeof SplatRoute
   '/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
+  '/exames-correcao': typeof LayoutExamesCorrecaoRoute
   '/exames-uc': typeof LayoutExamesUcRoute
   '/mobile_evaluate_tests': typeof LayoutMobile_evaluate_testsRoute
   '/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
@@ -109,6 +117,7 @@ export interface FileRoutesById {
   '/_layout': typeof LayoutRouteWithChildren
   '/_layout/banco-questoes': typeof LayoutBancoQuestoesRoute
   '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
+  '/_layout/exames-correcao': typeof LayoutExamesCorrecaoRoute
   '/_layout/exames-uc': typeof LayoutExamesUcRoute
   '/_layout/mobile_evaluate_tests': typeof LayoutMobile_evaluate_testsRoute
   '/_layout/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
@@ -123,6 +132,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/banco-questoes'
     | '/detalhes-uc'
+    | '/exames-correcao'
     | '/exames-uc'
     | '/mobile_evaluate_tests'
     | '/mobile_scan_teste'
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
     | '/$'
     | '/banco-questoes'
     | '/detalhes-uc'
+    | '/exames-correcao'
     | '/exames-uc'
     | '/mobile_evaluate_tests'
     | '/mobile_scan_teste'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '/_layout'
     | '/_layout/banco-questoes'
     | '/_layout/detalhes-uc'
+    | '/_layout/exames-correcao'
     | '/_layout/exames-uc'
     | '/_layout/mobile_evaluate_tests'
     | '/_layout/mobile_scan_teste'
@@ -227,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutExamesUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/exames-correcao': {
+      id: '/_layout/exames-correcao'
+      path: '/exames-correcao'
+      fullPath: '/exames-correcao'
+      preLoaderRoute: typeof LayoutExamesCorrecaoRouteImport
+      parentRoute: typeof LayoutRoute
+    }
     '/_layout/detalhes-uc': {
       id: '/_layout/detalhes-uc'
       path: '/detalhes-uc'
@@ -247,6 +266,7 @@ declare module '@tanstack/react-router' {
 interface LayoutRouteChildren {
   LayoutBancoQuestoesRoute: typeof LayoutBancoQuestoesRoute
   LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
+  LayoutExamesCorrecaoRoute: typeof LayoutExamesCorrecaoRoute
   LayoutExamesUcRoute: typeof LayoutExamesUcRoute
   LayoutMobile_evaluate_testsRoute: typeof LayoutMobile_evaluate_testsRoute
   LayoutMobile_scan_testeRoute: typeof LayoutMobile_scan_testeRoute
@@ -258,6 +278,7 @@ interface LayoutRouteChildren {
 const LayoutRouteChildren: LayoutRouteChildren = {
   LayoutBancoQuestoesRoute: LayoutBancoQuestoesRoute,
   LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
+  LayoutExamesCorrecaoRoute: LayoutExamesCorrecaoRoute,
   LayoutExamesUcRoute: LayoutExamesUcRoute,
   LayoutMobile_evaluate_testsRoute: LayoutMobile_evaluate_testsRoute,
   LayoutMobile_scan_testeRoute: LayoutMobile_scan_testeRoute,

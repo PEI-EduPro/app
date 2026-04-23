@@ -1,3 +1,4 @@
+import base64
 import os
 import cv2
 from fastapi import File, HTTPException, UploadFile
@@ -5,6 +6,53 @@ from bs4 import BeautifulSoup
 
 IMAGES_DIR = os.getenv("IMAGES_DIR", "/tmp")
 
+
+
+def decode_base64_image(base64_str: str) -> tuple[int, str]:
+    """Decode a base64 image, save it temporarily, and read its QR code.
+
+    Returns:
+        Tuple of (exam_id, temp_file_path)
+    """
+    # Extract MIME type and strip data URI prefix if present
+    mime_type = "image/jpeg"  # default
+    if "," in base64_str:
+        header, base64_str = base64_str.split(",", 1)
+        # Extract MIME type from header like "data:image/jpeg;base64"
+        if "data:" in header:
+            mime_part = header.split(";")[0]  # "data:image/jpeg"
+            if "/" in mime_part:
+                mime_type = mime_part.split("/")[1]  # "image/jpeg"
+
+    # Map MIME type to file extension
+    ext_map = {"jpeg": ".jpg", "jpg": ".jpg", "png": ".png"}
+    ext = ext_map.get(mime_type.split("/")[1] if "/" in mime_type else mime_type, ".jpg")
+
+    try:
+        image_bytes = base64.b64decode(base64_str)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {e}")
+
+    os.makedirs(IMAGES_DIR, exist_ok=True)
+    temp_file_path = os.path.join(IMAGES_DIR, f"exam_{os.urandom(8).hex()}{ext}")
+    with open(temp_file_path, "wb") as buffer:
+        buffer.write(image_bytes)
+
+    img = cv2.imread(temp_file_path)
+    if img is None:
+        raise HTTPException(status_code=400, detail="Failed to load the uploaded image.")
+
+    detector = cv2.QRCodeDetector()
+    id_str, _, _ = detector.detectAndDecode(img)
+
+
+    if not id_str:
+        raise HTTPException(status_code=400, detail="Failed find an ID from the QR code.")
+
+    if not id_str.isdigit():
+        raise HTTPException(status_code=400, detail=f"Failed to decode a valid ID from the QR code. (I.E, the QR code that was read did not have only digits). We read: {id_str}")
+
+    return int(id_str), temp_file_path
 
 
 def clean_text(xml_text: str) -> str:
