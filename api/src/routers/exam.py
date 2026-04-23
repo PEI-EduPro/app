@@ -329,6 +329,7 @@ async def get_exam_info(
         "questions": questions,
     }
 
+'''
 @router.post("/{exam_id}/notify-student")
 async def notify_student_via_email(
     exam_id: int,
@@ -336,8 +337,7 @@ async def notify_student_via_email(
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Notifies the associated student via email about their grade.
-    The email consists of a message indicating the grade and 2 attachments (their answer grid, and the corresponding correction)
+    Notifies the associated students via email about their grade.
     """
 
     exam = await get_exam_by_id(session, exam_id)
@@ -421,11 +421,15 @@ async def notify_student_via_email(
 
     message += "A sua tabela de resposta:<br><br>"
 
-    message += "<p>METER AQUI FOTO DA TABELA DO ALUNO</p><br>"
+    #message += "<p>METER AQUI FOTO DA TABELA DO ALUNO</p><br>"
+    if exam.capture_path and os.path.exists(exam.capture_path):
+        message += '<img src="cid:student_capture" style="max-width: 80%; height: auto; display: block; margin: auto; border: 1px solid #ccc;"><br>'
+    else:
+        message += '<p><i>[Imagem da tabela de resposta indisponível]</i></p><br>'
 
     # === CORRECT_TABLE_CORRECT_TABLE_CORRECT_TABLE ===
 
-    message += "As respostas solução à sua versão do exame são:"
+    message += "As respostas solução à sua versão do exame são:<br><br>"
 
     # Start the HTML table
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
@@ -588,3 +592,4 @@ async def notify_student_via_email(
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
 
     return {"message": "Email enviado com sucesso"}
+'''

@@ -345,3 +345,44 @@ async def evaluate_exam_batch(
             results.append({"exam_id": exam_instance.id, "status": "error", "detail": str(e)})
 
     return {"results": results}
+
+@router.post("/{waiting_room_id}/notify-students")
+async def notify_students_via_email(
+    waiting_room_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Notify associated students about their exam score.
+    The exam consists of the student identification, the exam score distribution, their answer grid,
+    the solution to their exam as well as the scores obtained in each question.
+    """
+
+    waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if waiting_room.state != WaitingRoomState.CLOSED:
+        raise HTTPException(status_code=400, detail="Waiting room must be in the closed state to notify students.")
+    
+    associations = waiting_room.associations
+
+    # assoc = "exam_id:student_nmec"
+    for assoc in associations:
+        exam_id = int(assoc.split(":")[0])
+        exam = await exam_service.get_exam_by_id(exam_id)
+
+        # Nota: Exames NÃO validados serão enviados na mesma (dar address ao risco da foto do aluno conter perguntas do teste em caso de falha no OMR)
+        if exam:
+            try:
+                await exam_service.notify_student(session, exam)
+            except Exception as e:
+                logger.error(f"Failed to send email for exam {exam_id}: {e}")
+
+    return {"message": f"Successfully notified students in waiting room {waiting_room_id}."}
