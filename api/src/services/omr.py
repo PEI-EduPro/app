@@ -217,6 +217,11 @@ async def evaluate_exam(
     total_exam_score = max(0.0, total_exam_score)
     print(f"\nFINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
+    # Save the colored correction image and use it as capture_path
+    name_parts = image_path.rsplit(".", 1)
+    correction_path = f"{name_parts[0]}_omr_correction.{name_parts[1]}"
+    cv2.imwrite(correction_path, grid_paper)
+
     # Persist results to the database
     exam.grade = total_exam_score
     exam.results = json.dumps(answered_dict)
@@ -226,10 +231,3 @@ async def evaluate_exam(
     session.add(exam)
     await session.commit()
     await session.refresh(exam)
-
-    # I am assuming this save is for debug. 
-    # I would urge my colleagues to leave debugs in writting for future reference thought. Something like:
-    # Debug => saving image to check it out.
-    new_name = image_path.rsplit(".", 1)
-    new_name = f"{new_name[0]}_omr_correction.{new_name[1]}"
-    cv2.imwrite(new_name, grid_paper)
