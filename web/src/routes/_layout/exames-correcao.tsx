@@ -30,17 +30,13 @@ function RouteComponent() {
   const [checked, setChecked] = useState<boolean>(false);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-4 md:px-6 w-full">
       <div className="shrink-0">
         <AppBreadcrumb
           page={wrName}
           crumbs={[
             { name: "Unidades Curriculares", link: "/unidades-curriculares" },
             { name: ucName, link: `/detalhes-uc?ucId=${ucId}` },
-            {
-              name: "Exames",
-              link: `/exames-uc?ucId=${ucId}&ucName=${ucName}`,
-            },
           ]}
         />
 

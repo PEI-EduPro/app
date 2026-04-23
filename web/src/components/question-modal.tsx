@@ -157,7 +157,7 @@ export default function QuestionModal({
               onClick={onClose}
               className="cursor-pointer"
             >
-              <X className="!h-[25px] !w-[25px]" />
+              <X className="h-6.25! w-6.25!" />
             </Button>
           </div>
 
@@ -284,7 +284,7 @@ export default function QuestionModal({
             </div>
 
             {/* Actions */}
-            <div className="flex gap-3 justify-end">
+            <div className="flex gap-3">
               <Button
                 variant="destructive"
                 onClick={onClose}

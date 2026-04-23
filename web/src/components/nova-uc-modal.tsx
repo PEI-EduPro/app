@@ -6,9 +6,10 @@ interface UcModalProps {
   onClose: () => void;
   ucId?: number;
   ucName?: string;
+  lockRegente?: boolean;
 }
 
-export function NovaUcModal({ onClose, ucId, ucName }: UcModalProps) {
+export function NovaUcModal({ onClose, ucId, ucName, lockRegente }: UcModalProps) {
   const isEdit = !!ucId;
   return (
     <div
@@ -27,7 +28,7 @@ export function NovaUcModal({ onClose, ucId, ucName }: UcModalProps) {
             <X />
           </Button>
         </div>
-        <NovaUCForm ucId={ucId} onSuccess={onClose} onCancel={onClose} />
+        <NovaUCForm ucId={ucId} onSuccess={onClose} onCancel={onClose} lockRegente={lockRegente} />
       </div>
     </div>
   );

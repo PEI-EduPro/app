@@ -45,11 +45,11 @@ function LayoutComponent() {
       <SidebarHoverWrapper>
         <AppSidebar />
       </SidebarHoverWrapper>
-      <main className="flex flex-row w-full h-screen">
+      <main className="flex flex-row w-full h-screen overflow-hidden">
         {isMobile && <SidebarTrigger />}
         <div
           key={pathname}
-          className="w-full h-full animate-fade-in-up overflow-clip"
+          className="w-full h-full animate-fade-in-up overflow-hidden"
         >
           <Outlet />
         </div>

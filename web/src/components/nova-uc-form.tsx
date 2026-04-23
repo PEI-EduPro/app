@@ -24,13 +24,13 @@ function formatName(p: { firstName?: string; lastName?: string; first_name?: str
 interface UCFormProps {
   onSuccess?: () => void;
   onCancel?: () => void;
-  // edit mode
   ucId?: number;
   initialRegente?: string;
   initialProfessores?: string[];
+  lockRegente?: boolean;
 }
 
-function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialProfessores = [] }: UCFormProps) {
+function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialProfessores = [], lockRegente = false }: UCFormProps) {
   const isEdit = !!ucId;
   const { mutate: addUc } = useAddUc(onSuccess);
   const { mutate: updateUc } = useUpdateUc(ucId ?? 0);
@@ -120,6 +120,8 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
     );
   }
 
+  const lockedRegentProfessor = lockRegente ? professors.find((p) => p.id === initialRegente) : undefined;
+
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
       {!isEdit && (
@@ -153,19 +155,34 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
           <label className="text-sm font-medium flex items-center gap-1">
             Regente <span className="text-red-500">*</span>
           </label>
-          <Controller
-            control={control}
-            name="regente"
-            render={({ field }) => (
-              <SearchableList
-                items={filteredRegente}
-                search={regenteSearch}
-                onSearch={setRegenteSearch}
-                selected={field.value}
-                onToggle={(id) => field.onChange(field.value === id ? "" : id)}
-              />
-            )}
-          />
+          {lockRegente ? (
+            <div className="border rounded-md px-3 py-2.5 text-sm bg-muted/50 text-muted-foreground select-none">
+              {lockedRegentProfessor ? (
+                <>
+                  <div className="font-medium text-foreground">{formatName(lockedRegentProfessor)}</div>
+                  {lockedRegentProfessor.email && (
+                    <div className="text-xs">{lockedRegentProfessor.email}</div>
+                  )}
+                </>
+              ) : (
+                initialRegente || "—"
+              )}
+            </div>
+          ) : (
+            <Controller
+              control={control}
+              name="regente"
+              render={({ field }) => (
+                <SearchableList
+                  items={filteredRegente}
+                  search={regenteSearch}
+                  onSearch={setRegenteSearch}
+                  selected={field.value}
+                  onToggle={(id) => field.onChange(field.value === id ? "" : id)}
+                />
+              )}
+            />
+          )}
         </div>
 
         <div className="flex-1 flex flex-col gap-2">
@@ -205,7 +222,11 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
         <Button
           type="submit"
           className="cursor-pointer"
-          disabled={(!isEdit && (!watch("nome") || watch("nome").trim() === "")) || !watch("regente") || (isEdit && watch("regente") === initialRegente && watch("professores").slice().sort().join(",") === initialProfessores.slice().sort().join(","))}
+          disabled={
+            (!isEdit && (!watch("nome") || watch("nome").trim() === "")) ||
+            !watch("regente") ||
+            (isEdit && watch("regente") === initialRegente && watch("professores").slice().sort().join(",") === initialProfessores.slice().sort().join(","))
+          }
         >
           {isEdit ? "Guardar" : "Criar"}
         </Button>
@@ -214,8 +235,7 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
   );
 }
 
-// Edit mode wrapper — loads existing data before rendering
-function EditUCFormLoader({ ucId, onSuccess, onCancel }: { ucId: number; onSuccess?: () => void; onCancel?: () => void }) {
+function EditUCFormLoader({ ucId, onSuccess, onCancel, lockRegente }: { ucId: number; onSuccess?: () => void; onCancel?: () => void; lockRegente?: boolean }) {
   const { data: regent, isLoading: loadingRegent } = useGetUcRegent(ucId);
   const { data: professors, isLoading: loadingProfs } = useGetUcProfessors(ucId);
 
@@ -231,11 +251,12 @@ function EditUCFormLoader({ ucId, onSuccess, onCancel }: { ucId: number; onSucce
       initialProfessores={professors?.map((p) => p.id)}
       onSuccess={onSuccess}
       onCancel={onCancel}
+      lockRegente={lockRegente}
     />
   );
 }
 
 export function NovaUCForm(props: UCFormProps = {}) {
-  if (props.ucId) return <EditUCFormLoader ucId={props.ucId} onSuccess={props.onSuccess} onCancel={props.onCancel} />;
+  if (props.ucId) return <EditUCFormLoader ucId={props.ucId} onSuccess={props.onSuccess} onCancel={props.onCancel} lockRegente={props.lockRegente} />;
   return <UCFormInner {...props} />;
 }

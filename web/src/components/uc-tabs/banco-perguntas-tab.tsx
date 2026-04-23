@@ -1,22 +1,11 @@
-import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { Card } from "@/components/ui/card";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import {
-  Plus,
-  ChevronDown,
-  ChevronRight,
-  SquarePen,
-  Search,
-  Trash2,
-  Trash2Icon,
-} from "lucide-react";
-import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import TopicModal from "@/components/topic-modal";
 import QuestionModal from "@/components/question-modal";
 import XmlUploadButton from "@/components/xml-upload-button";
 import {
   useQuestions,
-  useSubject,
   useCreateTopic,
   useUpdateTopic,
   useDeleteTopic,
@@ -24,10 +13,6 @@ import {
   useUpdateQuestion,
   useDeleteQuestion,
 } from "@/hooks/use-questions";
-import { z } from "zod";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { decodeId } from "@/lib/id-encoder";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,18 +26,16 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { NoQuestionsAlertDialog } from "@/components/no-questions-alert-dialog";
-
-const bancoQuestoesSearchSchema = z.object({
-  ucId: z.string(),
-});
-
-export const Route = createFileRoute("/_layout/banco-questoes")({
-  validateSearch: bancoQuestoesSearchSchema,
-  component: BancoQuestões,
-  beforeLoad: ({ search }) => ({
-    ucId: decodeId(search.ucId),
-  }),
-});
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  SquarePen,
+  Search,
+  Trash2,
+  Trash2Icon,
+} from "lucide-react";
 
 interface Question {
   id: number;
@@ -67,12 +50,107 @@ interface Topic {
   questions: Record<number, Question>;
   isOpen: boolean;
 }
-function BancoQuestões() {
-  const { ucId } = Route.useSearch();
-  const realId = decodeId(ucId);
-  const navigate = useNavigate();
 
-  const { data: subjectData } = useSubject(realId);
+interface QuestionItemProps {
+  question: Question;
+  questionNumber: number;
+  topicId: number;
+  onEdit: () => void;
+  onDelete: () => void;
+}
+
+function QuestionItem({
+  question,
+  questionNumber,
+  onEdit,
+  onDelete,
+}: QuestionItemProps) {
+  return (
+    <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+      <div className="flex-1">
+        <div className="flex items-start gap-3">
+          <div className="mt-1">
+            <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-medium">
+              {questionNumber}
+            </div>
+          </div>
+          <div className="flex-1">
+            <h4 className="font-medium text-gray-800 mb-2">{question.text}</h4>
+            <div className="space-y-2">
+              {Object.entries(question.options).map(([key, value]) => (
+                <div key={key} className="flex items-center gap-3">
+                  <div
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? "border-green-500 bg-green-500" : "border-gray-300"}`}
+                  >
+                    {parseInt(key) === question.answer && (
+                      <div className="w-2 h-2 rounded-full bg-white" />
+                    )}
+                  </div>
+                  <span
+                    className={`text-sm ${parseInt(key) === question.answer ? "text-green-600 font-medium" : "text-gray-600"}`}
+                  >
+                    {value}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          variant="ghost"
+          onClick={onEdit}
+          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+          title="Editar questão"
+        >
+          <SquarePen className="w-4 h-4" />
+        </Button>
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button
+              variant="ghost"
+              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+              title="Excluir questão"
+            >
+              <Trash2 className="w-4 h-4" />
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                <Trash2Icon />
+              </AlertDialogMedia>
+              <AlertDialogTitle>Apagar Questão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Deseja apagar esta questão?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+              <AlertDialogCancel
+                variant="outline"
+                className="cursor-pointer"
+                size="lg"
+              >
+                Cancelar
+              </AlertDialogCancel>
+              <AlertDialogAction
+                size="lg"
+                variant="destructive"
+                className="cursor-pointer"
+                onClick={onDelete}
+              >
+                Apagar
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </div>
+    </div>
+  );
+}
+
+export default function BancoPerguntasTab({ realId }: { realId: number }) {
   const { data: apiData, isLoading, error } = useQuestions(realId);
 
   const createTopicMutation = useCreateTopic(realId);
@@ -94,12 +172,11 @@ function BancoQuestões() {
   const [search, setSearch] = useState("");
   const [noQuestionsAlertOpen, setNoQuestionsAlertOpen] = useState(false);
 
-  // Transform API data to local state format
   useEffect(() => {
     if (apiData && typeof apiData === "object" && "subject_topics" in apiData) {
       const topicsObj = apiData.subject_topics as Record<string, any>;
-      const transformedTopics: Topic[] = Object.values(topicsObj).map(
-        (topic: any) => ({
+      setTopics(
+        Object.values(topicsObj).map((topic: any) => ({
           id: topic.topic_id,
           name: topic.topic_name,
           questions: Object.values(topic.topic_questions || {}).reduce(
@@ -115,40 +192,27 @@ function BancoQuestões() {
             {},
           ),
           isOpen: false,
-        }),
+        })),
       );
-      setTopics(transformedTopics);
     }
   }, [apiData]);
 
-  // Topic CRUD operations
-  const handleCreateTopic = (name: string) => {
-    createTopicMutation.mutate(name);
-  };
-
-  const handleUpdateTopic = (id: number, name: string) => {
+  const handleCreateTopic = (name: string) => createTopicMutation.mutate(name);
+  const handleUpdateTopic = (id: number, name: string) =>
     updateTopicMutation.mutate({ id, name });
-  };
 
-  // Question CRUD operations
   const handleCreateQuestion = (
     topicId: number,
     question: Omit<Question, "id">,
   ) => {
-    const questions = [
-      {
-        topic_id: topicId,
-        question_text: question.text,
-      },
-    ];
-
-    const options = Object.entries(question.options).map(([key, value]) => ({
-      question_id: 0,
-      option_text: value,
-      value: parseInt(key) === question.answer,
-    }));
-
-    createQuestionMutation.mutate({ questions, options });
+    createQuestionMutation.mutate({
+      questions: [{ topic_id: topicId, question_text: question.text }],
+      options: Object.entries(question.options).map(([key, value]) => ({
+        question_id: 0,
+        option_text: value,
+        value: parseInt(key) === question.answer,
+      })),
+    });
   };
 
   const handleUpdateQuestion = (
@@ -161,170 +225,81 @@ function BancoQuestões() {
     const newIds = new Set(
       Object.keys(question.options).map((id) => parseInt(id)),
     );
-
-    const toUpdate = Object.entries(question.options)
-      .filter(([id]) => oldIds.has(parseInt(id)))
-      .map(([id, text]) => ({
-        id: parseInt(id),
-        option_text: text,
-        value: parseInt(id) === question.answer,
-      }));
-
-    const toCreate = Object.entries(question.options)
-      .filter(([id]) => !oldIds.has(parseInt(id)))
-      .map(([id, text]) => ({
-        question_id: questionId,
-        option_text: text,
-        value: parseInt(id) === question.answer,
-      }));
-
-    const toDelete = [...oldIds].filter((id) => !newIds.has(id));
-
     updateQuestionMutation.mutate({
       id: questionId,
       data: { id: questionId, topic_id: topicId, question_text: question.text },
-      toUpdate,
-      toCreate,
-      toDelete,
+      toUpdate: Object.entries(question.options)
+        .filter(([id]) => oldIds.has(parseInt(id)))
+        .map(([id, text]) => ({
+          id: parseInt(id),
+          option_text: text,
+          value: parseInt(id) === question.answer,
+        })),
+      toCreate: Object.entries(question.options)
+        .filter(([id]) => !oldIds.has(parseInt(id)))
+        .map(([id, text]) => ({
+          question_id: questionId,
+          option_text: text,
+          value: parseInt(id) === question.answer,
+        })),
+      toDelete: [...oldIds].filter((id) => !newIds.has(id)),
     });
   };
 
-  const toggleTopic = (topicId: number) => {
+  const toggleTopic = (topicId: number) =>
     setTopics(
-      topics.map((topic) =>
-        topic.id === topicId ? { ...topic, isOpen: !topic.isOpen } : topic,
-      ),
+      topics.map((t) => (t.id === topicId ? { ...t, isOpen: !t.isOpen } : t)),
     );
-  };
 
-  const closeAllTopics = () => {
-    setTopics(topics.map((topic) => ({ ...topic, isOpen: false })));
-  };
+  const closeAllTopics = () =>
+    setTopics(topics.map((t) => ({ ...t, isOpen: false })));
 
-  if (isLoading) {
+  if (isLoading)
     return (
-      <div className="py-3.5 px-6 w-full">
-        <AppBreadcrumb
-          page="Banco de Questões"
-          crumbs={[
-            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-            {
-              name: subjectData?.name || "...",
-              link: `/detalhes-uc?ucId=${ucId}`,
-            },
-          ]}
-        />
-        <div className="flex justify-center items-center h-64">
-          <p className="text-gray-500">Carregando questões...</p>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-500">Carregando questões...</p>
       </div>
     );
-  }
-
-  if (error) {
+  if (error)
     return (
-      <div className="py-3.5 px-6 w-full">
-        <AppBreadcrumb
-          page="Banco de Questões"
-          crumbs={[
-            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-            {
-              name: subjectData?.name || "...",
-              link: `/detalhes-uc?ucId=${ucId}`,
-            },
-          ]}
-        />
-        <div className="flex justify-center items-center h-64">
-          <p className="text-red-500">Erro ao carregar questões</p>
-        </div>
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500">Erro ao carregar questões</p>
       </div>
     );
-  }
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
-      <div className="shrink-0 flex flex-col items-center">
-        <AppBreadcrumb
-          page="Banco de Questões"
-          crumbs={[
-            { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-            {
-              name: subjectData?.name || "...",
-              link: `/detalhes-uc?ucId=${ucId}`,
-            },
-          ]}
-        />
-        <div className="w-262.5">
-          <div className="relative flex flex-col justify-start mb-7 items-center">
-            <div className="text-center flex flex-col">
-              <div className="typography-h1">
-                {subjectData?.name || "UNIDADE CURRICULAR"}
-              </div>
-              <h1 className="typography-h2 mt-4 text-[#3263A8]">
-                Banco de questões
-              </h1>
-              <div className="relative w-full min-w-sm mx-auto animate-fade-in-up flex flex-row items-center gap-2 mt-6">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Pesquisar tópico..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-9"
-                />
-              </div>
-            </div>
-            <div className="absolute right-0">
-              <Button
-                size="lg"
-                className="h-auto w-auto font-medium py-2.5 cursor-pointer"
-                onClick={() => {
-                  const hasQuestions = topics.some(
-                    (t) => Object.keys(t.questions).length > 0,
-                  );
-                  if (!hasQuestions) {
-                    setNoQuestionsAlertOpen(true);
-                  } else {
-                    navigate({
-                      to: "/novo-exame",
-                      search: { ucId, ucName: subjectData?.name || "" },
-                    });
-                  }
-                }}
-              >
-                Novo Exame
-              </Button>
-              <NoQuestionsAlertDialog
-                open={noQuestionsAlertOpen}
-                onOpenChange={setNoQuestionsAlertOpen}
-                ucId={realId}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex mb-4 justify-between w-full">
+    <div className="flex flex-col gap-4 mt-4">
+      <div className="flex items-center gap-2 w-full">
+        <div className="flex gap-2 shrink-0 h-auto">
           <XmlUploadButton subjectId={realId} />
-
           <Button
+            size="sm"
             onClick={() => {
               closeAllTopics();
               setShowTopicModal(true);
             }}
-            className="flex items-center gap-2 bg-[#3263A8] text-white px-4 py-2 rounded-lg hover:bg-[#2a5390] transition-colors h-10 cursor-pointer"
+            className="gap-1 cursor-pointer"
           >
-            <Plus className="h-5! w-5!" />
+            <Plus className="h-4 w-4" />
             Adicionar Tópico
           </Button>
         </div>
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Pesquisar tópico..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
       </div>
 
-      {/* Topics List - One per line */}
-      <div className="flex-1 overflow-y-auto space-y-4">
+      <div className="flex flex-col gap-4">
         {topics
           .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
           .map((topic) => (
             <Card key={topic.id} className="overflow-hidden p-0">
-              {/* Topic Header */}
               <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
                 <div
                   className="flex items-center gap-3 flex-1"
@@ -347,7 +322,6 @@ function BancoQuestões() {
                     </p>
                   </div>
                 </div>
-
                 <div className="flex items-center gap-2">
                   <Button
                     variant="ghost"
@@ -361,14 +335,11 @@ function BancoQuestões() {
                   >
                     <SquarePen className="w-5 h-5" />
                   </Button>
-
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
                         variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                        }}
+                        onClick={(e) => e.stopPropagation()}
                         className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
                         title="Excluir tópico"
                       >
@@ -380,9 +351,7 @@ function BancoQuestões() {
                         <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                           <Trash2Icon />
                         </AlertDialogMedia>
-                        <AlertDialogTitle>
-                          Apagar Tópico
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Apagar Tópico</AlertDialogTitle>
                         <AlertDialogDescription>
                           Deseja apagar este tópico e todas as suas questões?
                         </AlertDialogDescription>
@@ -409,7 +378,6 @@ function BancoQuestões() {
                 </div>
               </div>
 
-              {/* Questions Content (Collapsible) */}
               {topic.isOpen && (
                 <div className="p-4 border-t">
                   {Object.keys(topic.questions).length === 0 ? (
@@ -462,7 +430,6 @@ function BancoQuestões() {
             </Card>
           ))}
 
-        {/* Empty state */}
         {topics.filter((t) =>
           t.name.toLowerCase().includes(search.toLowerCase()),
         ).length === 0 && (
@@ -476,7 +443,12 @@ function BancoQuestões() {
         )}
       </div>
 
-      {/* Modals */}
+      <NoQuestionsAlertDialog
+        open={noQuestionsAlertOpen}
+        onOpenChange={setNoQuestionsAlertOpen}
+        ucId={realId}
+      />
+
       <TopicModal
         isOpen={showTopicModal}
         onClose={() => {
@@ -496,126 +468,20 @@ function BancoQuestões() {
           setSelectedTopicId(null);
         }}
         onCreate={(question) => {
-          if (selectedTopicId) {
-            handleCreateQuestion(selectedTopicId, question);
-          }
+          if (selectedTopicId) handleCreateQuestion(selectedTopicId, question);
         }}
         onUpdate={(questionId, question) => {
-          if (editingQuestion) {
+          if (editingQuestion)
             handleUpdateQuestion(
               editingQuestion.topicId,
               questionId,
               question,
               editingQuestion.question.options,
             );
-          }
         }}
         editingQuestion={editingQuestion}
         topicId={selectedTopicId}
       />
-    </div>
-  );
-}
-
-// Question Item Component for inline display
-interface QuestionItemProps {
-  question: Question;
-  questionNumber: number;
-  topicId: number;
-  onEdit: () => void;
-  onDelete: () => void;
-}
-
-function QuestionItem({
-  question,
-  questionNumber,
-  onEdit,
-  onDelete,
-}: QuestionItemProps) {
-  return (
-    <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
-      <div className="flex-1">
-        <div className="flex items-start gap-3">
-          <div className="mt-1">
-            <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-medium">
-              {questionNumber}
-            </div>
-          </div>
-          <div className="flex-1">
-            <h4 className="font-medium text-gray-800 mb-2">{question.text}</h4>
-            <div className="space-y-2">
-              {Object.entries(question.options).map(([key, value]) => (
-                <div key={key} className="flex items-center gap-3">
-                  <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? "border-green-500 bg-green-500" : "border-gray-300"}`}
-                  >
-                    {parseInt(key) === question.answer && (
-                      <div className="w-2 h-2 rounded-full bg-white"></div>
-                    )}
-                  </div>
-                  <span
-                    className={`text-sm ${parseInt(key) === question.answer ? "text-green-600 font-medium" : "text-gray-600"}`}
-                  >
-                    {value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button
-          variant="ghost"
-          onClick={onEdit}
-          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
-          title="Editar questão"
-        >
-          <SquarePen className="w-4 h-4" />
-        </Button>
-
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-              title="Excluir questão"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-                <Trash2Icon />
-              </AlertDialogMedia>
-              <AlertDialogTitle>
-                Apagar Questão
-              </AlertDialogTitle>
-              <AlertDialogDescription>
-                Deseja apagar esta questão?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="w-full! flex flex-row justify-between!">
-              <AlertDialogCancel
-                variant="outline"
-                className="cursor-pointer"
-                size="lg"
-              >
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                size="lg"
-                variant="destructive"
-                className="cursor-pointer"
-                onClick={onDelete}
-              >
-                Apagar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
     </div>
   );
 }

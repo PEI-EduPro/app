@@ -94,7 +94,7 @@ export default function ExamCard({
               variant="ghost"
               size="icon"
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-red-500 hover:bg-red-50 rounded-full"
+              className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-red-500 hover:bg-red-50 rounded-full"
             >
               <Trash2Icon className="h-4 w-4" />
             </Button>
@@ -104,9 +104,7 @@ export default function ExamCard({
               <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                 <Trash2Icon />
               </AlertDialogMedia>
-              <AlertDialogTitle>
-                Apagar Configuração de Exame
-              </AlertDialogTitle>
+              <AlertDialogTitle>Apagar Configuração de Exame</AlertDialogTitle>
               <AlertDialogDescription>
                 Esta ação irá apagar permanentemente a configuração de exame.
                 Deseja continuar?

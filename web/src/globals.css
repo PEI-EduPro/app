@@ -3,9 +3,9 @@
 
 @custom-variant dark (&:is(.dark *));
 
-body {
+/* body {
   overflow: hidden;
-}
+} */
 
 /* Palette:
    #E3F6A2 – lime highlight
@@ -213,5 +213,12 @@ body {
 }
 
 .custom-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
