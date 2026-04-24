@@ -66,7 +66,7 @@ export default function XmlUploadButton({ subjectId }: XmlUploadButtonProps) {
         size="sm"
         onClick={handleButtonClick}
         disabled={isUploading}
-        className="gap-1 cursor-pointer h-auto"
+        className="gap-1 cursor-pointer"
       >
         <Upload className="h-4 w-4" />
         {isUploading ? "Importando..." : "Importar questões"}

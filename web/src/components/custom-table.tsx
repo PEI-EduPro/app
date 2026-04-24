@@ -147,6 +147,7 @@ export function CustomTable(props: CustomTableProps) {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onRowSelectionChange: handleRowSelectionChange,
+    autoResetPageIndex: false,
     globalFilterFn,
     state: {
       sorting,

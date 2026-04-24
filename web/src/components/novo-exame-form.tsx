@@ -32,7 +32,8 @@ import HelperHoverCard from "./helper-hover-card";
 import { useGetProfessors } from "@/hooks/use-users";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { MultiSelect } from "./multi-select";
-import { Upload, X } from "lucide-react";
+import { FileText, TriangleAlert, Upload, X } from "lucide-react";
+import { Separator } from "./ui/separator";
 
 type TopicSelection = {
   id: string;
@@ -482,7 +483,8 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                     Cotações relativas por tópico
                   </FormLabel>
                   <HelperHoverCard
-                    iconClassName="h-4 w-4 color-gray-500"
+                    side="top"
+                    iconClassName="h-4 w-4 color-gray-500 cursor-pointer"
                     content="As cotações relativas determinam o peso de cada tópico no exame. Quanto maior a cotação de um tópico, maior será a sua importância na nota final."
                   />
                 </div>
@@ -736,7 +738,8 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                       <div className="flex items-center gap-2 justify-center">
                         <FormLabel className="shrink-0">Desconto (%)</FormLabel>
                         <HelperHoverCard
-                          iconClassName="h-4 w-4 color-gray-500"
+                          side="bottom"
+                          iconClassName="h-4 w-4 color-gray-500 cursor-pointer"
                           content={`Para cada questão errada, será descontado ${watch("fraction") || 0}% do valor da questão. Exemplo: Se uma questão vale 2 valores e o desconto é de 20%, cada erro nessa questão resulta numa penalização de 0.4 valores.`}
                         />
                       </div>
@@ -811,7 +814,6 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                     !watch("exam_title") ||
                     !watch("exam_date") ||
                     !watch("academic_year") ||
-                    !watch("number_exams") ||
                     !watch("semester")
                   }
                 >
@@ -950,6 +952,83 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                       <FormLabel className="flex items-center gap-1">
                         Alunos (CSV)
                         <span className="text-red-500">*</span>
+                        <HelperHoverCard
+                          side="bottom"
+                          iconClassName="h-4 w-4 color-gray-500 cursor-pointer"
+                          content={
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded bg-gray-700 flex items-center justify-center shrink-0">
+                                  <FileText className="w-3.5 h-3.5 text-white" />
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-sm leading-tight text-gray-800">
+                                    Formato CSV
+                                  </p>
+                                  <p className="text-xs text-gray-400 font-mono">
+                                    .csv · separado por vírgulas
+                                  </p>
+                                </div>
+                              </div>
+                              <Separator className="bg-gray-300" />
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">
+                                  Colunas obrigatórias
+                                </p>
+                                {[
+                                  {
+                                    col: "nmec",
+                                    desc: "Número de aluno único",
+                                    example: "112903",
+                                  },
+                                  {
+                                    col: "nome",
+                                    desc: "Primeiro nome",
+                                    example: "Marta",
+                                  },
+                                  {
+                                    col: "email",
+                                    desc: "Email institucional",
+                                    example: undefined,
+                                  },
+                                ].map(({ col, desc, example }) => (
+                                  <div
+                                    key={col}
+                                    className="flex items-start gap-2"
+                                  >
+                                    <code className="text-xs bg-gray-200 text-gray-700 px-1.5 py-0.5 rounded w-14 text-center shrink-0">
+                                      {col}
+                                    </code>
+                                    <span className="text-xs text-gray-600 leading-snug">
+                                      {desc}{" "}
+                                      {example && (
+                                        <span className="text-gray-400">
+                                          (ex: {example})
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                              <div className="bg-gray-800 rounded-md px-3 py-2">
+                                <p className="text-[10px] text-gray-500 mb-1 uppercase tracking-wide">
+                                  Exemplo
+                                </p>
+                                <pre className="text-[11px] text-gray-300 font-mono leading-relaxed">{`nmec, nome, email\n112903, Marta, marta@ua.pt\n112904, Maria, maria@ua.pt`}</pre>
+                              </div>
+                              <div className="flex gap-1.5 items-start rounded-md bg-amber-50 border border-amber-200 px-2.5 py-2">
+                                <TriangleAlert className="w-3 h-3 text-amber-600 mt-0.5 shrink-0" />
+                                <p className="text-xs text-amber-700 leading-snug">
+                                  A linha de cabeçalho é obrigatória. Sem{" "}
+                                  <code className="font-mono text-[10px]">
+                                    nmec
+                                  </code>{" "}
+                                  duplicados ou linhas vazias.
+                                </p>
+                              </div>
+                            </div>
+                          }
+                        />
                       </FormLabel>
                       <p className="text-xs text-muted-foreground">
                         Formato esperado: <code>nmec, nome, email</code> (uma
@@ -1085,8 +1164,35 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                   name="number_exams"
                   render={() => (
                     <FormItem className="flex items-center justify-between">
-                      <FormLabel className="shrink-0 flex items-center gap-1">
+                      <FormLabel className="flex items-center gap-1">
                         Número de versões
+                        <HelperHoverCard
+                          side="bottom"
+                          iconClassName="h-4 w-4 color-gray-500 cursor-pointer"
+                          content={
+                            <p className="text-xs text-gray-600 leading-relaxed">
+                              Cada versão tem{" "}
+                              <span className="font-medium text-gray-800">
+                                questões diferentes
+                              </span>{" "}
+                              dos mesmos tópicos. Quando uma questão se repete,
+                              a{" "}
+                              <span className="font-medium text-gray-800">
+                                ordem das opções e das questões
+                              </span>{" "}
+                              é baralhada. Com{" "}
+                              <span className="font-medium text-gray-800">
+                                100 exames e 10 versões
+                              </span>
+                              , cada versão é repetida{" "}
+                              <span className="font-medium text-gray-800">
+                                10 vezes
+                              </span>{" "}
+                              ,ou seja, 10 alunos terão exatamente o mesmo
+                              exame.
+                            </p>
+                          }
+                        />
                       </FormLabel>
                       <FormControl>
                         <Input
@@ -1154,7 +1260,7 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                 />
               </div>
 
-              <div className="flex  gap-3 pt-4">
+              <div className="flex gap-3 pt-4">
                 <Button
                   className="cursor-pointer"
                   variant="outline"
@@ -1172,7 +1278,8 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                     !formState.isValid ||
                     !watch("students_csv") ||
                     !watch("vigilantes") ||
-                    watch("vigilantes").length == 0
+                    watch("vigilantes").length == 0 ||
+                    watch("number_exams") < 1
                   }
                 >
                   {isPending ? "A gerar..." : "Gerar Exame"}

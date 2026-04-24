@@ -5,24 +5,29 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import type { ReactNode } from "react";
 
 interface HelperHoverCardProps {
-  content: string;
+  content: ReactNode;
   iconClassName?: string;
+  side: "top" | "right" | "bottom" | "left";
+  trigger?: ReactNode;
 }
 
 export default function HelperHoverCard({
   content,
   iconClassName,
+  side,
+  trigger,
 }: HelperHoverCardProps) {
   return (
     <HoverCard openDelay={50} closeDelay={100}>
-      <HoverCardTrigger className="text-gray-400 hover:text-gray-600 cursor-pointer transition-colors">
-        <HelpCircle className={iconClassName} />
+      <HoverCardTrigger className={trigger ? "flex self-stretch" : undefined}>
+        {trigger || <HelpCircle className={iconClassName} />}
       </HoverCardTrigger>
       <HoverCardContent
-        side="top"
-        className="bg-gray-100 border border-gray-300 text-gray-700 shadow-md"
+        side={side}
+        className="bg-gray-100 w-100 border border-gray-300 text-gray-700 shadow-md"
       >
         <p className="text-sm">{content}</p>
       </HoverCardContent>

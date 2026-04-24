@@ -34,7 +34,13 @@ import {
   Search,
   Trash2,
   Trash2Icon,
+  FolderOpen,
+  HelpCircle,
+  CheckSquare,
+  Info,
+  FileCode,
 } from "lucide-react";
+import HelperHoverCard from "../helper-hover-card";
 
 interface Question {
   id: number;
@@ -269,7 +275,106 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-2 sticky top-10 z-10 bg-background py-2 -mx-4 px-4 md:-mx-6 md:px-6">
         <div className="flex gap-2 shrink-0 h-auto">
-          <XmlUploadButton subjectId={realId} />
+          <HelperHoverCard
+            side="right"
+            content={
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-gray-700 flex items-center justify-center shrink-0">
+                    <FileCode className="w-3.5 h-3.5 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-sm text-gray-800">
+                      Formato Moodle XML
+                    </p>
+                    <p className="text-xs text-gray-400 font-mono">
+                      .xml · exportado do Moodle
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs text-gray-600 leading-relaxed">
+                  Ficheiro exportado diretamente do Moodle. As questões são
+                  organizadas por{" "}
+                  <span className="font-medium text-gray-800">categorias</span>,
+                  que serão usadas como{" "}
+                  <span className="font-medium text-gray-800">tópicos</span> no
+                  exame.
+                </p>
+
+                <div className="space-y-1.5">
+                  {[
+                    {
+                      icon: (
+                        <FolderOpen className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
+                      ),
+                      label: "Categorias",
+                      desc: 'definidas por question type="category"',
+                    },
+                    {
+                      icon: (
+                        <HelpCircle className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
+                      ),
+                      label: "Questões",
+                      desc: 'do tipo multichoice com uma resposta correta (fraction="100")',
+                    },
+                    {
+                      icon: (
+                        <CheckSquare className="w-3 h-3 text-gray-500 mt-0.5 shrink-0" />
+                      ),
+                      label: "Opções de resposta",
+                      desc: "pelo menos uma correta por questão",
+                    },
+                  ].map(({ icon, label, desc }) => (
+                    <div key={label} className="flex items-start gap-2">
+                      {icon}
+                      <p className="text-xs text-gray-600 leading-snug">
+                        <span className="font-medium text-gray-800">
+                          {label}
+                        </span>{" "}
+                        — {desc}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="bg-gray-800 rounded-md px-3 py-2">
+                  <p className="text-[10px] text-gray-500 mb-1.5 uppercase tracking-wide">
+                    Exemplo
+                  </p>
+                  <pre className="text-[11px] text-gray-300 font-mono leading-relaxed overflow-x-auto">{`<quiz>
+  <question type="category">
+    <category><text>Spring</text></category>
+  </question>
+
+  <question type="multichoice">
+    <questiontext>
+      <text>What is a Spring Bean?</text>
+    </questiontext>
+    <answer fraction="100">
+      <text>A managed object</text>
+    </answer>
+    <answer fraction="0">
+      <text>A Java interface</text>
+    </answer>
+  </question>
+</quiz>`}</pre>
+                </div>
+
+                <div className="flex gap-1.5 items-start rounded-md bg-blue-50 border border-blue-100 px-2.5 py-2">
+                  <Info className="w-3 h-3 text-blue-500 mt-0.5 shrink-0" />
+                  <p className="text-xs text-blue-700 leading-snug">
+                    Para exportar do Moodle:{" "}
+                    <span className="font-medium">
+                      Banco de questões → Exportar → Formato Moodle XML
+                    </span>
+                    .
+                  </p>
+                </div>
+              </div>
+            }
+            trigger={<XmlUploadButton subjectId={realId} />}
+          />
           <Button
             size="sm"
             onClick={() => {
