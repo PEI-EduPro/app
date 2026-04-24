@@ -12,24 +12,26 @@ interface UcTabsProps {
 export default function UcTabs({ realId, ucName }: UcTabsProps) {
   return (
     <Tabs defaultValue="banco-perguntas" className="mb-7.5">
-      <TabsList>
-        <TabsTrigger className="cursor-pointer" value="banco-perguntas">
-          Banco de Perguntas
-        </TabsTrigger>
-        <TabsTrigger className="cursor-pointer" value="exames">
-          Exames
-        </TabsTrigger>
-        <TabsTrigger className="cursor-pointer" value="salas">
-          Salas
-        </TabsTrigger>
-      </TabsList>
-      <TabsContent value="banco-perguntas">
+      <div className="sticky top-0 z-10 bg-background pb-1 -mx-4 px-4 md:-mx-6 md:px-6">
+        <TabsList>
+          <TabsTrigger className="cursor-pointer" value="banco-perguntas">
+            Banco de Perguntas
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="exames">
+            Exames
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="salas">
+            Salas
+          </TabsTrigger>
+        </TabsList>
+      </div>
+      <TabsContent value="banco-perguntas" className="mt-0">
         <BancoPerguntasTab realId={realId} />
       </TabsContent>
-      <TabsContent value="exames">
+      <TabsContent value="exames" className="mt-0">
         <ExamesTab realId={realId} />
       </TabsContent>
-      <TabsContent value="salas">
+      <TabsContent value="salas" className="mt-0">
         <SalasTab realId={realId} ucName={ucName} />
       </TabsContent>
     </Tabs>

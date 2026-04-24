@@ -29,8 +29,8 @@ export default function SalasTab({
   }, [waitingRooms, realId, search]);
 
   return (
-    <div className="flex flex-col gap-4 mt-4">
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 sticky top-10 z-10 bg-background py-2 -mx-4 px-4 md:-mx-6 md:px-6">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input

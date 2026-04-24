@@ -56,8 +56,8 @@ export default function ExamesTab({ realId }: { realId: number }) {
   }, [examConfigs]);
 
   return (
-    <div className="flex flex-col gap-4 mt-4">
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 sticky top-10 z-10 bg-background py-2 -mx-4 px-4 md:-mx-6 md:px-6">
         <Button
           size="sm"
           onClick={() => {

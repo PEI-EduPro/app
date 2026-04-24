@@ -76,7 +76,7 @@ function RouteComponent() {
           { name: "Unidades Curriculares", link: "/unidades-curriculares" },
         ]}
       />
-      <div className="overflow-x-auto scrollbar-hide flex-1">
+      <div className="overflow-y-auto overflow-x-hidden scrollbar-hide flex-1">
         <div className="w-full md:px-47.5 min-w-max">
           <div className="flex flex-row mb-8 items-center gap-4">
             <span className="font-rubik typography-h1 flex-1 text-center min-w-0 wrap-break-word">

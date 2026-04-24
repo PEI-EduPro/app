@@ -108,12 +108,12 @@ function UCS() {
           </div>
         </div>
         {isMobile && (
-          <div className="flex gap-2 mb-6 overflow-x-auto pb-1 animate-fade-in-up">
+          <div className="flex gap-2 mb-4 animate-fade-in-up">
             {(["all", "running", "preparation", "closed"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setStateFilter(s)}
-                className={`shrink-0 text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
+                className={`text-xs font-semibold px-3 py-1 rounded-full border transition-colors ${
                   stateFilter === s
                     ? s === "running"
                       ? "bg-green-600 text-white border-green-600"
@@ -128,9 +128,9 @@ function UCS() {
                 {s === "all"
                   ? "Todos"
                   : s === "running"
-                    ? "A decorrer"
+                    ? "Decorrer"
                     : s === "preparation"
-                      ? "Em preparação"
+                      ? "Preparação"
                       : "Fechado"}
               </button>
             ))}

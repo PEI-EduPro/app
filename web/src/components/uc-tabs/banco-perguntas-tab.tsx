@@ -266,8 +266,8 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
     );
 
   return (
-    <div className="flex flex-col gap-4 mt-4">
-      <div className="flex items-center gap-2 w-full">
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 sticky top-10 z-10 bg-background py-2 -mx-4 px-4 md:-mx-6 md:px-6">
         <div className="flex gap-2 shrink-0 h-auto">
           <XmlUploadButton subjectId={realId} />
           <Button
