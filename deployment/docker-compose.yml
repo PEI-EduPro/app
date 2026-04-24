@@ -30,37 +30,21 @@ services:
     restart: unless-stopped
 
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.1
+    image: quay.io/keycloak/keycloak:26.0
     environment:
       KC_DB: postgres
       KC_DB_URL: jdbc:postgresql://keycloak-db:5432/${KC_DB_NAME}
       KC_DB_USERNAME: ${KC_DB_USER}
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
-      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
-      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    command: start --hostname ${KC_HOSTNAME} --hostname-port ${KC_HOSTNAME_PORT} --hostname-path /keycloak --hostname-admin ${KC_HOSTNAME} --proxy-headers forwarded --http-enabled=true
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    command: start --import-realm --hostname https://${KC_HOSTNAME}:${KC_HOSTNAME_PORT}/keycloak --proxy-headers forwarded --http-enabled=true
+    volumes:
+      - ./keycloak-config/realm.json:/opt/keycloak/data/import/realm.json:ro
     depends_on:
       keycloak-db:
         condition: service_healthy
     restart: unless-stopped
-
-  keycloak-config-cli:
-    image: adorsys/keycloak-config-cli:latest-24.0.1
-    environment:
-      KEYCLOAK_URL: http://keycloak:8080
-      KEYCLOAK_USER: ${KEYCLOAK_ADMIN}
-      KEYCLOAK_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-      KEYCLOAK_AVAILABILITYCHECK_ENABLED: "true"
-      KEYCLOAK_AVAILABILITYCHECK_TIMEOUT: "120s"
-      IMPORT_MANAGED_ONLY: "false"
-      IMPORT_VAR_SUBSTITUTION_ENABLED: "true"
-    volumes:
-      - ./keycloak-config:/config
-    depends_on:
-      - keycloak
-    restart: on-failure
-    profiles:
-      - setup
 
   api:
     build:
