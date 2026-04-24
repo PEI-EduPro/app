@@ -38,7 +38,7 @@ services:
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    command: start --import-realm --hostname ${KC_HOSTNAME} --hostname-path /keycloak --proxy-headers forwarded --http-enabled=true --hostname-port ${KC_HOSTNAME_PORT}
+    command: start --import-realm --hostname https://${KC_HOSTNAME}:${KC_HOSTNAME_PORT}/keycloak --proxy-headers forwarded --http-enabled=true
     volumes:
       - ./keycloak-config/realm.json:/opt/keycloak/data/import/realm.json:ro
     depends_on:
@@ -67,7 +67,7 @@ services:
       - "${WEB_PORT}:80"
       - "${SSL_PORT}:443"
     volumes:
-      - ./nginx.prod.conf:/etc/nginx/nginx.conf:ro  #muda isto se quiseres local
+      - ./nginx.dev.conf:/etc/nginx/nginx.conf:ro  #muda isto se quiseres local
       - ./nginx_certs:/certs:ro
     depends_on:
       - api
