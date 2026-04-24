@@ -5,8 +5,10 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CircleAlert } from "lucide-react";
 
 export function NoQuestionsAlertDialog({
   open,
@@ -19,6 +21,9 @@ export function NoQuestionsAlertDialog({
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+            <CircleAlert />
+          </AlertDialogMedia>
           <AlertDialogTitle>Sem questões disponíveis</AlertDialogTitle>
           <AlertDialogDescription>
             Esta unidade curricular não tem nenhum tópico com questões
@@ -27,7 +32,7 @@ export function NoQuestionsAlertDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Fechar</AlertDialogCancel>
+          <AlertDialogCancel size="lg" className="cursor-pointer w-full">Fechar</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

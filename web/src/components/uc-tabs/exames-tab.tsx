@@ -141,7 +141,7 @@ export default function ExamesTab({ realId }: { realId: number }) {
             examConfig={el}
           />
         ))}
-        {filtered.length === 0 && examConfigs && examConfigs.length > 0 && (
+        {filtered.length === 0 && examConfigs && (
           <p className="text-center text-muted-foreground py-8">
             Nenhum exame encontrado.
           </p>

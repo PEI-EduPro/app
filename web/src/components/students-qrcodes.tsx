@@ -4,6 +4,8 @@ import { Card } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -52,6 +54,9 @@ function StudentPickerDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Selecionar aluno</DialogTitle>
+          <DialogDescription>
+            Selecione o aluno a associar a este exame.
+          </DialogDescription>
         </DialogHeader>
         <CustomTable
           isSelectable
@@ -60,13 +65,18 @@ function StudentPickerDialog({
           rowSelection={selection}
           onChange={(rows) => setSelection(rows.slice(-1))}
         />
-        <Button
-          disabled={selection.length === 0}
-          onClick={handleConfirm}
-          className="cursor-pointer"
-        >
-          Confirmar
-        </Button>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose} className="cursor-pointer">
+            Cancelar
+          </Button>
+          <Button
+            disabled={selection.length === 0}
+            onClick={handleConfirm}
+            className="cursor-pointer"
+          >
+            Confirmar
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

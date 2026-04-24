@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Trash2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { ExamConfigI } from "@/lib/types";
@@ -132,17 +133,11 @@ export default function ExamCard({
       </Card>
 
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={handleCloseModal}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl max-w-lg w-full m-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+          <DialogContent className="max-w-lg p-0 overflow-y-auto max-h-[90vh]">
             <ExamConfigCard examConfigData={examConfig} />
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

@@ -125,12 +125,14 @@ function RouteComponent() {
                       <AlertDialogFooter className="w-full! flex flex-row justify-between!">
                         <AlertDialogCancel
                           variant="outline"
+                          size="lg"
                           className="cursor-pointer"
                         >
                           Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                           variant="destructive"
+                          size="lg"
                           className="cursor-pointer"
                           onClick={() => {
                             closeRoom();
