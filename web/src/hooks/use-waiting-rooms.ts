@@ -154,10 +154,11 @@ const useResolveWarnings = (roomId: number) => {
   });
 };
 
-const useGetExamsResponses = (roomId: number) =>
+const useGetExamsResponses = (roomId: number, refetchInterval?: number) =>
   useQuery<ExamResponseI[]>({
     queryKey: ["exams_responses", roomId],
     queryFn: () => apiClient.get(`/exams/${roomId}/all_exams_info`),
+    refetchInterval,
   });
 
 const useValidateExam = (roomId: number) => {

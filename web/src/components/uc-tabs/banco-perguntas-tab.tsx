@@ -25,7 +25,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { NoQuestionsAlertDialog } from "@/components/no-questions-alert-dialog";
 import { useState, useEffect } from "react";
 import {
   Plus,
@@ -170,7 +169,6 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
   } | null>(null);
   const [selectedTopicId, setSelectedTopicId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
-  const [noQuestionsAlertOpen, setNoQuestionsAlertOpen] = useState(false);
 
   useEffect(() => {
     if (apiData && typeof apiData === "object" && "subject_topics" in apiData) {
@@ -442,12 +440,6 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
           </Card>
         )}
       </div>
-
-      <NoQuestionsAlertDialog
-        open={noQuestionsAlertOpen}
-        onOpenChange={setNoQuestionsAlertOpen}
-        ucId={realId}
-      />
 
       <TopicModal
         isOpen={showTopicModal}

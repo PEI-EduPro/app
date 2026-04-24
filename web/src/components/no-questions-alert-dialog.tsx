@@ -1,8 +1,5 @@
-import { Link } from "@tanstack/react-router";
-import { encodeId } from "@/lib/id-encoder";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
@@ -14,11 +11,9 @@ import {
 export function NoQuestionsAlertDialog({
   open,
   onOpenChange,
-  ucId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ucId: number;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -33,9 +28,6 @@ export function NoQuestionsAlertDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Fechar</AlertDialogCancel>
-          <Link to="/banco-questoes" search={{ ucId: encodeId(ucId) }}>
-            <AlertDialogAction>Ir para o Banco de Questões</AlertDialogAction>
-          </Link>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

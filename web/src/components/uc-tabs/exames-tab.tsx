@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Search, Plus } from "lucide-react";
 import { useGetExamConfig } from "@/hooks/use-exams";
+import { useGetUCTopics } from "@/hooks/use-questions";
 import { useMemo, useState } from "react";
 import ExamCard from "../exam-card";
 import { Button } from "../ui/button";
@@ -17,6 +18,7 @@ import { NovoExameForm } from "../novo-exame-form";
 
 export default function ExamesTab({ realId }: { realId: number }) {
   const { data: examConfigs } = useGetExamConfig(realId);
+  const { data: topics } = useGetUCTopics(realId);
 
   const [search, setSearch] = useState("");
   const [noQuestionsAlertOpen, setNoQuestionsAlertOpen] = useState(false);
@@ -59,7 +61,12 @@ export default function ExamesTab({ realId }: { realId: number }) {
         <Button
           size="sm"
           onClick={() => {
-            setShowExamModal(true);
+            const hasQuestions = topics?.some(([, count]) => count > 0);
+            if (!hasQuestions) {
+              setNoQuestionsAlertOpen(true);
+            } else {
+              setShowExamModal(true);
+            }
           }}
           className="gap-1 cursor-pointer h-auto"
         >
@@ -149,8 +156,7 @@ export default function ExamesTab({ realId }: { realId: number }) {
         )}
         <NoQuestionsAlertDialog
           open={noQuestionsAlertOpen}
-          onOpenChange={setNoQuestionsAlertOpen}
-          ucId={realId}
+          onOpenChange={() => setNoQuestionsAlertOpen(false)}
         />
       </div>
     </div>
