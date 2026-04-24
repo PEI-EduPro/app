@@ -16,4 +16,5 @@ jobs:
           cp /etc/edupro/web.env web/.env
 
       - name: Deploy
-        run: ./deployment/deploy.sh
+        working-directory: deployment
+        run: docker compose up -d --build
