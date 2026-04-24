@@ -28,6 +28,7 @@ import { useGetUCTopics } from "@/hooks/use-questions";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Calendar } from "./ui/calendar";
 import { format, toDate } from "date-fns";
+import HelperHoverCard from "./helper-hover-card";
 import { useGetProfessors } from "@/hooks/use-users";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { MultiSelect } from "./multi-select";
@@ -50,6 +51,7 @@ export type NovoExameFormT = {
   semester: string;
   academic_year: string;
   students_csv: File | null;
+  number_versions: number;
 };
 
 export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
@@ -114,6 +116,10 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
       relative_quotations: { ...formData.relative_quotations },
       students_csv: formData.students_csv,
       vigilantes: [...(formData.vigilantes ?? [])],
+      number_versions:
+        formData.number_versions && formData.number_versions >= 1
+          ? formData.number_versions
+          : 1,
     };
 
     formData.topics?.forEach((topic) => {
@@ -149,6 +155,7 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
 
       setValue("number_exams", validated.number_exams);
       setValue("fraction", validated.fraction);
+      setValue("number_versions", validated.number_versions);
 
       Object.keys(validated.number_questions).forEach((key) => {
         setValue(`number_questions.${key}`, validated.number_questions[key]);
@@ -177,6 +184,7 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
       topics: finalData.topics.map((topic) => topic.nome),
       fraction: finalData.fraction,
       num_variations: finalData.number_exams,
+      number_versions: finalData.number_versions,
       number_questions: {},
       relative_quotations: {},
       exam_title: finalData.exam_title,
@@ -244,7 +252,7 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
       onClick={onClose}
     >
       <Card
-        className="flex flex-col flex-1 min-h-0 space-y-4 p-6 max-w-[calc(100vw/1.9)] h-[calc(100vh/1.2)]"
+        className="flex flex-col flex-1 min-h-0 space-y-4 p-6 max-w-[calc(100vw/2.3)] h-[calc(100vh/1.2)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex flex-col mb-6">
@@ -469,20 +477,14 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
               className="flex flex-col flex-1 min-h-0"
             >
               <div className="space-y-4 flex flex-col flex-1 min-h-0">
-                <FormLabel className="text-center block text-lg">
-                  Cotações relativas por tópico
-                </FormLabel>
-
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <h4 className="font-semibold text-blue-800 mb-2">
-                    Como funcionam as cotações relativas?
-                  </h4>
-                  <p className="text-sm text-blue-700">
-                    As <span className="font-medium">cotações relativas</span>{" "}
-                    determinam o peso de cada tópico no exame.<br></br>
-                    Quanto maior a cotação de um tópico, maior será a sua
-                    importância na nota final.
-                  </p>
+                <div className="flex items-center gap-2 justify-center">
+                  <FormLabel className="text-center block text-lg">
+                    Cotações relativas por tópico
+                  </FormLabel>
+                  <HelperHoverCard
+                    iconClassName="h-4 w-4 color-gray-500"
+                    content="As cotações relativas determinam o peso de cada tópico no exame. Quanto maior a cotação de um tópico, maior será a sua importância na nota final."
+                  />
                 </div>
 
                 <div className="custom-scrollbar overflow-y-auto min-h-0 flex flex-col gap-1 flex-1">
@@ -725,91 +727,19 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                   )}
                 />
 
-                <hr />
-
-                {/* Number of exams field */}
-                <FormField
-                  control={control}
-                  name="number_exams"
-                  render={() => (
-                    <FormItem className="flex items-center justify-between">
-                      <FormLabel className="shrink-0 flex items-center gap-1">
-                        Número de exames
-                        <span className="text-red-500">*</span>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          className="max-w-18.25"
-                          type="number"
-                          min="1"
-                          placeholder="1"
-                          value={watch(`number_exams`) || ""}
-                          onChange={(e) => {
-                            const value = e.target.value;
-
-                            // Allow empty value for backspacing
-                            if (value === "") {
-                              setValue(`number_exams`, NaN);
-                              return;
-                            }
-
-                            const numValue = parseInt(value);
-                            setValue(
-                              `number_exams`,
-                              isNaN(numValue) || numValue < 1 ? 1 : numValue,
-                            );
-                          }}
-                          onBlur={(e) => {
-                            const value = e.target.value;
-
-                            // Only validate and set to 1 on blur if empty
-                            if (value === "") {
-                              setValue(`number_exams`, 1);
-                              return;
-                            }
-
-                            const numValue = parseInt(value);
-                            if (isNaN(numValue) || numValue < 1) {
-                              setValue(`number_exams`, 1);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              !/[0-9]/.test(e.key) &&
-                              ![
-                                "Backspace",
-                                "Delete",
-                                "Tab",
-                                "Escape",
-                                "Enter",
-                                "ArrowLeft",
-                                "ArrowRight",
-                                "ArrowUp",
-                                "ArrowDown",
-                                "Home",
-                                "End",
-                              ].includes(e.key) &&
-                              !e.ctrlKey &&
-                              !e.metaKey
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
-
-                <hr />
-
                 {/* Discount field */}
                 <FormField
                   control={control}
                   name="fraction"
                   render={({ field }) => (
                     <FormItem className="flex items-center justify-between">
-                      <FormLabel className="shrink-0">Desconto (%)</FormLabel>
+                      <div className="flex items-center gap-2 justify-center">
+                        <FormLabel className="shrink-0">Desconto (%)</FormLabel>
+                        <HelperHoverCard
+                          iconClassName="h-4 w-4 color-gray-500"
+                          content={`Para cada questão errada, será descontado ${watch("fraction") || 0}% do valor da questão. Exemplo: Se uma questão vale 2 valores e o desconto é de 20%, cada erro nessa questão resulta numa penalização de 0.4 valores.`}
+                        />
+                      </div>
                       <FormControl>
                         <Input
                           className="w-fit"
@@ -862,19 +792,6 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                     </FormItem>
                   )}
                 />
-                <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                  <h4 className="font-semibold text-amber-800 mb-2">
-                    Sobre o desconto
-                  </h4>
-                  <p className="text-sm text-amber-700">
-                    Para cada questão errada, será descontado{" "}
-                    <span className="font-bold">{watch("fraction") || 0}%</span>{" "}
-                    do valor da questão.<br></br>
-                    Exemplo: Se uma questão vale 2 valores e o desconto é de
-                    20%, cada erro nessa questão resulta numa penalização de 0.4
-                    valores.
-                  </p>
-                </div>
               </div>
 
               <div className="flex gap-3">
@@ -1017,6 +934,8 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                               return;
                             }
                           }
+                          setValue(`number_exams`, lines.length - 1);
+                          setValue(`number_versions`, lines.length - 1);
                           resolve(true);
                         };
                         reader.readAsText(file as File);
@@ -1085,6 +1004,151 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                           {(value as File).name} carregado com sucesso.
                         </p>
                       )}
+                    </FormItem>
+                  )}
+                />
+                {/* Number of exams field */}
+                <FormField
+                  control={control}
+                  name="number_exams"
+                  render={() => (
+                    <FormItem className="flex items-center justify-between">
+                      <FormLabel className="shrink-0 flex items-center gap-1">
+                        Número de exames
+                        <span className="text-red-500">*</span>
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          className="max-w-18.25"
+                          type="number"
+                          min="1"
+                          placeholder="1"
+                          value={watch(`number_exams`) || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            // Allow empty value for backspacing
+                            if (value === "") {
+                              setValue(`number_exams`, NaN);
+                              return;
+                            }
+
+                            const numValue = parseInt(value);
+                            setValue(
+                              `number_exams`,
+                              isNaN(numValue) || numValue < 1 ? 1 : numValue,
+                            );
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+
+                            // Only validate and set to 1 on blur if empty
+                            if (value === "") {
+                              setValue(`number_exams`, 1);
+                              return;
+                            }
+
+                            const numValue = parseInt(value);
+                            if (isNaN(numValue) || numValue < 1) {
+                              setValue(`number_exams`, 1);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (
+                              !/[0-9]/.test(e.key) &&
+                              ![
+                                "Backspace",
+                                "Delete",
+                                "Tab",
+                                "Escape",
+                                "Enter",
+                                "ArrowLeft",
+                                "ArrowRight",
+                                "ArrowUp",
+                                "ArrowDown",
+                                "Home",
+                                "End",
+                              ].includes(e.key) &&
+                              !e.ctrlKey &&
+                              !e.metaKey
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={control}
+                  name="number_exams"
+                  render={() => (
+                    <FormItem className="flex items-center justify-between">
+                      <FormLabel className="shrink-0 flex items-center gap-1">
+                        Número de versões
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          className="max-w-18.25"
+                          type="number"
+                          min="1"
+                          max={watch("number_exams") || undefined}
+                          placeholder="1"
+                          value={watch(`number_versions`) || ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+
+                            // Allow empty value for backspacing
+                            if (value === "") {
+                              setValue(`number_versions`, NaN);
+                              return;
+                            }
+
+                            const numValue = parseInt(value);
+                            setValue(
+                              `number_versions`,
+                              isNaN(numValue) || numValue < 1 ? 1 : numValue,
+                            );
+                          }}
+                          onBlur={(e) => {
+                            const value = e.target.value;
+
+                            // Only validate and set to 1 on blur if empty
+                            if (value === "") {
+                              setValue(`number_versions`, 1);
+                              return;
+                            }
+
+                            const numValue = parseInt(value);
+                            if (isNaN(numValue) || numValue < 1) {
+                              setValue(`number_versions`, 1);
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (
+                              !/[0-9]/.test(e.key) &&
+                              ![
+                                "Backspace",
+                                "Delete",
+                                "Tab",
+                                "Escape",
+                                "Enter",
+                                "ArrowLeft",
+                                "ArrowRight",
+                                "ArrowUp",
+                                "ArrowDown",
+                                "Home",
+                                "End",
+                              ].includes(e.key) &&
+                              !e.ctrlKey &&
+                              !e.metaKey
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
+                        />
+                      </FormControl>
                     </FormItem>
                   )}
                 />
