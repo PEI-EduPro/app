@@ -42,6 +42,31 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
         logger.warning(f"Could not fetch fresh groups, falling back to token claims: {e}")
         groups = token_info.get("groups", [])
 
+    # Auto-assign 'professor' role directly if the user has no specific role yet
+    if "professor" not in realm_roles and "student" not in realm_roles and "manager" not in realm_roles:
+        logger.info(f"User {username} logged in without specific roles. Auto-assigning 'professor' role directly.")
+        try:
+            if keycloak_client.admin_client:
+                loop = asyncio.get_event_loop()
+                role_info = await loop.run_in_executor(
+                    None,
+                    lambda: keycloak_client.admin_client.get_realm_role("professor")
+                )
+                await loop.run_in_executor(
+                    None,
+                    lambda: keycloak_client.admin_client.assign_realm_roles(
+                        user_id=user_id,
+                        roles=[{"id": role_info['id'], "name": "professor"}]
+                    )
+                )
+                logger.info(f"Successfully auto-assigned 'professor' role to {username}.")
+                # Add to the current roles list so the current request succeeds
+                realm_roles.append("professor")
+            else:
+                logger.error("Admin client not initialized, cannot auto-assign role.")
+        except Exception as e:
+            logger.error(f"Failed to auto-assign 'professor' role to {username}: {e}")
+
     logger.info(f"Authenticated user: {username}, roles: {realm_roles}, groups: {groups}")
     user = User(user_id=user_id,username=username,email=email,realm_roles=realm_roles,groups=groups)
 
