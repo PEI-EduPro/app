@@ -6,25 +6,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useNavigate } from "@tanstack/react-router";
 import { Search, Plus } from "lucide-react";
 import { useGetExamConfig } from "@/hooks/use-exams";
-import { useMemo, useState } from "react";
-import ExamCard from "./exam-card";
-import { Button } from "./ui/button";
-import { Card } from "./ui/card";
-import { encodeId } from "@/lib/id-encoder";
 import { useGetUCTopics } from "@/hooks/use-questions";
-import { NoQuestionsAlertDialog } from "./no-questions-alert-dialog";
+import { useMemo, useState } from "react";
+import ExamCard from "../exam-card";
+import { Button } from "../ui/button";
+import { encodeId } from "@/lib/id-encoder";
+import { NoQuestionsAlertDialog } from "../no-questions-alert-dialog";
+import { NovoExameForm } from "../novo-exame-form";
 
-export default function ExamesUcExams({
-  realId,
-  ucName,
-}: {
-  realId: number;
-  ucName: string;
-}) {
-  const navigate = useNavigate();
+export default function ExamesTab({ realId }: { realId: number }) {
   const { data: examConfigs } = useGetExamConfig(realId);
   const { data: topics } = useGetUCTopics(realId);
 
@@ -33,6 +25,7 @@ export default function ExamesUcExams({
   const [filterField, setFilterField] = useState<
     "all" | "name" | "num_variations" | "fraction" | "num_questions"
   >("all");
+  const [showExamModal, setShowExamModal] = useState(false);
 
   const filtered = useMemo(() => {
     if (!examConfigs) return [];
@@ -63,8 +56,23 @@ export default function ExamesUcExams({
   }, [examConfigs]);
 
   return (
-    <>
-      <div className="flex gap-2 mb-12">
+    <div className="flex flex-col gap-4">
+      <div className="flex gap-2 sticky top-10 z-10 bg-background py-2 -mx-4 px-4 md:-mx-6 md:px-6">
+        <Button
+          size="sm"
+          onClick={() => {
+            const hasQuestions = topics?.some(([, count]) => count > 0);
+            if (!hasQuestions) {
+              setNoQuestionsAlertOpen(true);
+            } else {
+              setShowExamModal(true);
+            }
+          }}
+          className="gap-1 cursor-pointer h-auto"
+        >
+          <Plus className="h-4 w-4" />
+          Novo Exame
+        </Button>
         <Select
           value={filterField}
           onValueChange={(v) => {
@@ -76,11 +84,21 @@ export default function ExamesUcExams({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os campos</SelectItem>
-            <SelectItem value="name">Nome</SelectItem>
-            <SelectItem value="num_variations">Variações</SelectItem>
-            <SelectItem value="fraction">Desconto (%)</SelectItem>
-            <SelectItem value="num_questions">Nº Questões</SelectItem>
+            <SelectItem className="cursor-pointer" value="all">
+              Todos os campos
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="name">
+              Nome
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="num_variations">
+              Variações
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="fraction">
+              Desconto (%)
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="num_questions">
+              Nº Questões
+            </SelectItem>
           </SelectContent>
         </Select>
         <div className="relative flex-1">
@@ -123,32 +141,24 @@ export default function ExamesUcExams({
             examConfig={el}
           />
         ))}
-        {filtered.length === 0 && examConfigs && examConfigs.length > 0 && (
+        {filtered.length === 0 && examConfigs && (
           <p className="text-center text-muted-foreground py-8">
             Nenhum exame encontrado.
           </p>
         )}
-        <Card
-          className="flex-row justify-center items-center gap-2 px-5 py-4 border-2 border-dashed border-primary/40 bg-primary/5 hover:bg-primary/10 hover:border-primary/70 hover:-translate-y-1 cursor-pointer shadow-none group/add"
-          onClick={() => {
-            if (!topics?.some((t) => t[1] > 0)) {
-              setNoQuestionsAlertOpen(true);
-            } else {
-              navigate({ to: "/novo-exame", search: { ucId: encodeId(realId), ucName } });
-            }
-          }}
-        >
-          <Plus className="text-primary h-8 w-8 transition-transform duration-300 group-hover/add:rotate-90" />
-          <span className="text-base font-medium text-primary">
-            Criar Exame
-          </span>
-        </Card>
+        {showExamModal && (
+          <NovoExameForm
+            ucID={realId}
+            onClose={() => {
+              setShowExamModal(false);
+            }}
+          />
+        )}
         <NoQuestionsAlertDialog
           open={noQuestionsAlertOpen}
-          onOpenChange={setNoQuestionsAlertOpen}
-          ucId={realId}
+          onOpenChange={() => setNoQuestionsAlertOpen(false)}
         />
       </div>
-    </>
+    </div>
   );
 }

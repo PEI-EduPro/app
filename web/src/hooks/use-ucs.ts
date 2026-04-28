@@ -11,7 +11,7 @@ const useGetUc = ({ enabled = true }: { enabled?: boolean } = {}) =>
     enabled,
   });
 
-const useAddUc = () => {
+const useAddUc = (onSuccess?: () => void) => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
@@ -19,6 +19,7 @@ const useAddUc = () => {
     mutationKey: ["addUc"],
     mutationFn: (props: NewUcI) => apiClient.post("/subjects/", props),
     onSuccess: () => {
+      onSuccess?.();
       navigate({ to: "/unidades-curriculares" });
       queryClient.invalidateQueries({ queryKey: ["uc"] });
       toast.success("Unidade curricular criada com sucesso!", {
@@ -62,12 +63,14 @@ const useGetUcRegent = (ucId: number) =>
   });
 
 const useDeleteUcById = (ucId: number) => {
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   return useMutation({
     mutationKey: ["deleteUc", ucId],
     mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}/`),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["uc"] });
       toast.success("Unidade curricular eliminada com sucesso!", {
         position: "top-right",
       });

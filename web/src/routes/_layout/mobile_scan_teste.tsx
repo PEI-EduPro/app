@@ -71,7 +71,7 @@ function RouteComponent() {
   })) as unknown as Record<string, string>[];
 
   return (
-    <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-hidden">
+    <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Scan de Exames"}
         crumbs={[
@@ -79,7 +79,7 @@ function RouteComponent() {
         ]}
       />
 
-      <h1 className="font-rubik text-center text-lg font-bold text-foreground mb-2 animate-fade-in-up">
+      <h1 className="font-rubik text-center text-base font-bold text-foreground mb-2 animate-fade-in-up truncate">
         {roomDetails?.subject_name || "Carregando..."}
       </h1>
 
@@ -116,10 +116,8 @@ function RouteComponent() {
                         <AlertDialogMedia className="bg-destructive/10 text-destructive">
                           <Trash2Icon />
                         </AlertDialogMedia>
-                        <AlertDialogTitle className="font-medium text-xl">
-                          Fechar Exame
-                        </AlertDialogTitle>
-                        <AlertDialogDescription className="font-medium">
+                        <AlertDialogTitle>Fechar Exame</AlertDialogTitle>
+                        <AlertDialogDescription>
                           Ao fechar o exame nenhum outro utilizador conseguirá
                           fazer scan a mais nenhum código QR. Deseja continuar?
                         </AlertDialogDescription>
@@ -127,12 +125,14 @@ function RouteComponent() {
                       <AlertDialogFooter className="w-full! flex flex-row justify-between!">
                         <AlertDialogCancel
                           variant="outline"
+                          size="lg"
                           className="cursor-pointer"
                         >
                           Cancelar
                         </AlertDialogCancel>
                         <AlertDialogAction
                           variant="destructive"
+                          size="lg"
                           className="cursor-pointer"
                           onClick={() => {
                             closeRoom();
@@ -207,10 +207,10 @@ function RouteComponent() {
               <span className="text-base font-semibold text-foreground">
                 Alunos
               </span>
-              <div className="flex-1 min-h-0 overflow-auto">
+              <div className="flex-1 min-h-0 overflow-auto max-w-full [&_table]:text-xs [&_th]:px-1 [&_td]:px-1 [&_button]:px-1 [&_button]:text-xs [&_th]:whitespace-normal [&_td]:whitespace-normal [&_.relative.w-full.overflow-x-auto]:overflow-x-hidden">
                 <CustomTable
                   data={studentsData}
-                  rowNumber={5}
+                  rowNumber={3}
                   isSelectable
                   rowSelection={
                     alunosSelection

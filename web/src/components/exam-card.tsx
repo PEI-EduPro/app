@@ -10,6 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Trash2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { ExamConfigI } from "@/lib/types";
@@ -94,7 +95,7 @@ export default function ExamCard({
               variant="ghost"
               size="icon"
               onClick={(e) => e.stopPropagation()}
-              className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-red-500 hover:bg-red-50 rounded-full"
+              className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-red-500 hover:bg-red-50 rounded-full"
             >
               <Trash2Icon className="h-4 w-4" />
             </Button>
@@ -104,10 +105,8 @@ export default function ExamCard({
               <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                 <Trash2Icon />
               </AlertDialogMedia>
-              <AlertDialogTitle className="font-medium text-2xl">
-                Apagar Configuração de Exame
-              </AlertDialogTitle>
-              <AlertDialogDescription className="font-medium text-xl">
+              <AlertDialogTitle>Apagar Configuração de Exame</AlertDialogTitle>
+              <AlertDialogDescription>
                 Esta ação irá apagar permanentemente a configuração de exame.
                 Deseja continuar?
               </AlertDialogDescription>
@@ -115,7 +114,7 @@ export default function ExamCard({
             <AlertDialogFooter className="w-full! flex flex-row justify-between!">
               <AlertDialogCancel
                 variant="outline"
-                className="cursor-pointer text-xl"
+                className="cursor-pointer"
                 size="lg"
               >
                 Cancelar
@@ -123,7 +122,7 @@ export default function ExamCard({
               <AlertDialogAction
                 size="lg"
                 variant="destructive"
-                className="cursor-pointer text-xl"
+                className="cursor-pointer"
                 onClick={() => deleteMutation.mutate(id)}
               >
                 Apagar
@@ -134,17 +133,11 @@ export default function ExamCard({
       </Card>
 
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-          onClick={handleCloseModal}
-        >
-          <div
-            className="bg-white rounded-xl shadow-2xl max-w-lg w-full m-4 max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
+          <DialogContent className="max-w-lg p-0 overflow-y-auto max-h-[90vh]">
             <ExamConfigCard examConfigData={examConfig} />
-          </div>
-        </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
