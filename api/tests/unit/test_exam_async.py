@@ -10,6 +10,7 @@ from src.models.subject import Subject
 from src.models.topic import Topic
 from src.models.question import QuestionCreate
 from src.services.question import create_question
+from src.services.exam import generate_exams_task
 
 @pytest.mark.asyncio
 async def test_generate_exams_async_endpoint(client, mock_auth, session):
@@ -61,8 +62,9 @@ async def test_generate_exams_async_endpoint(client, mock_auth, session):
         assert mock_add_task.called
         # Check task arguments (task_func, session_factory, config_id, num_vars, specs)
         args, _ = mock_add_task.call_args
-        assert args[1] == data["id"] # config_id
-        assert args[2] == 1 # num_variations
+        assert args[0] == generate_exams_task
+        assert args[2] == data["id"] # config_id
+        assert args[3] == 1 # num_variations
 
 @pytest.mark.asyncio
 async def test_get_config_status_endpoint(client, mock_auth, session):
