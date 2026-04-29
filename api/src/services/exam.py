@@ -12,7 +12,7 @@ from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
 from src.models.user import User
-from src.models.exam_config import ExamConfig
+from src.models.exam_config import ExamConfig, GenerationStatus
 from src.models.topic_config import TopicConfig
 from src.models.topic import Topic
 from src.models.exam import Exam
@@ -23,6 +23,7 @@ from src.models.subject import Subject
 logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
+STORAGE_DIR = os.getenv("STORAGE_DIR", "/app/storage")
 
 
 async def create_configs(
@@ -110,7 +111,31 @@ async def generate_exams_from_configs(
     semester: str = "1",
     academic_year: str = "2025/26"
 ) -> bytes:
-    """Generate LaTeX exams and answer keys, return ZIP with PDFs."""
+    """Generate LaTeX exams and answer keys, return ZIP with PDFs. Saves a copy to disk."""
+    zip_bytes, zip_path = await generate_exams_to_disk(
+        session, exam_config, topic_configs, num_variations,
+        exam_title, exam_date, semester, academic_year
+    )
+    
+    # Update exam_config with zip_path and status COMPLETED for backward compatibility
+    exam_config.zip_path = zip_path
+    exam_config.status = GenerationStatus.COMPLETED
+    session.add(exam_config)
+    await session.commit()
+    
+    return zip_bytes
+
+async def generate_exams_to_disk(
+    session: AsyncSession,
+    exam_config: ExamConfig,
+    topic_configs: List[TopicConfig],
+    num_variations: int = 1,
+    exam_title: str = "Exame Época Normal",
+    exam_date: str = None,
+    semester: str = "1",
+    academic_year: str = "2025/26"
+) -> Tuple[bytes, str]:
+    """Generate LaTeX exams and answer keys, save to disk and return (bytes, path)."""
     import zipfile
     import io
 
@@ -194,28 +219,11 @@ async def generate_exams_from_configs(
                 val = ord(v)-65
                 k = k-1
                 answer_key[k] = val
-            # Transform:
-            # {
-            #     1: 'C',
-            #     2: 'A',
-            #     3: 'D'
-            # }
-            # into:
-            # {
-            #     0: 2,
-            #     1: 0,
-            #     2: 3
-            # }
+            
             relative_weights = {}
             for i, q in enumerate(all_questions):
                 weight = topic_weights.get(q.topic_id, 1.0)
                 relative_weights[i] = weight
-            # Associate questions with relative weights
-            # {
-            #     0: 1,
-            #     1: 1,
-            #     2: 2
-            # }
             
             num_questions = len(all_questions)
 
@@ -240,15 +248,6 @@ async def generate_exams_from_configs(
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
 
-            # Generate answer key PDF (marked grid)
-            ''' Temporarily disable this because of the new all_solutions.pdf
-            _write_answer_key(tmpdir, answers_map, num_questions)
-            key_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
-            if key_pdf:
-                with open(os.path.join(keys_dir, f"answer_key_var_{var_num}.pdf"), "wb") as f:
-                    f.write(key_pdf)
-            '''
-
         # Generate single solutions PDF with all variations
         _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title)
         solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
@@ -266,8 +265,65 @@ async def generate_exams_from_configs(
             for f in os.listdir(keys_dir):
                 zf.write(os.path.join(keys_dir, f), f"answer_keys/{f}")
 
-    return zip_buffer.getvalue()
+        zip_bytes = zip_buffer.getvalue()
+        
+        # Save ZIP to persistent storage
+        os.makedirs(os.path.join(STORAGE_DIR, "exams"), exist_ok=True)
+        zip_filename = f"exams_config_{exam_config.id}.zip"
+        zip_path = os.path.join(STORAGE_DIR, "exams", zip_filename)
+        with open(zip_path, "wb") as f:
+            f.write(zip_bytes)
 
+    return zip_bytes, zip_path
+
+async def generate_exams_task(
+    session_factory,
+    exam_config_id: int,
+    num_variations: int,
+    exam_specs: dict
+):
+    """Background task for generating exams."""
+    async with session_factory() as session:
+        try:
+            # Refresh exam_config and topic_configs
+            exam_config = await get_exam_config_by_id(session, exam_config_id)
+            if not exam_config:
+                logger.error(f"ExamConfig {exam_config_id} not found in task")
+                return
+
+            exam_config.status = GenerationStatus.PROCESSING
+            session.add(exam_config)
+            await session.commit()
+
+            topic_configs = exam_config.topic_configs
+            exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
+            exam_date = exam_specs.get("exam_date")
+            semester = exam_specs.get("semester", "1")
+            academic_year = exam_specs.get("academic_year", "2025/26")
+
+            _, zip_path = await generate_exams_to_disk(
+                session, exam_config, topic_configs, num_variations,
+                exam_title, exam_date, semester, academic_year
+            )
+
+            exam_config.zip_path = zip_path
+            exam_config.status = GenerationStatus.COMPLETED
+            session.add(exam_config)
+            await session.commit()
+            logger.info(f"Async generation for ExamConfig {exam_config_id} completed successfully.")
+
+        except Exception as e:
+            logger.error(f"Async generation for ExamConfig {exam_config_id} failed: {e}")
+            logger.error(traceback.format_exc())
+            # We need a new session to update status to FAILED if the previous one is in a bad state
+            try:
+                exam_config = await get_exam_config_by_id(session, exam_config_id)
+                if exam_config:
+                    exam_config.status = GenerationStatus.FAILED
+                    session.add(exam_config)
+                    await session.commit()
+            except Exception as e2:
+                logger.error(f"Failed to set status to FAILED for ExamConfig {exam_config_id}: {e2}")
 
 def _generate_questions_latex(questions: list, topic_weights: Dict[int, float], opts_by_q: Dict[int, list], num_options: int = 4) -> Tuple[str, Dict[int, str]]:
     """Generate LaTeX for questions and return answer map."""
