@@ -3,7 +3,7 @@ import json
 import io
 from src.core.deps import get_current_user_info
 from src.main import app
-from unittest.mock import patch, AsyncMock, MagicMock, mock_open
+from unittest.mock import patch, AsyncMock, MagicMock
 from httpx import AsyncClient
 
 @pytest.mark.asyncio
@@ -48,12 +48,7 @@ async def test_generate_exam(client, mock_auth, session):
          patch("src.services.exam._compile_latex", return_value=b"%PDF-1.4 dummy"), \
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
-         patch("src.services.exam._update_rules"), \
-         patch("src.services.exam.os.makedirs"), \
-         patch("src.services.exam.open", mock_open()) as mock_file, \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
-
-        mock_wr_kc.return_value = True
+         patch("src.services.exam._update_rules"):
 
         payload = {
             "subject_id": sub.id,
@@ -80,7 +75,7 @@ async def test_get_subject_exam_configs(client, mock_auth, session):
     
     from src.models.subject import Subject
     from src.models.topic import Topic
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig
     from src.models.topic_config import TopicConfig
     
     # Setup test data
@@ -94,7 +89,7 @@ async def test_get_subject_exam_configs(client, mock_auth, session):
     await session.commit()
     await session.refresh(topic)
     
-    exam_config = ExamConfig(subject_id=subject.id, fraction=50, status=GenerationStatus.COMPLETED)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -125,7 +120,7 @@ async def test_store_student_list(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig
     
     # Setup test data
     subject = Subject(name="Test Subject")
@@ -133,7 +128,7 @@ async def test_store_student_list(client, mock_auth, session):
     await session.commit()
     await session.refresh(subject)
     
-    exam_config = ExamConfig(subject_id=subject.id, fraction=50, status=GenerationStatus.COMPLETED)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -166,7 +161,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
     # Create a user with waiting room permissions
     from src.models.user import User
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig
     from unittest.mock import patch
     
     vigilant_user = User(
@@ -192,8 +187,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
     exam_config = ExamConfig(
         subject_id=subject.id, 
         fraction=50,
-        nmec_name_list=student_data,
-        status=GenerationStatus.COMPLETED
+        nmec_name_list=student_data
     )
     session.add(exam_config)
     await session.commit()
@@ -206,9 +200,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
             "subject_id": subject.id,
             "fraction": 50,
             "topic_configs": [],
-            "nmec_name_list": student_data,
-            "num_variations": 0,
-            "status": GenerationStatus.COMPLETED
+            "nmec_name_list": student_data
         }
         
         response = await client.get(f"/api/exams/exam/{exam_config.id}/student_list")
@@ -225,7 +217,7 @@ async def test_store_student_list_invalid_file_type(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig
     
     # Setup test data
     subject = Subject(name="Test Subject")
@@ -233,7 +225,7 @@ async def test_store_student_list_invalid_file_type(client, mock_auth, session):
     await session.commit()
     await session.refresh(subject)
     
-    exam_config = ExamConfig(subject_id=subject.id, fraction=50, status=GenerationStatus.COMPLETED)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -313,8 +305,6 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
          patch("src.services.exam._update_rules"), \
-         patch("src.services.exam.os.makedirs"), \
-         patch("src.services.exam.open", mock_open()) as mock_file, \
          patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
 
         mock_wr_kc.return_value = True
@@ -357,7 +347,7 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig
     from src.models.exam import Exam
     from src.models.waiting_room import WaitingRoom
 
@@ -366,7 +356,7 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     await session.commit()
     await session.refresh(subject)
 
-    exam_config = ExamConfig(subject_id=subject.id, fraction=50, status=GenerationStatus.COMPLETED)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=50)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -424,11 +414,7 @@ async def test_generate_exam_with_waiting_room(client, mock_auth, session):
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
          patch("src.services.exam._update_rules"), \
-         patch("src.services.exam.os.makedirs"), \
-         patch("src.services.exam.open", mock_open()) as mock_file, \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
-
-        mock_wr_kc.return_value = True
+         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock):
 
         payload = {
             "subject_id": sub.id,
