@@ -51,6 +51,8 @@ class ExamConfigRead(SQLModel):
     # creator_keycloak_id: str  # Commented out
     fraction: int
     subject_id: int
+    status: GenerationStatus
+    zip_path: Optional[str] = None
     
 
 class ExamConfigResponse(SQLModel):

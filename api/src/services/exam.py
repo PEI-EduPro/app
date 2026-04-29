@@ -23,7 +23,7 @@ from src.models.subject import Subject
 logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
-STORAGE_DIR = os.getenv("STORAGE_DIR", "/app/storage")
+STORAGE_DIR = os.getenv("STORAGE_DIR", "storage")
 
 
 async def create_configs(

@@ -65,7 +65,8 @@ async def get_subject_exam_configs(
             #creator_keycloak_id=config.creator_keycloak_id,
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
-            num_variations=num_variations
+            num_variations=num_variations,
+            status=config.status
         ))
 
     return response
@@ -316,7 +317,8 @@ async def retrieve_student_list(
         fraction=exam_config.fraction,
         topic_configs=exam_config.topic_configs or [],
         nmec_name_list=exam_config.nmec_name_list,
-        num_variations=num_variations
+        num_variations=num_variations,
+        status=exam_config.status
     )
 
 
