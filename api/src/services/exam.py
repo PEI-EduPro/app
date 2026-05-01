@@ -334,7 +334,6 @@ def _update_rules(workdir: str, num_questions: int, fraction: float):
     with open(rules_path, "w") as f:
         f.write(content)
 
-
 def _write_blank_answers(workdir: str, num_questions: int):
     """Write blank T-answers.tex for student exam."""
     cols = num_questions
@@ -347,19 +346,20 @@ def _write_blank_answers(workdir: str, num_questions: int):
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
-\\begin{{minipage}}{{0.15\\textwidth}}
 \\qrcode[height=0.75in]{{\\qrcodecontent}}
-\\end{{minipage}}%
-\\begin{{minipage}}{{0.80\\textwidth}}
-\\scriptsize
+\\end{{center}}
+\\vspace{{0.3cm}}
 \\begin{{center}}
+\\begin{{tikzpicture}}
+\\node[draw, dotted, thick, inner sep=1.5cm] {{
+\\scriptsize
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
  &{header}\\\\ \\hline
 {chr(10).join(rows)}
-\end{{tabular}}
-\end{{center}}
-\\end{{minipage}}
+\\end{{tabular}}
+}};
+\\end{{tikzpicture}}
 \\end{{center}}
 \\vspace{{0.25cm}}
 """
@@ -379,19 +379,20 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
     
     content = f"""\\renewcommand{{\\arraystretch}}{{1.5}}
 \\begin{{center}}
-\\begin{{minipage}}{{0.15\\textwidth}}
 \\qrcode[height=0.75in]{{\\qrcodecontent}}
-\\end{{minipage}}%
-\\begin{{minipage}}{{0.80\\textwidth}}
-\\scriptsize
+\\end{{center}}
+\\vspace{{0.3cm}}
 \\begin{{center}}
+\\begin{{tikzpicture}}
+\\node[draw, dotted, thick, inner sep=1.5cm] {{
+\\scriptsize
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
  &{header}\\\\ \\hline
 {chr(10).join(rows)}
-\end{{tabular}}
-\end{{center}}
-\\end{{minipage}}
+\\end{{tabular}}
+}};
+\\end{{tikzpicture}}
 \\end{{center}}
 \\vspace{{0.25cm}}
 """
