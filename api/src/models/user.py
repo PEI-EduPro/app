@@ -17,8 +17,6 @@ class User(SQLModel):
     realm_roles: List[str] = []
     groups: List[str] = []
     
-    # Optional fields that might be useful later
-    password: Optional[str] = None
     nmec: Optional[str] = None
 
 class UserCreate(SQLModel):
