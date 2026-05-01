@@ -22,7 +22,7 @@ class ExamConfig(SQLModel, table=True):
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
     exam_name: Optional[str] = Field(default=None, max_length=255)
-    status: GenerationStatus = Field(default=GenerationStatus.COMPLETED)
+    status: GenerationStatus = Field(default=GenerationStatus.PENDING)
     zip_path: Optional[str] = Field(default=None)
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
