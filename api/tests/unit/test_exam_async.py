@@ -179,3 +179,38 @@ async def test_generate_exams_task_logic(session):
         await session.refresh(config)
         assert config.status == GenerationStatus.COMPLETED
         assert config.zip_path == "/tmp/test.zip"
+
+@pytest.mark.asyncio
+async def test_generate_exams_task_failure_logic(session):
+    """Test the background task function when an error occurs."""
+    from src.services.exam import generate_exams_task
+    
+    sub = Subject(name="Failure Subject")
+    session.add(sub)
+    await session.commit()
+    
+    config = ExamConfig(subject_id=sub.id, fraction=0, status=GenerationStatus.PENDING)
+    session.add(config)
+    await session.commit()
+    await session.refresh(config)
+    
+    # Mock generate_exams_to_disk to raise an exception
+    with patch("src.services.exam.generate_exams_to_disk", side_effect=Exception("Simulated Failure")):
+        
+        mock_session_factory = MagicMock()
+        # Ensure every call to the factory returns a context manager that yields our session
+        mock_session_factory.return_value.__aenter__.return_value = session
+        mock_session_factory.return_value.__aexit__.return_value = None
+        
+        await generate_exams_task(
+            mock_session_factory,
+            config.id,
+            1,
+            {"exam_name": "Test Failure Task"}
+        )
+        
+        await session.refresh(config)
+        assert config.status == GenerationStatus.FAILED
+        # Check that the factory was called at least twice (once for the main block, once for the failure block)
+        assert mock_session_factory.call_count >= 2
+

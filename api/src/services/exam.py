@@ -315,13 +315,16 @@ async def generate_exams_task(
         except Exception as e:
             logger.error(f"Async generation for ExamConfig {exam_config_id} failed: {e}")
             logger.error(traceback.format_exc())
-            # We need a new session to update status to FAILED if the previous one is in a bad state
+            
+            # Use a fresh session to ensure the status update succeeds even if the previous session is poisoned
             try:
-                exam_config = await get_exam_config_by_id(session, exam_config_id)
-                if exam_config:
-                    exam_config.status = GenerationStatus.FAILED
-                    session.add(exam_config)
-                    await session.commit()
+                async with session_factory() as fail_session:
+                    exam_config = await get_exam_config_by_id(fail_session, exam_config_id)
+                    if exam_config:
+                        exam_config.status = GenerationStatus.FAILED
+                        fail_session.add(exam_config)
+                        await fail_session.commit()
+                        logger.info(f"ExamConfig {exam_config_id} status updated to FAILED")
             except Exception as e2:
                 logger.error(f"Failed to set status to FAILED for ExamConfig {exam_config_id}: {e2}")
 
