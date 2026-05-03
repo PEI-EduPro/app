@@ -112,12 +112,13 @@ async def generate_exams_from_configs(
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
-    academic_year: str = "2025/26"
+    academic_year: str = "2025/26",
+    num_versions: int = None
 ) -> bytes:
     """Generate LaTeX exams and answer keys, return ZIP with PDFs. Saves a copy to disk."""
     zip_bytes, zip_path = await generate_exams_to_disk(
         session, exam_config, topic_configs, num_variations,
-        exam_title, exam_date, semester, academic_year
+        exam_title, exam_date, semester, academic_year, num_versions
     )
     
     # Update exam_config with zip_path and status COMPLETED for backward compatibility
@@ -615,15 +616,19 @@ async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
     num_versions: int = 1,
-    student_tuples: List[tuple] = None
+    student_tuples: List[tuple] = None,
+    num_variations: int = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
+    if num_variations is None:
+        num_variations = num_versions
+        
     exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_versions)
     exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_versions, exam_title, exam_date, semester, academic_year)
+    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year, num_versions)
 
 
 async def get_exam_configs_by_subject(
