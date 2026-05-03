@@ -605,7 +605,7 @@ async def process_student_list_csv(
     """
     Parse the CSV file contents and store the student list.
     """
-    csv_text = file_contents.decode("utf-8")
+    csv_text = file_contents.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(csv_text))
 
     nmec_dict = {}
