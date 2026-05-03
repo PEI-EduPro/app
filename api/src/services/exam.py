@@ -163,6 +163,8 @@ async def generate_exams_to_disk(
     
     # Cache for unique versions (questions, answers, weights)
     versions_cache = {}
+    # Mapping from version index to list of batch numbers (var_num)
+    version_to_batches = {}
 
     with tempfile.TemporaryDirectory() as tmpdir:
         exams_dir = os.path.join(tmpdir, "exams")
@@ -195,6 +197,10 @@ async def generate_exams_to_disk(
         for var_num in range(1, num_variations + 1):
             version_idx = (var_num - 1) % num_versions
             
+            if version_idx not in version_to_batches:
+                version_to_batches[version_idx] = []
+            version_to_batches[version_idx].append(var_num)
+
             if version_idx in versions_cache:
                 questions_latex, answers_map, answer_key, relative_weights, num_questions = versions_cache[version_idx]
             else:
@@ -263,14 +269,20 @@ async def generate_exams_to_disk(
 
             # Generate exam PDF (blank answer grid)
             _write_blank_answers(tmpdir, num_questions)
-            # Pass (version_idx + 1) to LaTeX so students see "Versão 1" through "Versão 10" even if 100 exams are printed
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", version_idx + 1, subject_name, exam_title, semester, academic_year, exam_id_str)
+            # Pass var_num (Batch ID) to LaTeX so each paper is uniquely identified (e.g. Exame 12)
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
             if exam_pdf:
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
 
-        # Generate single solutions PDF with all UNIQUE variations
-        unique_answers = { (i+1): versions_cache[i][1] for i in range(len(versions_cache)) }
+        # Generate single solutions PDF with all UNIQUE variations and their corresponding batch IDs
+        unique_answers = {}
+        for i in range(len(versions_cache)):
+            v_num = i + 1
+            batch_list = " - ".join(map(str, version_to_batches[i]))
+            label = f"{v_num} (Exams: {batch_list})"
+            unique_answers[label] = versions_cache[i][1]
+
         _write_all_solutions(tmpdir, unique_answers, num_questions, exam_title)
         solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
         if solutions_pdf:
@@ -587,7 +599,7 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
                 f"\\input{{UC}}\n\t\\vspace{{0.2cm}}\n\t{{\\small \\textbf{{Versão {var_num}}}}}"
             )
         else:
-            # Replace existing version number
+            # Replace existing version number (Batch ID)
             import re
             h_content = re.sub(
                 r"Versão \d+",
