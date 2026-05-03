@@ -22,7 +22,7 @@ class ExamConfig(SQLModel, table=True):
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
     exam_name: Optional[str] = Field(default=None, max_length=255)
-    num_variations: int = Field(default=1)
+    num_versions: int = Field(default=1)
     status: GenerationStatus = Field(default=GenerationStatus.PENDING)
     zip_path: Optional[str] = Field(default=None)
 
@@ -75,6 +75,7 @@ class ExamGenerateRequest(SQLModel):
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
     num_variations: int = 1
+    number_versions: Optional[int] = None
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []
     vigilant_keycloak_ids: List[str] = []

@@ -8,7 +8,7 @@ import csv
 import io
 import json
 import traceback
-from typing import Tuple, List, Dict
+from typing import Tuple, List, Dict, Optional
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -31,7 +31,7 @@ async def create_configs(
     session: AsyncSession,
     exam_specs: dict,
     student_tuples: List[tuple] = None,
-    num_variations: int = 1
+    num_versions: int = 1
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
@@ -68,7 +68,7 @@ async def create_configs(
         fraction=exam_specs["fraction"],
         nmec_name_list=nmec_name_list,
         exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None),
-        num_variations=num_variations
+        num_versions=num_versions
         #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
@@ -136,11 +136,15 @@ async def generate_exams_to_disk(
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
-    academic_year: str = "2025/26"
+    academic_year: str = "2025/26",
+    num_versions: int = None
 ) -> Tuple[bytes, str]:
     """Generate LaTeX exams and answer keys, save to disk and return (bytes, path)."""
     import zipfile
     import io
+
+    if num_versions is None:
+        num_versions = num_variations
 
     if shutil.which("pdflatex") is None:
         raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
@@ -156,6 +160,9 @@ async def generate_exams_to_disk(
     zip_buffer = io.BytesIO()
     all_answers_maps = {}
     
+    # Cache for unique versions (questions, answers, weights)
+    versions_cache = {}
+
     with tempfile.TemporaryDirectory() as tmpdir:
         exams_dir = os.path.join(tmpdir, "exams")
         keys_dir = os.path.join(tmpdir, "answer_keys")
@@ -185,50 +192,59 @@ async def generate_exams_to_disk(
                 f.write(formatted_date)
 
         for var_num in range(1, num_variations + 1):
-            for f in os.listdir(TEMPLATES_DIR):
-                if f.endswith(".tex"):
-                    shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
-
-            # Gather questions for this variation
-            all_questions = []
-            for t_conf in topic_configs:
-                result = await session.exec(
-                    select(Question)
-                    .where(Question.topic_id == t_conf.topic_id)
-                    .order_by(func.random())
-                    .limit(t_conf.num_questions)
-                )
-                all_questions.extend(result.all())
+            version_idx = (var_num - 1) % num_versions
             
-            # Load options for all questions
-            q_ids = [q.id for q in all_questions]
-            opts_by_q = {}
-            if q_ids:
-                opts_result = await session.exec(
-                    select(QuestionOption).where(QuestionOption.question_id.in_(q_ids))
-                )
-                all_opts = opts_result.all()
-                logger.info(f"Loaded {len(all_opts)} options for {len(q_ids)} questions")
-                for opt in all_opts:
-                    opts_by_q.setdefault(opt.question_id, []).append(opt)
-            
-            random.shuffle(all_questions)
+            if version_idx in versions_cache:
+                questions_latex, answers_map, answer_key, relative_weights, num_questions = versions_cache[version_idx]
+            else:
+                for f in os.listdir(TEMPLATES_DIR):
+                    if f.endswith(".tex"):
+                        shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
 
-            # Generate T-variants.tex content and get answer positions
-            questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
+                # Gather questions for this variation
+                all_questions = []
+                for t_conf in topic_configs:
+                    result = await session.exec(
+                        select(Question)
+                        .where(Question.topic_id == t_conf.topic_id)
+                        .order_by(func.random())
+                        .limit(t_conf.num_questions)
+                    )
+                    all_questions.extend(result.all())
+                
+                # Load options for all questions
+                q_ids = [q.id for q in all_questions]
+                opts_by_q = {}
+                if q_ids:
+                    opts_result = await session.exec(
+                        select(QuestionOption).where(QuestionOption.question_id.in_(q_ids))
+                    )
+                    all_opts = opts_result.all()
+                    logger.info(f"Loaded {len(all_opts)} options for {len(q_ids)} questions")
+                    for opt in all_opts:
+                        opts_by_q.setdefault(opt.question_id, []).append(opt)
+                
+                random.shuffle(all_questions)
+
+                # Generate T-variants.tex content and get answer positions
+                questions_latex, answers_map = _generate_questions_latex(all_questions, topic_weights, opts_by_q)
+                
+                answer_key = dict()
+                for k,v in answers_map.items():
+                    val = ord(v)-65
+                    k = k-1
+                    answer_key[k] = val
+                
+                relative_weights = {}
+                for i, q in enumerate(all_questions):
+                    weight = topic_weights.get(q.topic_id, 1.0)
+                    relative_weights[i] = weight
+                
+                num_questions = len(all_questions)
+                versions_cache[version_idx] = (questions_latex, answers_map, answer_key, relative_weights, num_questions)
+
+            # Store in answers map for solutions PDF (using actual version number for display)
             all_answers_maps[var_num] = answers_map
-            answer_key = dict()
-            for k,v in answers_map.items():
-                val = ord(v)-65
-                k = k-1
-                answer_key[k] = val
-            
-            relative_weights = {}
-            for i, q in enumerate(all_questions):
-                weight = topic_weights.get(q.topic_id, 1.0)
-                relative_weights[i] = weight
-            
-            num_questions = len(all_questions)
 
             # Write variant questions file
             with open(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
@@ -246,13 +262,15 @@ async def generate_exams_to_disk(
 
             # Generate exam PDF (blank answer grid)
             _write_blank_answers(tmpdir, num_questions)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
+            # Pass (version_idx + 1) to LaTeX so students see "Versão 1" through "Versão 10" even if 100 exams are printed
+            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", version_idx + 1, subject_name, exam_title, semester, academic_year, exam_id_str)
             if exam_pdf:
                 with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
                     f.write(exam_pdf)
 
-        # Generate single solutions PDF with all variations
-        _write_all_solutions(tmpdir, all_answers_maps, num_questions, exam_title)
+        # Generate single solutions PDF with all UNIQUE variations
+        unique_answers = { (i+1): versions_cache[i][1] for i in range(len(versions_cache)) }
+        _write_all_solutions(tmpdir, unique_answers, num_questions, exam_title)
         solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
         if solutions_pdf:
             with open(os.path.join(keys_dir, "all_solutions.pdf"), "wb") as f:
@@ -283,9 +301,13 @@ async def generate_exams_task(
     session_factory,
     exam_config_id: int,
     num_variations: int,
-    exam_specs: dict
+    exam_specs: dict,
+    num_versions: Optional[int] = None
 ):
     """Background task for generating exams."""
+    if num_versions is None:
+        num_versions = num_variations
+
     async with session_factory() as session:
         try:
             # Refresh exam_config and topic_configs
@@ -306,7 +328,7 @@ async def generate_exams_task(
 
             _, zip_path = await generate_exams_to_disk(
                 session, exam_config, topic_configs, num_variations,
-                exam_title, exam_date, semester, academic_year
+                exam_title, exam_date, semester, academic_year, num_versions
             )
 
             exam_config.zip_path = zip_path
@@ -592,16 +614,16 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
 async def create_configs_and_exams(
     session: AsyncSession,
     exam_specs: dict,
-    num_variations: int = 1,
+    num_versions: int = 1,
     student_tuples: List[tuple] = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_variations)
+    exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_versions)
     exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year)
+    return await generate_exams_from_configs(session, exam_config, topic_configs, num_versions, exam_title, exam_date, semester, academic_year)
 
 
 async def get_exam_configs_by_subject(

@@ -62,7 +62,7 @@ async def get_subject_exam_configs(
             #creator_keycloak_id=config.creator_keycloak_id,
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
-            num_variations=config.num_variations,
+            num_variations=len(config.exams) if config.exams is not None else 0,
             status=config.status
         ))
 
@@ -84,7 +84,8 @@ async def generate_exams(
 
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     try:
-        num_variations = exam_specs.get("num_variations", 1)
+        num_variations = exam_specs.get("num_variations", 1) # Total exams
+        num_versions = exam_specs.get("number_versions", num_variations) # Unique shuffles
         professors = exam_specs.get("professors", [])
         student_tuples = exam_specs.get("student_tuples", [])  # List of (nmec, name, email)
         vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
@@ -92,7 +93,7 @@ async def generate_exams(
         zip_bytes = await exam.create_configs_and_exams(
             session,
             exam_specs,
-            num_variations,
+            num_versions,
             student_tuples
         )
 
@@ -150,12 +151,13 @@ async def generate_exams_async(
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     
     try:
-        num_variations = exam_specs.get("num_variations", 1)
+        num_variations = exam_specs.get("num_variations", 1) # Total exams
+        num_versions = exam_specs.get("number_versions", num_variations) # Unique shuffles
         student_tuples = exam_specs.get("student_tuples", [])
         vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
 
         # Create configs with PENDING status
-        exam_config, topic_configs = await exam.create_configs(session, exam_specs, student_tuples, num_variations)
+        exam_config, topic_configs = await exam.create_configs(session, exam_specs, student_tuples, num_versions)
         exam_config.status = GenerationStatus.PENDING
         session.add(exam_config)
         await session.commit()
@@ -178,7 +180,8 @@ async def generate_exams_async(
             async_session,
             exam_config.id,
             num_variations,
-            exam_specs
+            exam_specs,
+            num_versions
         )
 
         logger.info(f"Started async generation for {num_variations} variations. Config ID: {exam_config.id}")
@@ -199,7 +202,7 @@ async def generate_exams_async(
             fraction=exam_config.fraction,
             topic_configs=topic_configs_dto,
             nmec_name_list=exam_config.nmec_name_list,
-            num_variations=exam_config.num_variations,
+            num_variations=num_variations,
             status=exam_config.status
         )
 
@@ -311,7 +314,7 @@ async def retrieve_student_list(
         fraction=exam_config.fraction,
         topic_configs=exam_config.topic_configs or [],
         nmec_name_list=exam_config.nmec_name_list,
-        num_variations=exam_config.num_variations,
+        num_variations=len(exam_config.exams) if exam_config.exams is not None else 0,
         status=exam_config.status
     )
 
