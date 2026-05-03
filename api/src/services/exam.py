@@ -159,7 +159,6 @@ async def generate_exams_to_disk(
 
     topic_weights = _compute_normalized_weights(topic_configs)
     zip_buffer = io.BytesIO()
-    all_answers_maps = {}
     
     # Cache for unique versions (questions, answers, weights)
     versions_cache = {}
@@ -195,7 +194,15 @@ async def generate_exams_to_disk(
                 f.write(formatted_date)
 
         for var_num in range(1, num_variations + 1):
-            version_idx = (var_num - 1) % num_versions
+            # Calculate version_idx with remainder distributed to earlier versions
+            base_size = num_variations // num_versions
+            remainder = num_variations % num_versions
+            threshold = remainder * (base_size + 1)
+            
+            if var_num <= threshold:
+                version_idx = (var_num - 1) // (base_size + 1)
+            else:
+                version_idx = remainder + (var_num - 1 - threshold) // base_size
             
             if version_idx not in version_to_batches:
                 version_to_batches[version_idx] = []
@@ -250,9 +257,6 @@ async def generate_exams_to_disk(
                 num_questions = len(all_questions)
                 versions_cache[version_idx] = (questions_latex, answers_map, answer_key, relative_weights, num_questions)
 
-            # Store in answers map for solutions PDF (using actual version number for display)
-            all_answers_maps[var_num] = answers_map
-
             # Write variant questions file
             with open(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
                 f.write(questions_latex)
@@ -276,12 +280,20 @@ async def generate_exams_to_disk(
                     f.write(exam_pdf)
 
         # Generate single solutions PDF with all UNIQUE variations and their corresponding batch IDs
-        unique_answers = {}
+        unique_answers = []
         for i in range(len(versions_cache)):
             v_num = i + 1
-            batch_list = " - ".join(map(str, version_to_batches[i]))
-            label = f"{v_num} (Exams: {batch_list})"
-            unique_answers[label] = versions_cache[i][1]
+            batches = version_to_batches.get(i, [])
+            if not batches:
+                continue
+            
+            if len(batches) > 1:
+                batch_range = f"{min(batches)} - {max(batches)}"
+            else:
+                batch_range = f"{batches[0]}"
+                
+            label = f"{v_num} (Exams: {batch_range})"
+            unique_answers.append((label, versions_cache[i][1]))
 
         _write_all_solutions(tmpdir, unique_answers, num_questions, exam_title)
         solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
@@ -496,7 +508,7 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
         f.write(content)
 
 
-def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], num_questions: int, exam_title: str = "Exame Época Normal"):
+def _write_all_solutions(workdir: str, all_answers: List[Tuple[str, Dict[int, str]]], num_questions: int, exam_title: str = "Exame Época Normal"):
     """Write solutions.tex with all variations in horizontal lines."""
     content = f"""\\documentclass[a4paper,10pt]{{exam}}
 \\input{{H}}
@@ -520,8 +532,7 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
 
 """
     
-    for var_num in sorted(all_answers.keys()):
-        answers = all_answers[var_num]
+    for label, answers in all_answers:
         cols = num_questions
         header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
         
@@ -535,24 +546,20 @@ def _write_all_solutions(workdir: str, all_answers: Dict[int, Dict[int, str]], n
 \\vspace{{0.3cm}}
 
 \\begin{{center}}
-\\begin{{tabular}}{{c c}}
-\\textbf{{Version {var_num}}} &
+\\textbf{{Version {label}}}
+
+\\vspace{{0.2cm}}
+
 \\renewcommand{{\\arraystretch}}{{1.5}}
-\\begin{{minipage}}{{0.75\\textwidth}}
 \\scriptsize
-\\begin{{center}}
 \\begin{{tabular}}{{|l|{'l|' * cols}}}
 \\hline
  &{header}\\\\ \\hline
 {chr(10).join(rows)}
 \\end{{tabular}}
 \\end{{center}}
-\\end{{minipage}}
-\\end{{tabular}}
-\\end{{center}}
 
 \\vspace{{0.3cm}}
-
 """
     
     content += "\\end{document}"
