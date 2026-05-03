@@ -7,6 +7,7 @@ import subprocess
 import csv
 import io
 import json
+import traceback
 from typing import Tuple, List, Dict
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
@@ -29,7 +30,8 @@ STORAGE_DIR = os.getenv("STORAGE_DIR", "storage")
 async def create_configs(
     session: AsyncSession,
     exam_specs: dict,
-    student_tuples: List[tuple] = None
+    student_tuples: List[tuple] = None,
+    num_variations: int = 1
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
@@ -65,7 +67,8 @@ async def create_configs(
         subject_id=exam_specs["subject_id"],
         fraction=exam_specs["fraction"],
         nmec_name_list=nmec_name_list,
-        exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None)
+        exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None),
+        num_variations=num_variations
         #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
@@ -593,7 +596,7 @@ async def create_configs_and_exams(
     student_tuples: List[tuple] = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples)
+    exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_variations)
     exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")

@@ -55,9 +55,6 @@ async def get_subject_exam_configs(
                 relative_weight=tc.relative_weight
             ))
 
-        # Count exams using async query to avoid lazy loading
-        num_variations = len(config.exams) if config.exams is not None else 0
-
         response.append(ExamConfigResponse(
             id=config.id,
             subject_id=config.subject_id,
@@ -65,7 +62,7 @@ async def get_subject_exam_configs(
             #creator_keycloak_id=config.creator_keycloak_id,
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
-            num_variations=num_variations,
+            num_variations=config.num_variations,
             status=config.status
         ))
 
@@ -158,7 +155,7 @@ async def generate_exams_async(
         vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
 
         # Create configs with PENDING status
-        exam_config, topic_configs = await exam.create_configs(session, exam_specs, student_tuples)
+        exam_config, topic_configs = await exam.create_configs(session, exam_specs, student_tuples, num_variations)
         exam_config.status = GenerationStatus.PENDING
         session.add(exam_config)
         await session.commit()
@@ -202,7 +199,7 @@ async def generate_exams_async(
             fraction=exam_config.fraction,
             topic_configs=topic_configs_dto,
             nmec_name_list=exam_config.nmec_name_list,
-            num_variations=0, # Will be updated by task
+            num_variations=exam_config.num_variations,
             status=exam_config.status
         )
 
@@ -308,16 +305,13 @@ async def retrieve_student_list(
     if not exam_config:
         raise HTTPException(status_code=404, detail="Exam configuration not found.")
 
-    # Count exams using async query to avoid lazy loading
-    num_variations = len(exam_config.exams) if exam_config.exams is not None else 0
-
     return ExamConfigResponse(
         id=exam_config.id,
         subject_id=exam_config.subject_id,
         fraction=exam_config.fraction,
         topic_configs=exam_config.topic_configs or [],
         nmec_name_list=exam_config.nmec_name_list,
-        num_variations=num_variations,
+        num_variations=exam_config.num_variations,
         status=exam_config.status
     )
 
