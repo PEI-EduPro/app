@@ -94,7 +94,8 @@ async def generate_exams(
             session,
             exam_specs,
             num_versions,
-            student_tuples
+            student_tuples,
+            num_variations
         )
 
         # Create waiting room if vigilant_keycloak_ids provided
