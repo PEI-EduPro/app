@@ -281,18 +281,23 @@ async def generate_exams_to_disk(
 
         # Generate single solutions PDF with all UNIQUE variations and their corresponding batch IDs
         unique_answers = []
+        all_single = (num_versions == num_variations)
+        
         for i in range(len(versions_cache)):
             v_num = i + 1
             batches = version_to_batches.get(i, [])
             if not batches:
                 continue
             
-            if len(batches) > 1:
-                batch_range = f"{min(batches)} - {max(batches)}"
+            if all_single:
+                label = f"{v_num}"
             else:
-                batch_range = f"{batches[0]}"
+                if len(batches) > 1:
+                    batch_range = f"{min(batches)} - {max(batches)}"
+                else:
+                    batch_range = f"{batches[0]}"
+                label = f"{v_num} (Exams: {batch_range})"
                 
-            label = f"{v_num} (Exams: {batch_range})"
             unique_answers.append((label, versions_cache[i][1]))
 
         _write_all_solutions(tmpdir, unique_answers, num_questions, exam_title)
