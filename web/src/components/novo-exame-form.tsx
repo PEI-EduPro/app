@@ -210,21 +210,10 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
     toast.loading("A gerar exame...", { position: "top-right" });
     mutate(novoExameData, {
       onSuccess: () => {
-        toast.dismiss();
-        toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
         reset();
         onClose();
-      },
-      onError: () => {
-        toast.dismiss();
-        toast.error(
-          "Um erro ocorreu ao gerar exame, tente novamente mais tarde.",
-          {
-            position: "top-right",
-          },
-        );
       },
     });
   };
