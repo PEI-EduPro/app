@@ -937,12 +937,10 @@ async def notify_student(session: AsyncSession, exam: Exam):
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
     message += '<tr style="background-color: #f2f2f2;">'
     message += '<th style="padding: 10px;">Nome</th>'
-    message += '<th style="padding: 10px;">NMEC</th>'
-    message += '<th style="padding: 10px;">Nota</th></tr>'
+    message += '<th style="padding: 10px;">NMEC</th></tr>'
 
     message += f"<tr><td style='padding: 10px;'>{student_name}</td>"
-    message += f"<td style='padding: 10px;'>{nmec}</td>"
-    message += f"<td style='padding: 10px;'>{grade:.2f}</td></tr>"
+    message += f"<td style='padding: 10px;'>{nmec}</td></tr>"
     message += "</table><br>"
 
     # Exam Score Distribution Table (Question Value, and Penalty)
@@ -985,14 +983,79 @@ async def notify_student(session: AsyncSession, exam: Exam):
     message += "</table><br>"
 
     # Student Answer Grid (Real Image taken by the regent when correcting the exam)
-    message += "A sua tabela de resposta:<br><br>"
+    message += "Foto da sua tabela de resposta:<br><br>"
 
     if exam.capture_path and os.path.exists(exam.capture_path):
         message += '<img src="cid:student_capture" style="max-width: 80%; height: auto; display: block; margin: auto; border: 1px solid #ccc;"><br>'
     else:
         message += '<p><i>[Imagem da tabela de resposta indisponível]</i></p><br>'
 
+    # Parse the student's results from the JSON string
+    student_answers = json.loads(exam.results) if isinstance(exam.results, str) else (exam.results or {})
+
+    # Student Answer Grid (clean)
+    message += "A sua tabela digitalizada:<br><br>"
+
+    message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
+
+    # Create the header row (01, 02, 03, ...)
+    message += '<tr style="background-color: #f2f2f2;"><th></th>'
+    for q in range(len(answer_key)):
+        message += f"<th style='padding: 8px;'>{q + 1:02d}</th>"
+    message += "</tr>"
+
+    # Create the rows for options A, B, C, D
+    for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
+        message += f"<tr><th style='padding: 8px;'>{row_label}</th>"
+        
+        for q_idx in range(len(answer_key)):
+            q_str = str(q_idx)
+            
+            # 1. Did the student select this specific cell?
+            is_selected = student_answers.get(q_str, {}).get(row_label, False)
+            
+            # 2. Is this specific cell the actual correct answer?
+            # (Checking both string and int just to be safe with how answer_key was saved)
+            is_correct = (answer_key.get(q_str) == row_idx) or (answer_key.get(int(q_idx)) == row_idx)
+            
+            # 3. Determine the "X"
+            cell_text = "<b>X</b>" if is_selected else ""
+            
+            # 4. Determine the color
+            bg_color = ""
+            if is_correct:
+                # Green if it's the correct answer (whether the student marked it or not)
+                bg_color = "background-color: #a8e6cf;" 
+            elif is_selected and not is_correct:
+                # Red if the student marked it, but it's wrong
+                bg_color = "background-color: #ff8b94;" 
+                
+            message += f"<td style='padding: 8px; {bg_color}'>{cell_text}</td>"
+                
+        message += "</tr>"
+
+    message += "</table><br>"
+
+    # Table Color Scheme Legend
+    message += "<table style='margin-left: 10%; border-collapse: separate; border-spacing: 0 5px; text-align: left; font-size: 14px;'>"
+    message += "<tr>"
+    message += "<td style='width: 25px; height: 25px; background-color: #a8e6cf; border: 1px solid black;'></td>"
+    message += "<td style='padding-left: 10px;'>- Resposta correta</td>"
+    message += "</tr>"
+
+    message += "<tr>"
+    message += "<td style='width: 25px; height: 25px; background-color: #a8e6cf; border: 1px solid black; text-align: center;'><b>X</b></td>"
+    message += "<td style='padding-left: 10px;'>- Resposta correta selecionada</td>"
+    message += "</tr>"
+
+    message += "<tr>"
+    message += "<td style='width: 25px; height: 25px; background-color: #ff8b94; border: 1px solid black; text-align: center;'><b>X</b></td>"
+    message += "<td style='padding-left: 10px;'>- Resposta incorreta selecionada</td>"
+    message += "</tr>"
+    message += "</table><br>"
+
     # Exam Correct Answer Grid
+    '''
     message += "As respostas solução à sua versão do exame são:<br><br>"
 
     message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
@@ -1012,6 +1075,7 @@ async def notify_student(session: AsyncSession, exam: Exam):
         message += "</tr>"
 
     message += "</table><br>"
+    '''
 
     # Details regarding comparison between the student's actual answer and the correct exam answers
     message += "Das suas respostas resultaram as seguintes cotações:<br><br>"
@@ -1036,7 +1100,8 @@ async def notify_student(session: AsyncSession, exam: Exam):
 
     for idx in sorted_indices:
         val = details[str(idx)]["correct"]
-        message += f"<td style='padding: 8px;'>{val}</td>"
+        bg_color = "background-color: #a8e6cf;" if val == 1 else ""
+        message += f"<td style='padding: 8px; {bg_color}'>{val}</td>"
 
     message += "</tr>"
 
@@ -1046,7 +1111,8 @@ async def notify_student(session: AsyncSession, exam: Exam):
 
     for idx in sorted_indices:
         val = details[str(idx)]["incorrect"]
-        message += f"<td style='padding: 8px;'>{val}</td>"
+        bg_color = "background-color: #ff8b94;" if val > 0 else ""
+        message += f"<td style='padding: 8px; {bg_color}'>{val}</td>"
 
     message += "</tr>"
 
@@ -1064,7 +1130,17 @@ async def notify_student(session: AsyncSession, exam: Exam):
 
         score = correct * weight - incorrect * penalty
 
-        message += f"<td style='padding: 8px;'>{score:.2f}</td>"
+        # Determine the background color based on the score
+        bg_color = ""
+        if score > 0.001:
+            bg_color = "background-color: #a8e6cf;" # Green for positive
+        elif score < -0.001:
+            bg_color = "background-color: #ff8b94;" # Red for negative
+            
+        # Add a '+' sign for non negative numbers
+        score_display = f"{score:+.2f}"
+            
+        message += f"<td style='padding: 8px; {bg_color}'>{score_display}</td>"
 
     message += "</tr>"
 
@@ -1089,8 +1165,15 @@ async def notify_student(session: AsyncSession, exam: Exam):
 
     message += "</table>"
     
+    message += f"""
+    <div style="text-align: center; margin: 30px 0; font-family: Arial, sans-serif;">
+        <div style="font-size: 25px; font-weight: bold; color: #555;">Nota Final</div>
+        <div style="font-size: 45px; font-weight: bold; color: #000; margin-top: 5px;">{grade:.2f}/20</div>
+    </div>
+    """
+
     # Disclaimer and Greeting
-    message += f"<br>Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
+    message += f"Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
     message += "<br>Continuação de um bom ano letivo.<br>"
     message += "<b>EduPro @ UA</b>"
 
@@ -1114,6 +1197,22 @@ async def notify_student(session: AsyncSession, exam: Exam):
     </html>
     """
     msg.attach(MIMEText(html_body, 'html'))
+
+    # --- NEW: Attach the student capture image inline ---
+    # We use exam.correction_path if you want the drawn boxes, 
+    # or exam.capture_path if you want the clean crop. 
+    image_to_send = exam.capture_path # Change to exam.capture_path if preferred
+
+    if image_to_send and os.path.exists(image_to_send):
+        try:
+            with open(image_to_send, "rb") as img:
+                mime_image_capture = MIMEImage(img.read())
+                # The Content-ID must perfectly match the cid: in the HTML above
+                mime_image_capture.add_header("Content-ID", "<student_capture>")
+                mime_image_capture.add_header("Content-Disposition", "inline", filename="student_capture.jpg")
+                msg.attach(mime_image_capture)
+        except Exception as e:
+            logger.error(f"Failed to attach student capture image: {e}")
 
     # Attach signature image inline
     img_path = os.path.join(os.path.dirname(__file__), "..", "img", "signature.jpg")

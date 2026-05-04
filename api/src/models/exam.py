@@ -17,7 +17,8 @@ class Exam(SQLModel, table=True):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     results_details: Optional[Dict[int, int]] = Field(default_factory=dict, sa_column=Column(JSON))
-    capture_path: Optional[str] = Field(default=None)
+    capture_path: Optional[str] = Field(default=None)       # raw cropped image
+    correction_path: Optional[str] = Field(default=None)    # corrected cropped image
     batch_number: Optional[int] = Field(default=None)
     validated: bool = Field(default=False)
     answer_key: Optional[Dict[int, int]] = Field(default_factory=dict, sa_column=Column(JSON))
@@ -42,6 +43,7 @@ class ExamUpdate(SQLModel):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
+    correction_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
 
 
@@ -53,6 +55,8 @@ class ExamRead(SQLModel):
     nmec: Optional[int] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
+    capture_path: Optional[str] = Field(default=None)
+    correction_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
 
 class ExamPublic(SQLModel):
