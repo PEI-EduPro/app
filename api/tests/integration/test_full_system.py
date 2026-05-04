@@ -53,7 +53,7 @@ async def test_manager_user(keycloak_admin_edupro):
     Cleans up after test.
     """
     username = f"test_manager_{uuid.uuid4().hex[:8]}"
-    password = "testpassword"
+    password = "testpassword12345"
     email = f"{username}@example.com"
     
     # 1. Create User
