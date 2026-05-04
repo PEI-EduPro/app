@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as DefusedET
 import tempfile
 from pathlib import Path
 from latex import build_pdf
@@ -6,7 +7,7 @@ from latex import build_pdf
 
 def xml_to_pdf(xml_content: str, exam_id: int, subject_name: str = None) -> bytes:
     """Converts Exam XML to PDF bytes."""
-    root = ET.fromstring(xml_content)
+    root = DefusedET.fromstring(xml_content)
     latex_content, t_variants_content = xml_to_latex(root, exam_id)
     return compile_latex_to_pdf(latex_content, t_variants_content, subject_name)
 

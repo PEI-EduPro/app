@@ -4,6 +4,14 @@ from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
 
 
+from enum import Enum
+
+class GenerationStatus(str, Enum):
+    PENDING = "PENDING"
+    PROCESSING = "PROCESSING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
@@ -12,8 +20,11 @@ class ExamConfig(SQLModel, table=True):
     #creator_keycloak_id: str = Field(max_length=255)
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
-    nmec_name_list: Optional[str] # nmec (string): {name: string, email: string}
+    nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
     exam_name: Optional[str] = Field(default=None, max_length=255)
+    num_versions: int = Field(default=1)
+    status: GenerationStatus = Field(default=GenerationStatus.PENDING)
+    zip_path: Optional[str] = Field(default=None)
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
@@ -41,6 +52,8 @@ class ExamConfigRead(SQLModel):
     # creator_keycloak_id: str  # Commented out
     fraction: int
     subject_id: int
+    status: GenerationStatus
+    zip_path: Optional[str] = None
     
 
 class ExamConfigResponse(SQLModel):
@@ -51,6 +64,7 @@ class ExamConfigResponse(SQLModel):
     topic_configs: List[TopicConfigDTO]
     nmec_name_list: Optional[str]
     num_variations: int
+    status: GenerationStatus
 
 
 class ExamGenerateRequest(SQLModel):
@@ -61,6 +75,7 @@ class ExamGenerateRequest(SQLModel):
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
     num_variations: int = 1
+    number_versions: Optional[int] = None
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []
     vigilant_keycloak_ids: List[str] = []

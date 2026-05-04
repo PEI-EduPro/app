@@ -12,6 +12,7 @@ function cleanup {
     echo -e "${GREEN}Cleaning up test infrastructure...${NC}"
     cd "$START_DIR"
     docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v
+    rm -rf /tmp/edupro_test_storage
 }
 trap cleanup EXIT
 
@@ -22,31 +23,16 @@ echo -e "${GREEN}1. Starting ISOLATED Docker Services (DB:5433 & Keycloak:8081).
 
 # Define environment variables for the test run to ensure isolation
 export POSTGRES_PORT=5433
+export STORAGE_DIR=/tmp/edupro_test_storage
 
 # Use a specific project name 'edupro-test' to namespace volumes and containers
 # This prevents conflict with 'edupro-dev' or 'edupro' project names.
 docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v --remove-orphans
 docker network rm edupro-test_default 2>/dev/null || true
 
-# Start services with setup profile to configure Keycloak realm
-echo -e "${GREEN}Starting infrastructure with setup profile (configuring Keycloak realm)...${NC}"
-docker compose -p edupro-test --profile setup -f deployment/docker-compose.test.yml up -d --force-recreate
-
-# Wait for keycloak-config-cli to complete
-echo -e "${GREEN}Waiting for Keycloak configuration to complete...${NC}"
-timeout=180
-counter=0
-while ! docker ps -a --filter "name=edupro-test-keycloak-config-cli" --filter "status=exited" | grep -q "edupro-test-keycloak-config-cli"; do
-    sleep 2
-    ((counter+=2))
-    if [ $counter -ge $timeout ]; then
-        echo -e "${RED}Timeout waiting for Keycloak configuration!${NC}"
-        docker logs edupro-test-keycloak-config-cli 2>&1 || true
-        exit 1
-    fi
-    echo -n "."
-done
-echo -e "\n${GREEN}Keycloak configuration complete!${NC}"
+# Start services (Keycloak will auto-import realm on startup)
+echo -e "${GREEN}Starting test infrastructure...${NC}"
+docker compose -p edupro-test -f deployment/docker-compose.test.yml up -d --force-recreate
 
 # Wait for DB (Port 5433)
 echo "Waiting for Test Database (port 5433)..."
@@ -83,6 +69,7 @@ cd api
 
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)
+STORAGE_DIR=$STORAGE_DIR \
 PYTHONPATH=. \
 POSTGRES_SERVER=localhost \
 POSTGRES_PORT=5432 \
@@ -103,6 +90,7 @@ echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Pass env vars explicitly to ensure pytest picks them up
 
 #Se calhar passamos isto para um .env.test um dia 
+STORAGE_DIR=$STORAGE_DIR \
 PYTHONPATH=. \
 POSTGRES_SERVER=localhost \
 POSTGRES_PORT=5433 \

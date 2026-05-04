@@ -70,8 +70,10 @@ class KeycloakClient:
             if isinstance(token_audience, str):
                 token_audience = [token_audience]
             
-            if not any(aud in allowed_audiences for aud in token_audience):
-                logger.error(f"Audience mismatch. Expected one of {allowed_audiences}, Got: {token_audience}")
+            azp = token_info.get('azp', '')
+            
+            if azp != 'frontend' and not any(aud in allowed_audiences for aud in token_audience):
+                logger.error(f"Audience mismatch. Expected one of {allowed_audiences} or azp='frontend', Got aud: {token_audience}, azp: {azp}")
                 return None
             
             logger.info(f"Token verified successfully for user: {token_info.get('preferred_username', token_info.get('sub', 'unknown'))}")
