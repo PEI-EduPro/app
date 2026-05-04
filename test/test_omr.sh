@@ -12,7 +12,7 @@ CLIENT_SECRET="**"  # <--- paste KEYCLOAK_CLIENT_SECRET from deployment/.env
 # USERNAME="professor1"
 USERNAME="orp"
 # PASSWORD="password"
-PASSWORD="admin"
+PASSWORD="adminadminadmin1"
 
 IMAGE_PATH="${1:-}"  # Pass image path as first argument
 

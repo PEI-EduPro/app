@@ -8,7 +8,7 @@ CLIENT_ID="frontend"
 CLIENT_SECRET="**"  # <--- paste KEYCLOAK_CLIENT_SECRET from deployment/.env
 
 USERNAME="orp"
-PASSWORD="admin"
+PASSWORD="adminadminadmin1"
 
 # --- GET TOKEN ---
 echo "--- Getting Keycloak token for '$USERNAME' ---"
