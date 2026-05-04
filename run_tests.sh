@@ -12,6 +12,7 @@ function cleanup {
     echo -e "${GREEN}Cleaning up test infrastructure...${NC}"
     cd "$START_DIR"
     docker compose -p edupro-test -f deployment/docker-compose.test.yml down -v
+    rm -rf /tmp/edupro_test_storage
 }
 trap cleanup EXIT
 
@@ -22,6 +23,7 @@ echo -e "${GREEN}1. Starting ISOLATED Docker Services (DB:5433 & Keycloak:8081).
 
 # Define environment variables for the test run to ensure isolation
 export POSTGRES_PORT=5433
+export STORAGE_DIR=/tmp/edupro_test_storage
 
 # Use a specific project name 'edupro-test' to namespace volumes and containers
 # This prevents conflict with 'edupro-dev' or 'edupro' project names.
@@ -67,6 +69,7 @@ cd api
 
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)
+STORAGE_DIR=$STORAGE_DIR \
 PYTHONPATH=. \
 POSTGRES_SERVER=localhost \
 POSTGRES_PORT=5432 \
@@ -87,6 +90,7 @@ echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Pass env vars explicitly to ensure pytest picks them up
 
 #Se calhar passamos isto para um .env.test um dia 
+STORAGE_DIR=$STORAGE_DIR \
 PYTHONPATH=. \
 POSTGRES_SERVER=localhost \
 POSTGRES_PORT=5433 \

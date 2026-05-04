@@ -9,9 +9,11 @@ services:
       - "${API_PORT}:80"
     volumes:
       - exam_images:/app/images
+      - exam_storage:/app/storage
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   exam_images:
+  exam_storage:

@@ -210,21 +210,10 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
     toast.loading("A gerar exame...", { position: "top-right" });
     mutate(novoExameData, {
       onSuccess: () => {
-        toast.dismiss();
-        toast.success("Exame criado com sucesso!", { position: "top-right" });
         setFormStep(0);
         setValidatedData(null);
         reset();
         onClose();
-      },
-      onError: () => {
-        toast.dismiss();
-        toast.error(
-          "Um erro ocorreu ao gerar exame, tente novamente mais tarde.",
-          {
-            position: "top-right",
-          },
-        );
       },
     });
   };
@@ -936,8 +925,6 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                               return;
                             }
                           }
-                          setValue(`number_exams`, lines.length - 1);
-                          setValue(`number_versions`, lines.length - 1);
                           resolve(true);
                         };
                         reader.readAsText(file as File);
@@ -1048,9 +1035,27 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                             multiple
                             type="file"
                             id="file-upload-yI1i8RdV"
-                            onChange={(e) =>
-                              onChange(e.target.files?.[0] ?? null)
-                            }
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] ?? null;
+                              onChange(file);
+                              if (file) {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  const text = ev.target?.result as string;
+                                  const lines = text
+                                    .split("\n")
+                                    .filter((l) => l.trim());
+                                  if (lines.length > 1) {
+                                    setValue(`number_exams`, lines.length - 1);
+                                    setValue(
+                                      `number_versions`,
+                                      lines.length - 1,
+                                    );
+                                  }
+                                };
+                                reader.readAsText(file);
+                              }
+                            }}
                             accept=".csv"
                             className="hidden"
                           />
@@ -1161,7 +1166,7 @@ export const NovoExameForm = (props: { ucID: number; onClose: () => void }) => {
                 />
                 <FormField
                   control={control}
-                  name="number_exams"
+                  name="number_versions"
                   render={() => (
                     <FormItem className="flex items-center justify-between">
                       <FormLabel className="flex items-center gap-1">

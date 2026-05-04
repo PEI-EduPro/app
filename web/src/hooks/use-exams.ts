@@ -26,9 +26,23 @@ const useAddExamConfig = () => {
       apiClient.download("/exams/generate/", props),
 
     onSuccess: (zipBlob: Blob) => {
+      toast.dismiss();
+      toast.success("Exame criado com sucesso!", {
+        position: "top-right",
+        duration: 3000,
+      });
+
       saveFile(zipBlob, "generated_exam.zip");
 
       queryClient.invalidateQueries({ queryKey: ["examConfig"] });
+    },
+
+    onError: () => {
+      toast.dismiss();
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+        duration: 3000,
+      });
     },
   });
 };
