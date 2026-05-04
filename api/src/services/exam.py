@@ -1011,17 +1011,15 @@ async def notify_student(session: AsyncSession, exam: Exam):
         for q_idx in range(len(answer_key)):
             q_str = str(q_idx)
             
-            # 1. Did the student select this specific cell?
+            # Check selection
             is_selected = student_answers.get(q_str, {}).get(row_label, False)
             
-            # 2. Is this specific cell the actual correct answer?
-            # (Checking both string and int just to be safe with how answer_key was saved)
+            # Check correctness
             is_correct = (answer_key.get(q_str) == row_idx) or (answer_key.get(int(q_idx)) == row_idx)
             
-            # 3. Determine the "X"
             cell_text = "<b>X</b>" if is_selected else ""
             
-            # 4. Determine the color
+            # Cell background color
             bg_color = ""
             if is_correct:
                 # Green if it's the correct answer (whether the student marked it or not)
@@ -1053,29 +1051,6 @@ async def notify_student(session: AsyncSession, exam: Exam):
     message += "<td style='padding-left: 10px;'>- Resposta incorreta selecionada</td>"
     message += "</tr>"
     message += "</table><br>"
-
-    # Exam Correct Answer Grid
-    '''
-    message += "As respostas solução à sua versão do exame são:<br><br>"
-
-    message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
-
-    message += '<tr style="background-color: #f2f2f2;"><th></th>'
-    for q in range(len(answer_key)):
-        message += f"<th style='padding: 8px;'>{q + 1:02d}</th>"
-    message += "</tr>"
-
-    for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
-        message += f"<tr><th style='padding: 8px;'>{row_label}</th>"
-        
-        for q_idx in range(len(answer_key)):
-            cell = "X" if answer_key.get(str(q_idx)) == row_idx else ""
-            message += f"<td>{cell}</td>"
-                
-        message += "</tr>"
-
-    message += "</table><br>"
-    '''
 
     # Details regarding comparison between the student's actual answer and the correct exam answers
     message += "Das suas respostas resultaram as seguintes cotações:<br><br>"
@@ -1198,9 +1173,7 @@ async def notify_student(session: AsyncSession, exam: Exam):
     """
     msg.attach(MIMEText(html_body, 'html'))
 
-    # --- NEW: Attach the student capture image inline ---
-    # We use exam.correction_path if you want the drawn boxes, 
-    # or exam.capture_path if you want the clean crop. 
+    # Attach the student capture image inline
     image_to_send = exam.capture_path # Change to exam.capture_path if preferred
 
     if image_to_send and os.path.exists(image_to_send):
