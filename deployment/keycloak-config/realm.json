@@ -1,6 +1,7 @@
 {
   "id": "fb9deee9-8806-453f-b86d-4d6ce20af004",
   "realm": "edupro",
+  "loginTheme": "edupro",
   "notBefore": 0,
   "defaultSignatureAlgorithm": "RS256",
   "revokeRefreshToken": false,
@@ -1601,8 +1602,9 @@
       }
     ]
   },
-  "internationalizationEnabled": false,
-  "supportedLocales": [],
+  "internationalizationEnabled": true,
+  "supportedLocales": ["pt", "en"],
+  "defaultLocale": "pt",
   "authenticationFlows": [
     {
       "id": "04fa4e73-cac1-4601-a36b-6efec03fd2f6",
