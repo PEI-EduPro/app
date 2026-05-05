@@ -161,6 +161,13 @@ const useGetExamsResponses = (roomId: number, refetchInterval?: number) =>
     refetchInterval,
   });
 
+const useGetExamInfo = (examId: number | null) =>
+  useQuery<ExamResponseI>({
+    queryKey: ["exam_info", examId],
+    queryFn: () => apiClient.get(`/exams/${examId}/exam_info`),
+    enabled: examId !== null,
+  });
+
 const useValidateExam = (roomId: number) => {
   const queryClient = useQueryClient();
 
@@ -222,6 +229,7 @@ export {
   useGetWarnings,
   useResolveWarnings,
   useGetExamsResponses,
+  useGetExamInfo,
   useValidateExam,
   useCorrectExam,
   useGetSubmitedExams,
