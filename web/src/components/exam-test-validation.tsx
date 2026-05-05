@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import type { ExamResponseI, OptionKey, QuestionsI } from "@/lib/types";
+import { useGetExamInfo } from "@/hooks/use-waiting-rooms";
+import type { OptionKey, QuestionsI } from "@/lib/types";
 
 const OPTIONS: OptionKey[] = ["a", "b", "c", "d"];
 
@@ -104,7 +106,7 @@ function AnswerGrid({
 }
 
 export default function ExamTestValidation({
-  exam,
+  examId,
   grade,
   grid,
   validated,
@@ -112,16 +114,28 @@ export default function ExamTestValidation({
   onGradeChange,
   onValidate,
   onReCorrect,
+  onExamLoaded,
 }: {
-  exam: ExamResponseI;
+  examId: number;
   grade: number | null;
-  grid: Grid;
+  grid: Grid | null;
   validated: boolean;
   onGridChange: (grid: Grid) => void;
   onGradeChange: (grade: number) => void;
   onValidate: () => void;
   onReCorrect: () => void;
+  onExamLoaded: (grade: number | null, grid: Grid, validated: boolean) => void;
 }) {
+  const { data: exam } = useGetExamInfo(examId);
+
+  useEffect(() => {
+    if (exam?.questions) {
+      onExamLoaded(exam.grade ?? null, buildGrid(exam.questions), exam.validated);
+    }
+  }, [exam]);
+
+  if (!exam?.questions || !grid) return null;
+
   return (
     <div className="flex flex-col gap-15 w-full">
       {exam.capture && (
