@@ -1,7 +1,6 @@
 import logging
 import sys
 from src.core.settings import settings
-from pydantic_settings import BaseSettings, SettingsConfigDict
 
 def setup_logging():
     """Configure application logging"""

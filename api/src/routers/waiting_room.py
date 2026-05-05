@@ -389,9 +389,7 @@ async def notify_students_via_email(
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Notify associated students about their exam score.
-    The exam consists of the student identification, the exam score distribution, their answer grid,
-    the solution to their exam as well as the scores obtained in each question.
+    Notify students about their exam score.
     """
 
     waiting_room = await waiting_room_service.get_waiting_room(session, waiting_room_id)
