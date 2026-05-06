@@ -7,6 +7,7 @@ import imutils
 import numpy as np
 import cv2
 import json
+import os
 
 # Settings (tune if needed)
 NOISE_THRESHOLD = 30
@@ -238,11 +239,14 @@ async def evaluate_exam(
     print(f"\nFINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
     # Save the padded image as the final capture path
-    name_parts = image_path.rsplit(".", 1)
-    clean_path = f"{name_parts[0]}_clean.{name_parts[1]}"
-    correction_path = f"{name_parts[0]}_omr_correction.{name_parts[1]}"
-    
+    dir_name = os.path.dirname(image_path)
+    base_name = os.path.basename(image_path)
+    name_parts = base_name.rsplit(".", 1)
+    safe_correction_name = f"{name_parts[0]}_omr_correction.{name_parts[1]}"
+    safe_clean_name = f"{name_parts[0]}_clean.{name_parts[1]}"
+    clean_path = os.path.join(dir_name, safe_clean_name)
     cv2.imwrite(clean_path, clean_crop)
+    correction_path = os.path.join(dir_name, safe_correction_name)
     cv2.imwrite(correction_path, outer_paper)
 
     # Persist results to the database

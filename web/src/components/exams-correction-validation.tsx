@@ -5,9 +5,7 @@ import {
   useValidateExam,
 } from "@/hooks/use-waiting-rooms";
 import ExamTestList from "@/components/exam-test-list";
-import ExamTestValidation, {
-  buildGrid,
-} from "@/components/exam-test-validation";
+import ExamTestValidation from "@/components/exam-test-validation";
 import type { OptionKey } from "@/lib/types";
 
 type Grid = Record<number, Record<OptionKey, boolean>>;
@@ -18,18 +16,19 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
   const [grid, setGrid] = useState<Grid | null>(null);
   const [validated, setValidated] = useState(false);
 
-  const { data: examsResponses } = useGetExamsResponses(wrId);
+  useGetExamsResponses(wrId);
   const { mutate: validateExam } = useValidateExam(wrId);
   const { mutate: correctExam } = useCorrectExam(wrId);
 
-  const selectedExam = examsResponses?.find((e) => e.exam_id === selected);
-
   function handleSelect(examId: number) {
     setSelected(examId);
-    const exam = examsResponses?.find((e) => e.exam_id === examId);
-    setGrade(exam?.grade ?? null);
-    setGrid(exam?.questions ? buildGrid(exam.questions) : null);
-    setValidated(exam?.validated ?? false);
+    setGrid(null);
+  }
+
+  function handleExamLoaded(loadedGrade: number | null, loadedGrid: Grid, loadedValidated: boolean) {
+    setGrade(loadedGrade);
+    setGrid(loadedGrid);
+    setValidated(loadedValidated);
   }
 
   function handleValidate() {
@@ -44,20 +43,21 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
       <ExamTestList wrId={wrId} selected={selected} onSelect={handleSelect} />
 
       <div className="flex-1 p-6 flex items-start min-w-0">
-        {selectedExam?.questions ? (
+        {selected !== null ? (
           <ExamTestValidation
-            exam={selectedExam}
+            examId={selected}
             grade={grade}
-            grid={grid ?? buildGrid(selectedExam.questions)}
+            grid={grid}
             validated={validated}
             onGridChange={setGrid}
             onGradeChange={setGrade}
             onValidate={handleValidate}
             onReCorrect={() => setValidated(false)}
+            onExamLoaded={handleExamLoaded}
           />
         ) : (
           <p className="text-sm text-muted-foreground">
-            {!selected && "Selecione um teste para corrigir."}
+            Selecione um teste para corrigir.
           </p>
         )}
       </div>
