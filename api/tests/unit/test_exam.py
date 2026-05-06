@@ -134,7 +134,7 @@ async def test_store_student_list(client, mock_auth, session):
     await session.refresh(exam_config)
     
     # Create CSV content
-    csv_content = "nmec,name\n12345,John Doe\n67890,Jane Smith"
+    csv_content = "nmec,name,email\n12345,John Doe,john@doe.com\n67890,Jane Smith,jane@smith.com"
     csv_file = io.BytesIO(csv_content.encode())
     
     files = {"file": ("students.csv", csv_file, "text/csv")}
@@ -151,8 +151,10 @@ async def test_store_student_list(client, mock_auth, session):
     # Verify data was stored
     await session.refresh(exam_config)
     stored_data = json.loads(exam_config.nmec_name_list)
-    assert stored_data["12345"] == "John Doe"
-    assert stored_data["67890"] == "Jane Smith"
+    assert stored_data["12345"]["name"] == "John Doe"
+    assert stored_data["12345"]["email"] == "john@doe.com"
+    assert stored_data["67890"]["name"] == "Jane Smith"
+    assert stored_data["67890"]["email"] == "jane@smith.com"
 
 
 @pytest.mark.asyncio
