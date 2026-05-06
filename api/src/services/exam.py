@@ -58,7 +58,6 @@ async def create_configs(
     # Convert student_tuples to JSON string if provided
     nmec_name_list = None
     if student_tuples:
-        import json
         student_dict = {str(nmec): {"name": name, "email": email} for nmec, name, email in student_tuples}
         nmec_name_list = json.dumps(student_dict)
 
@@ -68,7 +67,6 @@ async def create_configs(
         nmec_name_list=nmec_name_list,
         exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None),
         num_versions=num_versions
-        #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
     await session.commit()
@@ -84,7 +82,6 @@ async def create_configs(
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][topic_name],
                 relative_weight=exam_specs["relative_quotations"][topic_name],
-                #creator_keycloak_id=dummy_user_id
             )
             topic_configs.append(topic_config)
 

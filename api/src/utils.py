@@ -72,11 +72,7 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
     if img is None:
         raise HTTPException(status_code=400, detail="Failed to load the uploaded image.")
 
-    # detector = cv2.QRCodeDetector()
-    # id_str, _, _ = detector.detectAndDecode(img)
-
     id_str = _detect_qr(img)
-
 
     if not id_str:
         raise HTTPException(status_code=400, detail="Failed find an ID from the QR code.")

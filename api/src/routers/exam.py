@@ -53,7 +53,6 @@ async def get_subject_exam_configs(
             id=config.id,
             subject_id=config.subject_id,
             fraction=config.fraction,
-            #creator_keycloak_id=config.creator_keycloak_id,
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
             num_variations=len(config.exams) if config.exams is not None else 0,
@@ -340,10 +339,6 @@ async def delete_exam_config(
 # Deprecated: use POST /api/waiting-rooms/{waiting_room_id}/evaluate instead
 # @router.post("/evaluate")
 # async def evaluate_exam_omr(...)
-    
-
-    
-
 
 
 @router.post("/{exam_id}/validate")

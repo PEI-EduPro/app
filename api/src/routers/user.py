@@ -18,7 +18,7 @@ async def read_current_user(
     """Get current user info from the token (requires authentication)"""
     return UserPublic.model_validate(user)
 
-@router.post("/create", response_model=UserPublic) #, dependencies=[Depends(require_manager)])
+@router.post("/create", response_model=UserPublic)
 async def create_user_endpoint(
     user_data: UserCreate,
     current_user_info: User = Depends(get_current_user_info) # Ensures authentication
