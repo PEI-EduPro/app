@@ -16,6 +16,12 @@ jobs:
         working-directory: deployment
         run: docker compose build
 
+      - name: Check migrations are up to date
+        working-directory: deployment
+        run: |
+          docker compose -f docker-compose.db.yml up -d --wait
+          docker compose run --rm -e POSTGRES_SERVER=db migrate /app/.venv/bin/alembic check
+
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
 
