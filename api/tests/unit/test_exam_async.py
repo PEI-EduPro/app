@@ -45,9 +45,9 @@ async def test_generate_exams_async_endpoint(client, mock_auth, session):
             "subject_id": sub.id,
             "fraction": 0,
             "exam_title": "Async Exam",
-            "topics": ["Async Topic"],
-            "number_questions": {"Async Topic": 1},
-            "relative_quotations": {"Async Topic": 1.0},
+            "topics": [str(topic.id)],
+            "number_questions": {str(topic.id): 1},
+            "relative_quotations": {str(topic.id): 1.0},
             "num_variations": 1
         }
 

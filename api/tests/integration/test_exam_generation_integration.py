@@ -52,9 +52,9 @@ async def test_exam_generation_with_students_and_waiting_room_integration(client
             "subject_id": subject.id,
             "fraction": 75,
             "exam_title": "Integration Test Exam",
-            "topics": ["Integration Topic"],
-            "number_questions": {"Integration Topic": 5},
-            "relative_quotations": {"Integration Topic": 2.0},
+            "topics": [str(topic.id)],
+            "number_questions": {str(topic.id): 5},
+            "relative_quotations": {str(topic.id): 2.0},
             "num_variations": 2,
             "professors": ["Prof. Smith", "Prof. Johnson"],
             "student_tuples": [
@@ -150,9 +150,9 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
             "subject_id": subject.id,
             "fraction": 50,
             "exam_title": "Simple Test Exam",
-            "topics": ["Simple Topic"],
-            "number_questions": {"Simple Topic": 3},
-            "relative_quotations": {"Simple Topic": 1.0},
+            "topics": [str(topic.id)],
+            "number_questions": {str(topic.id): 3},
+            "relative_quotations": {str(topic.id): 1.0},
             "num_variations": 1
         }
 
