@@ -38,6 +38,13 @@ jobs:
             -e POSTGRES_PASSWORD=postgres \
             -e POSTGRES_DB=ci_db \
             -e POSTGRES_PORT=5432 \
+            -e KEYCLOAK_SERVER_URL=http://localhost \
+            -e KEYCLOAK_ISSUER_URL=http://localhost \
+            -e KEYCLOAK_REALM=ci \
+            -e KEYCLOAK_CLIENT_ID=ci \
+            -e KEYCLOAK_CLIENT_SECRET=ci \
+            -e KEYCLOAK_ADMIN_USERNAME=ci \
+            -e KEYCLOAK_ADMIN_PASSWORD=ci \
             edupro-migrate /app/.venv/bin/alembic check
 
       - name: Install uv
