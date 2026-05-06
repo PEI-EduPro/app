@@ -14,7 +14,7 @@ import ExamCard from "../exam-card";
 import { Button } from "../ui/button";
 import { encodeId } from "@/lib/id-encoder";
 import { NoQuestionsAlertDialog } from "../no-questions-alert-dialog";
-import { NovoExameForm } from "../novo-exame-form";
+import { NovoExameForm } from "../novo-exame-steps/novo-exame-form";
 
 export default function ExamesTab({ realId }: { realId: number }) {
   const { data: examConfigs } = useGetExamConfig(realId);

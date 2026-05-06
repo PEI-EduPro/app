@@ -24,10 +24,10 @@ export interface NewExamConfigI {
   subject_id: number;
   fraction: number;
   num_variations: number;
-  number_versions: number;
+  num_versions: number;
   topics: string[];
-  number_questions: Record<string, number>;
-  relative_quotations: Record<string, number>;
+  number_questions: Record<number, number>;
+  relative_quotations: Record<number, number>;
   exam_title: string;
   exam_date: string;
   semester: string;
