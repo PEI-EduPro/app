@@ -12,7 +12,6 @@ from typing import Tuple, List, Dict, Optional
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models.user import User
 from src.models.exam_config import ExamConfig, GenerationStatus
 from src.models.topic_config import TopicConfig
 from src.models.topic import Topic
