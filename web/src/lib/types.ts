@@ -36,11 +36,14 @@ export interface NewExamConfigI {
   student_tuples: Array<Array<string>>;
 }
 
+export type GenerationStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+
 export interface ExamConfigI {
   id: number;
   subject_id: number;
   fraction: number;
   num_variations: number;
+  status: GenerationStatus;
   topic_configs: {
     topic_id: number;
     topic_name: string;

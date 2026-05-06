@@ -47,7 +47,7 @@ export const NovoExameForm = ({
   const onPrev = () => setFormStep((s) => s - 1);
 
   const onSubmit = () => {
-    toast.loading("A gerar exame...", { position: "top-right" });
+    toast.loading("A criar exame...", { position: "top-right" });
     const payload = { ...form.getValues(), subject_id: ucID };
     mutate(payload, {
       onSuccess: () => {

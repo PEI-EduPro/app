@@ -94,11 +94,10 @@ class ApiClient {
     return text ? JSON.parse(text) : null;
   }
 
-  async download(endpoint: string, data: unknown): Promise<Blob> {
+  async download(endpoint: string): Promise<Blob> {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
-      method: "POST",
+      method: "GET",
       headers: this.getHeaders(),
-      body: JSON.stringify(data),
     });
 
     if (!response.ok) {
