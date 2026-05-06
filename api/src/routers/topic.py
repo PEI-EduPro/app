@@ -5,13 +5,11 @@ from src.services import topic
 from src.services import question
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
-from src.models.topic import Topic, TopicCreate, TopicPublic, TopicUpdate
+from src.models.topic import TopicCreate, TopicPublic
 from src.models.common import MessageResponse
 from src.models.user import User
 import logging
-from sqlmodel import select
-from typing import List
-import src.services.topic as topic_service
+
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

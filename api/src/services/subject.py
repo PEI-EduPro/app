@@ -4,7 +4,6 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import joinedload
 
-from src.models.question_option import QuestionOption
 from src.models.question import Question
 from src.models.topic import Topic, TopicPublic
 from src.models.subject import Subject, SubjectUpdate
