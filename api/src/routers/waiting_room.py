@@ -7,6 +7,7 @@ from src.models.user import User
 from src.models.exam_config import ExamConfig
 from src.models.waiting_room import WaitingRoom, WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, EvaluateBatchRequest, QRCodeToNMEC
 from src.models.common import MessageResponse
+from src.models.email_options import EmailOptionsPayload
 import src.services.waiting_room as waiting_room_service
 import src.services.exam as exam_service
 from src.core.deps import get_current_user_info, verify_permission
@@ -385,6 +386,7 @@ async def evaluate_exam_batch(
 @router.post("/{waiting_room_id}/notify-students")
 async def notify_students_via_email(
     waiting_room_id: int,
+    email_options: EmailOptionsPayload,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
@@ -415,7 +417,7 @@ async def notify_students_via_email(
         # Nota: Exames NÃO validados serão enviados na mesma (dar address ao risco da foto do aluno conter perguntas do teste em caso de falha no OMR)
         if exam:
             try:
-                await exam_service.notify_student(session, exam)
+                await exam_service.notify_student(session, exam, email_options.model_dump())
             except Exception as e:
                 logger.error(f"Failed to send email for exam {exam_id}: {e}")
 

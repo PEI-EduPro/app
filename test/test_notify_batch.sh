@@ -32,11 +32,24 @@ WAITING_ROOM_ID=1
 echo ""
 echo "--- Triggering email notifications for waiting room $WAITING_ROOM_ID ---"
 
-# The endpoint is a POST request but doesn't require a JSON body, 
-# so we only need to pass the Authorization header.
+# 1. Define your JSON payload using a heredoc
+JSON_PAYLOAD=$(cat <<EOF
+{
+  "exam_capture": true,
+  "student_identification": true,
+  "question_weights": true,
+  "red_green_cross_table": true,
+  "cumulative_score_table": true
+}
+EOF
+)
+
+# 2. Add the Content-Type header and pass the payload using -d
 curl -v -X POST "$API_BASE/waiting-rooms/$WAITING_ROOM_ID/notify-students" \
   -H "Authorization: Bearer $TOKEN" \
-  -H "Accept: application/json"
+  -H "Accept: application/json" \
+  -H "Content-Type: application/json" \
+  -d "$JSON_PAYLOAD"
 
 echo ""
 echo "--- Request complete ---"

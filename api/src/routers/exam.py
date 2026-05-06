@@ -448,11 +448,11 @@ async def get_exam_info(
     subject_id = await exam.get_subject_id_by_exam_config_id(e.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
-    corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+    corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
 
     capture_b64 = None
-    if corrected and os.path.exists(e.capture_path):
-        with open(e.capture_path, "rb") as f:
+    if corrected and os.path.exists(e.correction_path):
+        with open(e.correction_path, "rb") as f:
             capture_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     questions = []
