@@ -9,6 +9,20 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
@@ -17,10 +31,14 @@ jobs:
         run: docker compose build
 
       - name: Check migrations are up to date
-        working-directory: deployment
         run: |
-          docker compose -f docker-compose.db.yml up -d --wait
-          docker compose run --rm -e POSTGRES_SERVER=db migrate /app/.venv/bin/alembic check
+          docker run --rm --network host \
+            -e POSTGRES_SERVER=localhost \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=ci_db \
+            -e POSTGRES_PORT=5432 \
+            edupro-migrate /app/.venv/bin/alembic check
 
       - name: Install uv
         uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
