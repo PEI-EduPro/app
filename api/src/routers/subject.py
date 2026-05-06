@@ -222,8 +222,9 @@ async def add_students_to_subject(
         return {"message": "Students added successfully"}
     except ValueError:
         raise HTTPException(status_code=404, detail="Subject not found")
-    except Exception:
-        raise HTTPException(status_code=500, detail="Failed to add students")
+    except Exception as e:
+        logger.error(f"Failed to add students to subject {subject_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add students to subject")
 
 @router.post("/{subject_id}/professors", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_professor_to_subject(
@@ -247,8 +248,9 @@ async def add_professor_to_subject(
         return {"message": "Professor added successfully."}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    except Exception as e:
+        logger.error(f"Failed to add professor to subject {subject_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to add professor to subject")
 
 @router.put("/{subject_id}/professors/{professor_id}", response_model=MessageResponse)
 async def update_professor_permissions(
@@ -273,8 +275,9 @@ async def update_professor_permissions(
         return {"message": "Permissions updated successfully."}
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception:
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+    except Exception as e:
+        logger.error(f"Failed to update professor {professor_id} permissions for subject {subject_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update professor permissions")
 
 @router.delete("/{subject_id}/professors/{professor_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_professor_from_subject(

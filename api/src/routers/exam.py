@@ -124,7 +124,7 @@ async def generate_exams(
         logger.error(traceback.format_exc())
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"An error occurred: {str(e)}"
+            detail="Failed to create exam configuration"
         )
 
 @router.post("/generate_async", response_model=ExamConfigResponse)
@@ -206,7 +206,7 @@ async def generate_exams_async(
     except Exception as e:
         logger.error(f"Failed to initiate async generation: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to initiate async exam generation")
 
 
 @router.get("/config/{exam_config_id}/status")
@@ -225,7 +225,8 @@ async def get_config_status(
     return {
         "id": exam_config.id,
         "status": exam_config.status,
-        "is_ready": exam_config.status == GenerationStatus.COMPLETED
+        "is_ready": exam_config.status == GenerationStatus.COMPLETED,
+        "is_failed": exam_config.status == GenerationStatus.FAILED
     }
 
 

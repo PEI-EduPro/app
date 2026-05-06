@@ -6,6 +6,9 @@ from src.models.exam import Exam
 from src.models.exam_config import ExamConfig
 from src.models.waiting_room import WaitingRoom
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _get_nmec_name(nmec_str: str, nmec_to_name: dict) -> str:
@@ -81,7 +84,10 @@ async def calculate_and_persist_warnings(
                         exam.nmec = int(student_nmec)
                         session.add(exam)
                     except (ValueError, TypeError):
-                        pass
+                        logger.warning(
+                            f"Could not set nmec on exam {exam_id}: "
+                            f"'{student_nmec}' is not a valid integer. Association data may be corrupt."
+                        )
 
 async def get_filtered_students(
     session: AsyncSession,
@@ -102,7 +108,7 @@ async def get_filtered_students(
         try:
             nmec_to_info = json.loads(exam_config.nmec_name_list)
         except json.JSONDecodeError:
-            pass
+            logger.error(f"Failed to parse nmec_name_list for exam_config {waiting_room.exam_config_id}: invalid JSON")
 
     # Build set of nmecs that have at least one association
     associated_nmecs: Set[str] = set()
@@ -251,7 +257,7 @@ async def resolve_warnings_service(
         try:
             nmec_to_name = json.loads(exam_config.nmec_name_list)
         except json.JSONDecodeError:
-            pass
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config_id}: invalid JSON")
 
     await calculate_and_persist_warnings(session, exam_config_id, new_associations, nmec_to_name)
     await session.commit()

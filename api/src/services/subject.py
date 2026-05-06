@@ -65,7 +65,7 @@ async def create_subject_service(
         # Rollback DB creation if Keycloak fails to ensure consistency
         await session.delete(db_subject)
         await session.commit()
-        raise RuntimeError(f"Subject created in DB, but Keycloak group creation failed: {e}")
+        raise RuntimeError("Subject creation failed due to a Keycloak error.")
 
     return {
         "subject": db_subject,

@@ -380,7 +380,10 @@ async def generate_exams_task(
                         await fail_session.commit()
                         logger.info(f"ExamConfig {exam_config_id} status updated to FAILED")
             except Exception as e2:
-                logger.error(f"Failed to set status to FAILED for ExamConfig {exam_config_id}: {e2}")
+                logger.critical(
+                    f"ExamConfig {exam_config_id} is stuck in PENDING. "
+                    f"Generation error: {e} | Status update error: {e2}"
+                )
 
 def _generate_questions_latex(questions: list, topic_weights: Dict[int, float], opts_by_q: Dict[int, list], num_options: int = 4) -> Tuple[str, Dict[int, str]]:
     """Generate LaTeX for questions and return answer map."""

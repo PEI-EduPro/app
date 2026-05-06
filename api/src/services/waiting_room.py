@@ -86,7 +86,7 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
                     )
                 )
         except json.JSONDecodeError:
-            pass
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
 
     # Role extraction logic
     user_role = "Unknown"
@@ -188,7 +188,7 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
         try:
             nmec_to_name = json.loads(exam_config.nmec_name_list)
         except json.JSONDecodeError:
-            pass
+            logger.error(f"Failed to parse nmec_name_list for exam_config {waiting_room.exam_config_id}: invalid JSON")
 
     # 4. Detect conflicts, persist warnings, and write clean exam.nmec values
     await calculate_and_persist_warnings(session, waiting_room.exam_config_id, waiting_room.associations, nmec_to_name)

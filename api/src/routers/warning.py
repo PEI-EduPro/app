@@ -8,7 +8,9 @@ from src.models.waiting_room import WaitingRoom
 from src.models.warning import ExamWarningResponse, ResolveWarningsRequest, WarningsWithStudentsResponse
 from src.core.deps import get_current_user_info, verify_permission
 from src.services.warning import get_warnings_by_waiting_room_id, resolve_warnings_service, get_filtered_students
+import logging
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -39,9 +41,8 @@ async def get_waiting_room_warnings(
         students = await get_filtered_students(session, waiting_room_id)
         return WarningsWithStudentsResponse(warnings=warnings, students=students)
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Failed to fetch warnings: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"Failed to fetch warnings for waiting room {waiting_room_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch warnings for waiting room")
 
 
 @router.post("/{waiting_room_id}/resolve", response_model=List[ExamWarningResponse])
@@ -78,6 +79,5 @@ async def resolve_waiting_room_warnings(
     try:
         return await resolve_warnings_service(session, waiting_room_id, body.assignments)
     except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f"Failed to resolve warnings: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        logger.error(f"Failed to resolve warnings for waiting room {waiting_room_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to resolve warnings for waiting room")

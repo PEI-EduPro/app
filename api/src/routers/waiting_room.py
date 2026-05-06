@@ -66,7 +66,7 @@ async def create_waiting_room(
         logger.error(f"Failed to create waiting room: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to create waiting room: {str(e)}"
+            detail="Failed to create waiting room"
         )
 
 @router.patch("/{waiting_room_id}/start", response_model=WaitingRoomResponse)
@@ -106,7 +106,7 @@ async def start_waiting_room(
         logger.error(f"Failed to start waiting room: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to start waiting room: {str(e)}"
+            detail="Failed to start waiting room"
         )
 
 @router.get("/{waiting_room_id}/info", response_model=WaitingRoomInfoResponse)
@@ -133,7 +133,7 @@ async def get_waiting_room_info(
         logger.error(f"Failed to retrieve waiting room info: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve waiting room info: {str(e)}"
+            detail="Failed to retrieve waiting room info"
         )
 
 @router.post("/{waiting_room_id}/student_to_exam", response_model=MessageResponse)
@@ -175,7 +175,7 @@ async def associate_students_to_exams(
         logger.error(f"Failed to associate students: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to associate students to exams: {str(e)}"
+            detail="Failed to associate student to exam"
         )
 
 @router.get("/{waiting_room_id}/metrics", response_model=WaitingRoomMetricsResponse)
@@ -202,7 +202,7 @@ async def get_waiting_room_metrics(
         logger.error(f"Failed to retrieve waiting room metrics: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to retrieve waiting room metrics: {str(e)}"
+            detail="Failed to retrieve waiting room metrics"
         )
 
 

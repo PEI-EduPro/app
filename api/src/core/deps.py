@@ -39,7 +39,7 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
         groups = await keycloak_client.get_user_group_paths(user_id)
         logger.debug(f"Fetched fresh groups for {username}: {groups}")
     except Exception as e:
-        logger.warning(f"Could not fetch fresh groups, falling back to token claims: {e}")
+        logger.error(f"Could not fetch fresh groups for {username}, falling back to stale token claims: {e}")
         groups = token_info.get("groups", [])
 
     # Auto-assign 'professor' role directly if the user has no specific role yet
