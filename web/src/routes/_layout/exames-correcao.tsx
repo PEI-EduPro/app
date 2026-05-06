@@ -4,8 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { CustomSwitch } from "@/components/custom-switch";
-import StudentsQRCodes from "@/components/students-qrcodes";
-import ExamsCorrectionValidation from "@/components/exams-correction-validation";
+import StudentsQRCodes from "@/components/exames-correcao/students-qrcodes";
+import ExamsCorrectionValidation from "@/components/exames-correcao/exams-correction-validation";
 
 const examesUCSearchSchema = z.object({
   ucId: z.string(),

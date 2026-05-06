@@ -4,8 +4,8 @@ import {
   useGetExamsResponses,
   useValidateExam,
 } from "@/hooks/use-waiting-rooms";
-import ExamTestList from "@/components/exam-test-list";
-import ExamTestValidation from "@/components/exam-test-validation";
+import ExamTestList from "@/components/exames-correcao/exam-test-list";
+import ExamTestValidation from "@/components/exames-correcao/exam-test-validation";
 import type { OptionKey } from "@/lib/types";
 
 type Grid = Record<number, Record<OptionKey, boolean>>;
@@ -25,7 +25,11 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
     setGrid(null);
   }
 
-  function handleExamLoaded(loadedGrade: number | null, loadedGrid: Grid, loadedValidated: boolean) {
+  function handleExamLoaded(
+    loadedGrade: number | null,
+    loadedGrid: Grid,
+    loadedValidated: boolean,
+  ) {
     setGrade(loadedGrade);
     setGrid(loadedGrid);
     setValidated(loadedValidated);
