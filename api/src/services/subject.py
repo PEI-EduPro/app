@@ -9,6 +9,9 @@ from src.models.topic import Topic, TopicPublic
 from src.models.subject import Subject, SubjectUpdate
 from src.core.keycloak import keycloak_client
 from src.core.deps import verify_regent_exists
+from src.services import exam as exam_service
+from src.models.exam_config import ExamConfig
+
 
 logger = logging.getLogger(__name__)
 
@@ -162,26 +165,23 @@ async def delete_subject_service(session: AsyncSession, subject_id: int):
     if not subject:
         raise ValueError("Subject not found")
         
-    # Delete Keycloak Groups
+    # 1. Delete Keycloak Groups for the subject
     kc_success = await keycloak_client.delete_subject_groups(str(subject_id))
     if not kc_success:
         logger.warning(f"Keycloak cleanup failed for subject {subject_id}")
 
-    # Delete related Exams and Configs (Preserved from existing code)
-    from src.models.exam_config import ExamConfig
-    from src.models.exam import Exam
-    
+    # 2. Use the improved exam deletion service for all related exam configurations.
+    # This handles exams, files, waiting rooms, warnings, and Keycloak groups.   
     result = await session.exec(select(ExamConfig).where(ExamConfig.subject_id == subject_id))
     exam_configs = result.all()
     for ec in exam_configs:
-        exams_result = await session.exec(select(Exam).where(Exam.exam_config_id == ec.id))
-        for exam in exams_result.all():
-            await session.delete(exam)
-        await session.delete(ec)
+        await exam_service.delete_exam_config(session, ec.id)
 
-    # Delete DB Subject
+    # 3. Delete DB Subject
+    # This cascades to Topics, Questions, Options, and any remaining related data via SQLModel relationships
     await session.delete(subject)
     await session.commit()
+    logger.info(f"Successfully deleted subject {subject_id} and all related data.")
 
 async def get_students_service(session: AsyncSession, subject_id: int) -> List[dict]:
     # Check DB existence
