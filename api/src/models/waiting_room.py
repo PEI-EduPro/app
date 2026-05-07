@@ -1,4 +1,4 @@
-from typing import Optional, List, Dict
+from typing import Optional, List
 from sqlmodel import Field, SQLModel
 from pydantic import BaseModel
 from enum import Enum

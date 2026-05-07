@@ -12,7 +12,6 @@ from typing import Tuple, List, Dict, Optional
 from sqlmodel import select, func
 from sqlalchemy.orm import selectinload
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models.user import User
 from src.models.exam_config import ExamConfig, GenerationStatus
 from src.models.topic_config import TopicConfig
 from src.models.topic import Topic
@@ -30,6 +29,9 @@ from email.mime.image import MIMEImage
 from src.core.config import settings
 from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
+from src.models.waiting_room import WaitingRoom
+from src.models.warning import Warning
+from src.core.keycloak import keycloak_client
 
 logger = logging.getLogger(__name__)
 
@@ -224,7 +226,7 @@ async def generate_exams_to_disk(
                 questions_latex, answers_map, answer_key, relative_weights, num_questions = versions_cache[version_idx]
             else:
                 for f in os.listdir(LATEX_TEMPLATES_DIR):
-                    if f.endswith(".tex"):
+                    if f.endswith(".tex") and not (f == "date.tex" and exam_date):
                         shutil.copy(os.path.join(LATEX_TEMPLATES_DIR, f), tmpdir)
 
                 # Gather questions for this variation
@@ -812,15 +814,82 @@ async def delete_exam_config(
     session: AsyncSession,
     exam_config_id: int
 ) -> bool:
-    statement = select(ExamConfig).where(ExamConfig.id == exam_config_id)
+    """
+    Comprehensive deletion of an exam configuration and all related data.
+    - Associated exams and their capture images.
+    - Associated waiting rooms and their Keycloak groups.
+    - Associated warnings.
+    - The generated ZIP file.
+    - The configuration itself and its topic configurations.
+    """
+    # 1. Fetch ExamConfig with related entities
+    statement = (
+        select(ExamConfig)
+        .where(ExamConfig.id == exam_config_id)
+        .options(selectinload(ExamConfig.exams))
+    )
     result = await session.exec(statement)
     exam_config = result.first()
     
     if not exam_config:
         return False
-        
+
+    # 2. Fetch related WaitingRooms and Warnings
+    wr_stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
+    wr_result = await session.exec(wr_stmt)
+    waiting_rooms = list(wr_result.all())
+
+    warning_stmt = select(Warning).where(Warning.exam_config_id == exam_config_id)
+    warning_result = await session.exec(warning_stmt)
+    warnings = list(warning_result.all())
+
+    # 3. Delete files from disk
+    # Delete ZIP file
+    if exam_config.zip_path and os.path.exists(exam_config.zip_path):
+        try:
+            os.remove(exam_config.zip_path)
+            logger.info(f"Deleted ZIP file: {exam_config.zip_path}")
+        except Exception as e:
+            logger.error(f"Failed to delete ZIP file {exam_config.zip_path}: {e}")
+
+    # Delete exam capture images
+    for exam_item in exam_config.exams:
+        if exam_item.capture_path and os.path.exists(exam_item.capture_path):
+            try:
+                os.remove(exam_item.capture_path)
+                logger.info(f"Deleted exam capture: {exam_item.capture_path}")
+            except Exception as e:
+                logger.error(f"Failed to delete capture file {exam_item.capture_path}: {e}")
+
+    # 4. Delete Keycloak groups for each waiting room
+    for wr in waiting_rooms:
+        try:
+            success = await keycloak_client.delete_waiting_room_groups(wr.id)
+            if success:
+                logger.info(f"Deleted Keycloak groups for waiting room {wr.id}")
+            else:
+                logger.warning(f"Failed to delete Keycloak groups for waiting room {wr.id}")
+        except Exception as e:
+            logger.error(f"Error while deleting Keycloak groups for waiting room {wr.id}: {e}")
+
+    # 5. Delete database records in order
+    # Delete Warnings
+    for w in warnings:
+        await session.delete(w)
+    
+    # Delete WaitingRooms
+    for wr in waiting_rooms:
+        await session.delete(wr)
+    
+    # Delete Exams
+    for exam_item in exam_config.exams:
+        await session.delete(exam_item)
+    
+    # Delete the configuration itself (cascades to topic_configs)
     await session.delete(exam_config)
+    
     await session.commit()
+    logger.info(f"Successfully deleted exam configuration {exam_config_id} and all related data.")
     return True
 
 

@@ -1,6 +1,6 @@
 # src/models/workbook.py
 from typing import Optional
-from sqlmodel import Field, SQLModel, Relationship
+from sqlmodel import Field, SQLModel
 
 
 # Workbook model

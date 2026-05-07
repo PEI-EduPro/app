@@ -1,7 +1,7 @@
 # src/models/topic_config.py
-from typing import Optional, List
+from typing import Optional
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
+
 
 
 # TopicConfig model

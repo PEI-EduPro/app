@@ -1,14 +1,12 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
 from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
-from src.models.warning import Warning, WarningType
 from src.models.exam_config import ExamConfig
-from src.models.exam import Exam
 from src.models.subject import Subject
 from src.services.exam import get_exams_by_config_id
 from src.services.warning import calculate_and_persist_warnings
 from src.core.keycloak import keycloak_client
-from typing import Optional, List, Set, Dict
+from typing import Optional, List, Dict
 import json
 import logging
 

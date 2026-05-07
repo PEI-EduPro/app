@@ -1,6 +1,6 @@
-from typing import Optional, List
+from typing import Optional
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
+
 
 # QuestionOption model - allows multiple options with fractional scoring
 class QuestionOption(SQLModel, table=True):

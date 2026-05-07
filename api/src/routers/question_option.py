@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import select
 from src.services import question_option
 from src.services import question as question_service
 from src.services import topic as topic_service
