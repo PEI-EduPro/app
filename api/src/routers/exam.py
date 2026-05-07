@@ -11,6 +11,7 @@ from src.services.waiting_room import get_waiting_room
 from src.services.omr import evaluate_exam
 from src.core.db import get_session, async_session
 from src.models.user import User
+from src.models.waiting_room import WaitingRoom, WaitingRoomState
 from src.models.exam import Exam, ExamRead, ExamPublic, ExamUpdate, ExamCreate, CorrectByHandRequest
 from src.models.exam_config import ExamConfig, ExamConfigResponse, ExamGenerateRequest, GenerationStatus
 from src.models.common import MessageResponse, StatusResponse
@@ -335,6 +336,25 @@ async def delete_exam_config(
         raise HTTPException(status_code=404, detail=str(e))
 
     verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    # Check if associated waiting rooms are in PREPARATION state
+    # In theory, there is only one waiting room for the exam config
+    wr_stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
+    wr_result = await session.exec(wr_stmt)
+    waiting_rooms = wr_result.all()
+    
+    for wr in waiting_rooms:
+        if wr.state != WaitingRoomState.PREPARATION:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete exam configuration because its waiting room is in {wr.state} state. It must be in preparation state."
+            )
+    
+    # The previous check is missing another passing clause.
+    # If the entire exam process has already been completed, aka, the students already got their grades
+    # It should be possible to delete an exam_config.
+    # With that said, that is dependent on another implementation. So I am leaving this comment here
+    # To remember in the future to do so.
 
     success = await exam.delete_exam_config(session, exam_config_id)
     if not success:
