@@ -402,12 +402,6 @@ async def get_all_exams_info(
 
     result = []
     for e in exams:
-        # corrected = e.grade is not None and e.results is not None and e.capture_path is not None
-
-        # capture_b64 = None
-        # if corrected and os.path.exists(e.capture_path):
-        #     with open(e.capture_path, "rb") as f:
-        #         capture_b64 = base64.b64encode(f.read()).decode("utf-8")
         corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
 
         capture_b64 = None

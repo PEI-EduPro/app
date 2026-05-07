@@ -412,7 +412,6 @@ async def notify_students_via_email(
         exam_id = int(assoc.split(":")[0])
         exam = await exam_service.get_exam_by_id(session, exam_id)
 
-        # Nota: Exames NÃO validados serão enviados na mesma (dar address ao risco da foto do aluno conter perguntas do teste em caso de falha no OMR)
         if exam:
             try:
                 await exam_service.notify_student(session, exam, email_options.model_dump())
