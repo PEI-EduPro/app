@@ -405,17 +405,16 @@ async def notify_students_via_email(
     if waiting_room.state != WaitingRoomState.CLOSED:
         raise HTTPException(status_code=400, detail="Waiting room must be in the closed state to notify students.")
     
-    associations = waiting_room.associations
+    exams = exam_config.exams
 
-    # assoc = "exam_id:student_nmec"
-    for assoc in associations:
-        exam_id = int(assoc.split(":")[0])
-        exam = await exam_service.get_exam_by_id(session, exam_id)
+    for exam in exams:
+        # Check for exams with no association
+        if not (exam and exams.student_email and exam.nmec and exams.student_name):
+            logger.error(f"Exam {exam.id} is not associated with any student!")
 
-        if exam:
-            try:
-                await exam_service.notify_student(session, exam, email_options.model_dump())
-            except Exception as e:
-                logger.error(f"Failed to send email for exam {exam_id}: {e}")
+        try:
+            await exam_service.notify_student(session, exam, email_options.model_dump())
+        except Exception as e:
+            logger.error(f"Failed to send email for exam {exam.id}: {e}")
 
     return {"message": f"Successfully notified students in waiting room {waiting_room_id}."}
