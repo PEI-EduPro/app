@@ -29,10 +29,13 @@ from email.mime.application import MIMEApplication
 from email.mime.image import MIMEImage
 from src.core.config import settings
 from fastapi import HTTPException
+from jinja2 import Environment, FileSystemLoader
 
 logger = logging.getLogger(__name__)
 
-TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
+LATEX_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates/latex")
+HTML_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates/html")
+jinja_env = Environment(loader=FileSystemLoader(HTML_TEMPLATES_DIR))
 STORAGE_DIR = os.getenv("STORAGE_DIR", "storage")
 
 
@@ -181,9 +184,9 @@ async def generate_exams_to_disk(
         os.makedirs(keys_dir)
 
         # Copy base templates
-        for f in os.listdir(TEMPLATES_DIR):
+        for f in os.listdir(LATEX_TEMPLATES_DIR):
             if f.endswith(".tex"):
-                shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+                shutil.copy(os.path.join(LATEX_TEMPLATES_DIR, f), tmpdir)
 
         # Write custom date.tex
         if exam_date:
@@ -220,9 +223,9 @@ async def generate_exams_to_disk(
             if version_idx in versions_cache:
                 questions_latex, answers_map, answer_key, relative_weights, num_questions = versions_cache[version_idx]
             else:
-                for f in os.listdir(TEMPLATES_DIR):
+                for f in os.listdir(LATEX_TEMPLATES_DIR):
                     if f.endswith(".tex"):
-                        shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+                        shutil.copy(os.path.join(LATEX_TEMPLATES_DIR, f), tmpdir)
 
                 # Gather questions for this variation
                 all_questions = []
@@ -917,309 +920,137 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         raise HTTPException(status_code=404, detail="Exam not found")
     
     exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
-
-    exam_name = exam_config.exam_name
     subject = await get_subject_by_id(session, exam_config.subject_id)
 
-    subject_name = subject.name
+    # 1. PREPARE DATA FOR TEMPLATE
+    has_capture = bool(exam.capture_path and os.path.exists(exam.capture_path))
+    student_answers = json.loads(exam.results) if isinstance(exam.results, str) else (exam.results or {})
     
-    nmec = exam.nmec
-    student_email = exam.student_email
-    student_name = exam.student_name
-    grade = exam.grade
-    fraction = exam_config.fraction
-    relative_weights = exam.relative_weights
-    details = exam.results_details
-    answer_key = exam.answer_key
-
-    message = ""
-
-    # Student Identification Table (Name, NMEC, and Grade)
-    if email_options.get("student_identification", False):
-        message += "Identificação do aluno:"
-        
-        message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
-        message += '<tr style="background-color: #f2f2f2;">'
-        message += '<th style="padding: 10px;">Nome</th>'
-        message += '<th style="padding: 10px;">NMEC</th></tr>'
-
-        message += f"<tr><td style='padding: 10px;'>{student_name}</td>"
-        message += f"<td style='padding: 10px;'>{nmec}</td></tr>"
-        message += "</table><br>"
-
-    # Student Answer Grid (Real Image taken by the regent when correcting the exam)
-    if email_options.get("exam_capture", False):
-        message += "Foto da sua tabela de resposta:<br><br>"
-
-        if exam.capture_path and os.path.exists(exam.capture_path):
-            message += '<img src="cid:student_capture" style="max-width: 80%; height: auto; display: block; margin: auto; border: 1px solid #ccc;"><br>'
-        else:
-            message += '<p><i>[Imagem da tabela de resposta indisponível]</i></p><br>'
-
-    # Student Answer Grid (clean)
-    if email_options.get("red_green_cross_table", False):
-        # Parse the student's results from the JSON string
-        student_answers = json.loads(exam.results) if isinstance(exam.results, str) else (exam.results or {})
-        
-        message += "A sua tabela digitalizada:<br><br>"
-
-        message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
-
-        # Create the header row (01, 02, 03, ...)
-        message += '<tr style="background-color: #f2f2f2;"><th></th>'
-        for q in range(len(answer_key)):
-            message += f"<th style='padding: 8px;'>{q + 1:02d}</th>"
-        message += "</tr>"
-
-        # Create the rows for options A, B, C, D
-        for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
-            message += f"<tr><th style='padding: 8px;'>{row_label}</th>"
+    # Pre-calculate the Answer Grid 
+    answer_grid = []
+    for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
+        row_cells = []
+        for q_idx in range(len(exam.answer_key)):
+            q_str = str(q_idx)
+            is_selected = student_answers.get(q_str, {}).get(row_label, False)
+            is_correct = (exam.answer_key.get(q_str) == row_idx) or (exam.answer_key.get(int(q_idx)) == row_idx)
             
-            for q_idx in range(len(answer_key)):
-                q_str = str(q_idx)
+            bg_class = ""
+            if is_correct:
+                bg_class = "bg-green"
+            elif is_selected and not is_correct:
+                bg_class = "bg-red"
                 
-                # Check selection
-                is_selected = student_answers.get(q_str, {}).get(row_label, False)
-                
-                # Check correctness
-                is_correct = (answer_key.get(q_str) == row_idx) or (answer_key.get(int(q_idx)) == row_idx)
-                
-                cell_text = "<b>X</b>" if is_selected else ""
-                
-                # Cell background color
-                bg_color = ""
-                if is_correct:
-                    # Green if it's the correct answer (whether the student marked it or not)
-                    bg_color = "background-color: #a8e6cf;" 
-                elif is_selected and not is_correct:
-                    # Red if the student marked it, but it's wrong
-                    bg_color = "background-color: #ff8b94;" 
-                    
-                message += f"<td style='padding: 8px; {bg_color}'>{cell_text}</td>"
-                    
-            message += "</tr>"
+            row_cells.append({
+                "is_selected": is_selected,
+                "bg_class": bg_class
+            })
+        answer_grid.append({"label": row_label, "cells": row_cells})
 
-        message += "</table><br>"
+    # Pre-calculate Question Weights and Scores
+    sorted_weight_indices = sorted([int(k) for k in exam.relative_weights.keys()])
+    question_stats = []
+    for idx in sorted_weight_indices:
+        weight = exam.relative_weights[str(idx)]
+        question_stats.append({
+            "num": f"{idx + 1:02d}",
+            "weight": weight,
+            "penalty": weight * exam_config.fraction / 100
+        })
 
-        # Table Color Scheme Legend
-        message += "<table style='margin-left: 10%; border-collapse: separate; border-spacing: 0 5px; text-align: left; font-size: 14px;'>"
-        message += "<tr>"
-        message += "<td style='width: 25px; height: 25px; background-color: #a8e6cf; border: 1px solid black;'></td>"
-        message += "<td style='padding-left: 10px;'>- Resposta correta</td>"
-        message += "</tr>"
+    results_details = dict()
+    for q in range(len(exam.answer_key)):
+        print("q " + str(q))
 
-        message += "<tr>"
-        message += "<td style='width: 25px; height: 25px; background-color: #a8e6cf; border: 1px solid black; text-align: center;'><b>X</b></td>"
-        message += "<td style='padding-left: 10px;'>- Resposta correta selecionada</td>"
-        message += "</tr>"
+        results_details[str(q)] = {"correct": 0, "incorrect": 0}
+        correct = chr(int(exam.answer_key[str(q)]) + 65)
 
-        message += "<tr>"
-        message += "<td style='width: 25px; height: 25px; background-color: #ff8b94; border: 1px solid black; text-align: center;'><b>X</b></td>"
-        message += "<td style='padding-left: 10px;'>- Resposta incorreta selecionada</td>"
-        message += "</tr>"
-        message += "</table><br>"
-
-    # Exam Score Distribution Table (Question Value, and Penalty)
-    if email_options.get("question_weights", False):
-        message += "Distribuição de cotações por questão:<br><br>"
-
-        message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
-
-        sorted_indices = sorted([int(k) for k in relative_weights.keys()])
-
-        # First row: Question numbers
-        message += '<tr style="background-color: #f2f2f2;">'
-        message += '<th style="padding: 8px;">Pergunta</th>'
-
-        for idx in sorted_indices:
-            q_num = f"{idx + 1:02d}"
-            message += f"<th style='padding: 8px;'>{q_num}</th>"
-
-        message += "</tr>"
-
-        # Second row: Values
-        message += "<tr>"
-        message += '<th style="padding: 8px;">Cotação</th>'
-
-        for idx in sorted_indices:
-            val = relative_weights[str(idx)]
-            message += f"<td style='padding: 8px;'>{val:.2f}</td>"
-
-        message += "</tr>"
-
-        # Third row: Penalties
-        message += "<tr>"
-        message += f'<th style="padding: 8px;">Desconto por questão errada ({fraction}%)</th>'
-
-        for idx in sorted_indices:
-            val = relative_weights[str(idx)]*fraction/100
-            message += f"<td style='padding: 8px;'>{val:.2f}</td>"
-
-        message += "</tr>"
-
-        message += "</table><br>"
-
-    # Details regarding comparison between the student's actual answer and the correct exam answers
-    if email_options.get("cumulative_score_table", False):
-        message += "Das suas respostas resultaram as seguintes cotações:<br><br>"
-
-        message += '<table border="1" style="border-collapse: collapse; margin-left: auto; margin-right: auto; width: 80%; text-align: center;">'
-
-        sorted_indices = sorted([int(k) for k in details.keys()])
-
-        # First row: Question numbers
-        message += '<tr style="background-color: #f2f2f2;">'
-        message += '<th style="padding: 8px;">Pergunta</th>'
-
-        for idx in sorted_indices:
-            q_num = f"{idx + 1:02d}"
-            message += f"<th style='padding: 8px;'>{q_num}</th>"
-
-        message += "</tr>"
-
-        # Second row: Correct answers
-        message += "<tr>"
-        message += '<th style="padding: 8px;">Respostas corretas</th>'
-
-        for idx in sorted_indices:
-            val = details[str(idx)]["correct"]
-            bg_color = "background-color: #a8e6cf;" if val == 1 else ""
-            message += f"<td style='padding: 8px; {bg_color}'>{val}</td>"
-
-        message += "</tr>"
-
-        # Third row: Incorrect answers
-        message += "<tr>"
-        message += '<th style="padding: 8px;">Respostas incorretas</th>'
-
-        for idx in sorted_indices:
-            val = details[str(idx)]["incorrect"]
-            bg_color = "background-color: #ff8b94;" if val > 0 else ""
-            message += f"<td style='padding: 8px; {bg_color}'>{val}</td>"
-
-        message += "</tr>"
-
-        # Fourth row: Resulting score (optional but useful)
-        message += "<tr>"
-        message += '<th style="padding: 8px;">Cotação obtida</th>'
-
-        for idx in sorted_indices:
-            correct = details[str(idx)]["correct"]
-            incorrect = details[str(idx)]["incorrect"]
-
-            weight = relative_weights.get(str(idx), 0)
-
-            penalty = weight * fraction / 100
-
-            score = correct * weight - incorrect * penalty
-
-            # Determine the background color based on the score
-            bg_color = ""
-            if score > 0.001:
-                bg_color = "background-color: #a8e6cf;" # Green for positive
-            elif score < -0.001:
-                bg_color = "background-color: #ff8b94;" # Red for negative
-                
-            # Add a '+' sign for non negative numbers
-            score_display = f"{score:+.2f}"
-                
-            message += f"<td style='padding: 8px; {bg_color}'>{score_display}</td>"
-
-        message += "</tr>"
-
-        # Fifth row: Cumulative score
-        message += "<tr>"
-        message += '<th style="padding: 8px;">Cotação acumulada</th>'
-
-        cumulative_score = 0.0
-        for idx in sorted_indices:
-            correct = details[str(idx)]["correct"]
-            incorrect = details[str(idx)]["incorrect"]
-
-            weight = relative_weights.get(str(idx), 0)
-            penalty = weight * fraction / 100
-            score = correct * weight - incorrect * penalty
-            
-            cumulative_score += score
-
-            message += f"<td style='padding: 8px;'>{cumulative_score:.2f}</td>"
-
-        message += "</tr>"
-
-        message += "</table>"
+        for letter in student_answers[str(q)]:
+            print("letter" + letter)
+            if student_answers[str(q)][letter]:
+                if correct == letter:
+                    results_details[str(q)]["correct"] += 1
+                else:
+                    results_details[str(q)]["incorrect"] += 1
     
-    # Student Grade
-    message += f"""
-    <div style="text-align: center; margin: 30px 0; font-family: Arial, sans-serif;">
-        <div style="font-size: 25px; font-weight: bold; color: #555;">Nota</div>
-        <div style="font-size: 45px; font-weight: bold; color: #000; margin-top: 5px;">{grade:.2f}/20</div>
-    </div>
-    """
+    # Pre-calculate Cumulative Scores
+    sorted_detail_indices = sorted([int(k) for k in results_details.keys()])
+    score_details = []
+    cumulative_score = 0.0
 
-    # Grading Disclosure
-    if email_options.get("exam_capture", False) and email_options.get("red_green_cross_table", False):
-        message += "Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.<br>"
+    for idx in sorted_detail_indices:
+        correct = results_details[str(idx)]["correct"]
+        incorrect = results_details[str(idx)]["incorrect"]
+        weight = exam.relative_weights.get(str(idx), 0)
+        penalty = weight * exam_config.fraction / 100
+        score = correct * weight - incorrect * penalty
+        
+        cumulative_score += score
 
-    # Greeting
-    message += "<br>Continuação de um bom ano letivo.<br>"
-    message += "<b>EduPro @ UA</b><br>"
+        score_class = ""
+        if score > 0.001:
+            score_class = "bg-green"
+        elif score < -0.001:
+            score_class = "bg-red"
 
-    # No Reply Notice
-    message += """
-    <div style="text-align: center; color: #888888; font-size: 15px;">
-        Email enviado automaticamente.<br>
-        Por favor não responda a este email.
-    </div>
-    """
-    ""
-    # EduPro Signatura Image
-    message += """
-    <br><br>
-    <img src="cid:signature_image"
-        style="width:100%; height:auto; display:block; margin:auto;">
-    """
+        score_details.append({
+            "num": f"{idx + 1:02d}",
+            "correct": correct,
+            "incorrect": incorrect,
+            "score_display": f"{score:+.2f}",
+            "score_class": score_class,
+            "cumulative": cumulative_score
+        })
 
+    # 2. RENDER HTML FROM TEMPLATE
+    template = jinja_env.get_template('email_to_student.html')
+    html_body = template.render(
+        options=email_options,
+        student_name=exam.student_name,
+        nmec=exam.nmec,
+        grade=exam.grade,
+        has_capture=has_capture,
+        answer_key=exam.answer_key,
+        answer_grid=answer_grid,
+        question_stats=question_stats,
+        score_details=score_details,
+        fraction=exam_config.fraction
+    )
+
+    # 3. CONSTRUCT AND SEND EMAIL (Unchanged)
     msg = MIMEMultipart()
     msg['From'] = os.getenv("SENDER_EMAIL")
-    msg['To'] = student_email
-    msg['Subject'] = f"Nota de {exam_name} de {subject_name}"
-
-    html_body = f"""
-    <html>
-        <body>
-            <p>{message}</p>
-        </body>
-    </html>
-    """
+    msg['To'] = exam.student_email
+    msg['Subject'] = f"Nota de {exam_config.exam_name} de {subject.name}"
+    
     msg.attach(MIMEText(html_body, 'html'))
 
-    # Attach the student capture image inline
-    image_to_send = exam.capture_path # Change to exam.capture_path if preferred
-
-    if image_to_send and os.path.exists(image_to_send):
+    # Attach student capture
+    if has_capture:
         try:
-            with open(image_to_send, "rb") as img:
+            with open(exam.capture_path, "rb") as img:
                 mime_image_capture = MIMEImage(img.read())
-                # The Content-ID must perfectly match the cid: in the HTML above
                 mime_image_capture.add_header("Content-ID", "<student_capture>")
                 mime_image_capture.add_header("Content-Disposition", "inline", filename="student_capture.jpg")
                 msg.attach(mime_image_capture)
         except Exception as e:
             logger.error(f"Failed to attach student capture image: {e}")
 
-    # Attach signature image inline
+    # Attach signature
     img_path = os.path.join(os.path.dirname(__file__), "..", "img", "signature.jpg")
+    try:
+        with open(img_path, "rb") as img:
+            mime_image = MIMEImage(img.read())
+            mime_image.add_header("Content-ID", "<signature_image>")
+            mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
+            msg.attach(mime_image)
+    except Exception as e:
+         logger.error(f"Failed to attach signature image: {e}")
 
-    with open(img_path, "rb") as img:
-        mime_image = MIMEImage(img.read())
-        mime_image.add_header("Content-ID", "<signature_image>")
-        mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
-        msg.attach(mime_image)
-
-    # Send via SMTP
+    # Send
     try:
         server = smtplib.SMTP("smtp.gmail.com", int(os.getenv("EMAIL_NOTIFIER_PORT")))
-        server.starttls() # Segurança
+        server.starttls()
         server.login(os.getenv("SENDER_EMAIL"), os.getenv("EMAIL_CODE"))
         server.send_message(msg)
         server.quit()

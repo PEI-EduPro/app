@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <style>
+        .data-table { border-collapse: collapse; margin: 0 auto; width: 80%; text-align: center; border: 1px solid black; }
+        .data-table th, .data-table td { padding: 8px; border: 1px solid black; }
+        .data-table th { background-color: #f2f2f2; }
+        .bg-green { background-color: #a8e6cf; }
+        .bg-red { background-color: #ff8b94; }
+        .legend-table { margin-left: 10%; border-collapse: separate; border-spacing: 0 5px; text-align: left; font-size: 14px; }
+        .legend-box { width: 25px; height: 25px; border: 1px solid black; text-align: center; }
+        .center-text { text-align: center; }
+    </style>
+</head>
+<body style="font-family: Arial, sans-serif; color: #333;">
+
+    <!-- Student Identification -->
+    {% if options.student_identification %}
+        <p>Identificação do aluno:</p>
+        <table class="data-table">
+            <tr>
+                <th>Nome</th>
+                <th>NMEC</th>
+            </tr>
+            <tr>
+                <td>{{ student_name }}</td>
+                <td>{{ nmec }}</td>
+            </tr>
+        </table><br>
+    {% endif %}
+
+    <!-- Exam Capture Image -->
+    {% if options.exam_capture %}
+        <p>Foto da sua tabela de resposta:<br><br></p>
+        {% if has_capture %}
+            <img src="cid:student_capture" style="max-width: 80%; height: auto; display: block; margin: auto; border: 1px solid #ccc;"><br>
+        {% else %}
+            <p><i>[Imagem da tabela de resposta indisponível]</i></p><br>
+        {% endif %}
+    {% endif %}
+
+    <!-- Red/Green Cross Table -->
+    {% if options.red_green_cross_table %}
+        <p>A sua tabela digitalizada:<br><br></p>
+        <table class="data-table">
+            <tr>
+                <th></th>
+                {% for q in range(answer_key|length) %}
+                    <th>{{ "%02d"|format(q + 1) }}</th>
+                {% endfor %}
+            </tr>
+            {% for row in answer_grid %}
+            <tr>
+                <th>{{ row.label }}</th>
+                {% for cell in row.cells %}
+                    <td class="{{ cell.bg_class }}">{% if cell.is_selected %}<b>X</b>{% endif %}</td>
+                {% endfor %}
+            </tr>
+            {% endfor %}
+        </table><br>
+
+        <table class="legend-table">
+            <tr><td class="legend-box bg-green"></td><td style="padding-left: 10px;">- Resposta correta</td></tr>
+            <tr><td class="legend-box bg-green"><b>X</b></td><td style="padding-left: 10px;">- Resposta correta selecionada</td></tr>
+            <tr><td class="legend-box bg-red"><b>X</b></td><td style="padding-left: 10px;">- Resposta incorreta selecionada</td></tr>
+        </table><br>
+    {% endif %}
+
+    <!-- Question Weights Table -->
+    {% if options.question_weights %}
+        <p>Distribuição de cotações por questão:<br><br></p>
+        <table class="data-table">
+            <tr>
+                <th>Pergunta</th>
+                {% for q in question_stats %}<th>{{ q.num }}</th>{% endfor %}
+            </tr>
+            <tr>
+                <th>Cotação</th>
+                {% for q in question_stats %}<td>{{ "%.2f"|format(q.weight) }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <th>Desconto por questão errada ({{ fraction }}%)</th>
+                {% for q in question_stats %}<td>{{ "%.2f"|format(q.penalty) }}</td>{% endfor %}
+            </tr>
+        </table><br>
+    {% endif %}
+
+    <!-- Cumulative Score Table -->
+    {% if options.cumulative_score_table %}
+        <p>Das suas respostas resultaram as seguintes cotações:<br><br></p>
+        <table class="data-table">
+            <tr>
+                <th>Pergunta</th>
+                {% for q in score_details %}<th>{{ q.num }}</th>{% endfor %}
+            </tr>
+            <tr>
+                <th>Respostas corretas</th>
+                {% for q in score_details %}<td class="{% if q.correct == 1 %}bg-green{% endif %}">{{ q.correct }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <th>Respostas incorretas</th>
+                {% for q in score_details %}<td class="{% if q.incorrect > 0 %}bg-red{% endif %}">{{ q.incorrect }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <th>Cotação obtida</th>
+                {% for q in score_details %}<td class="{{ q.score_class }}">{{ q.score_display }}</td>{% endfor %}
+            </tr>
+            <tr>
+                <th>Cotação acumulada</th>
+                {% for q in score_details %}<td>{{ "%.2f"|format(q.cumulative) }}</td>{% endfor %}
+            </tr>
+        </table><br>
+    {% endif %}
+
+    <!-- Final Grade -->
+    <div style="text-align: center; margin: 30px 0;">
+        <div style="font-size: 25px; font-weight: bold; color: #555;">Nota</div>
+        <div style="font-size: 45px; font-weight: bold; color: #000; margin-top: 5px;">{{ "%.2f"|format(grade) }}/20</div>
+    </div>
+
+    {% if options.exam_capture and options.red_green_cross_table %}
+        <p>Se detetou alguma gralha na correção, deve comunicar ao regente responsável pela unidade curricular.</p>
+    {% endif %}
+
+    <p><br>Continuação de um bom ano letivo.<br><b>EduPro @ UA</b></p>
+
+    <div style="text-align: center; color: #888888; font-size: 15px;">
+        Email enviado automaticamente.<br>Por favor não responda a este email.
+    </div>
+
+    <br><br>
+    <img src="cid:signature_image" style="width:100%; height:auto; display:block; margin:auto;">
+</body>
+</html>
