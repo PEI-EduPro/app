@@ -214,7 +214,7 @@ async def generate_exams_to_disk(
                 questions_latex, answers_map, answer_key, relative_weights, num_questions = versions_cache[version_idx]
             else:
                 for f in os.listdir(TEMPLATES_DIR):
-                    if f.endswith(".tex"):
+                    if f.endswith(".tex") and not (f == "date.tex" and exam_date):
                         shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
 
                 # Gather questions for this variation
