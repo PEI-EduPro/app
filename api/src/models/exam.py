@@ -1,7 +1,7 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, JSON
-from enum import Enum
+
 
 
 # Exam model

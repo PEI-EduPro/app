@@ -3,12 +3,10 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
 from src.services import exam
 from src.services.exam import build_exam_questions, generate_exams_task
 from src.services import waiting_room as waiting_room_service
 from src.services.waiting_room import get_waiting_room
-from src.services.omr import evaluate_exam
 from src.core.db import get_session, async_session
 from src.models.user import User
 from src.models.waiting_room import WaitingRoom, WaitingRoomState
@@ -17,14 +15,10 @@ from src.models.exam_config import ExamConfig, ExamConfigResponse, ExamGenerateR
 from src.models.common import MessageResponse, StatusResponse
 from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
-from src.core.keycloak import keycloak_client
 import base64
-import json
 import logging
 import os
 import traceback
-import cv2
-from src import utils
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
