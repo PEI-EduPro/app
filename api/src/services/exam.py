@@ -22,7 +22,6 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.keycloak import keycloak_client
 
-from src.models.email_options import EmailOptionsPayload
 from src.models.exam import Exam
 from src.models.exam_config import ExamConfig, GenerationStatus
 from src.models.question import Question
