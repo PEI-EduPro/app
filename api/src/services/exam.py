@@ -1,37 +1,39 @@
-import logging
-import random
-import os
-import shutil
-import tempfile
-import subprocess
 import csv
 import io
 import json
+import logging
+import os
+import random
+import shutil
+import smtplib
+import subprocess
+import tempfile
 import traceback
-from typing import Tuple, List, Dict, Optional
-from sqlmodel import select, func
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Dict, List, Optional, Tuple
+
+from fastapi import HTTPException
+from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import selectinload
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models.exam_config import ExamConfig, GenerationStatus
-from src.models.topic_config import TopicConfig
-from src.models.topic import Topic
+
+from src.core.keycloak import keycloak_client
+
+from src.models.email_options import EmailOptionsPayload
 from src.models.exam import Exam
+from src.models.exam_config import ExamConfig, GenerationStatus
 from src.models.question import Question
 from src.models.question_option import QuestionOption
 from src.models.subject import Subject
-from src.models.email_options import EmailOptionsPayload
-from src.services.subject import get_subject_by_id
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from email.mime.application import MIMEApplication
-from email.mime.image import MIMEImage
-from src.core.config import settings
-from fastapi import HTTPException
-from jinja2 import Environment, FileSystemLoader
+from src.models.topic import Topic
+from src.models.topic_config import TopicConfig
 from src.models.waiting_room import WaitingRoom
 from src.models.warning import Warning
-from src.core.keycloak import keycloak_client
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -989,7 +991,7 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         raise HTTPException(status_code=404, detail="Exam not found")
     
     exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
-    subject = await get_subject_by_id(session, exam_config.subject_id)
+    subject = await session.get(Subject, exam_config.subject_id)
 
     # 1. PREPARE DATA FOR TEMPLATE
     has_capture = bool(exam.capture_path and os.path.exists(exam.capture_path))
