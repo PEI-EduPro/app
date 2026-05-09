@@ -374,7 +374,11 @@ async def evaluate_exam_batch(
         except Exception as e:
             logger.error(f"Error evaluating exam {exam_instance.id}: {e}")
             logger.error(traceback.format_exc())
-            results.append({"exam_id": exam_instance.id, "status": "error", "detail": str(e)})
+            results.append({
+                "exam_id": exam_instance.id,
+                "status": "error",
+                "detail": "Internal error while evaluating exam."
+            })
 
     has_errors = any(r["status"] == "error" for r in results)
     has_success = any(r["status"] == "success" for r in results)
