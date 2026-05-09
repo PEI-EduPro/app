@@ -36,18 +36,22 @@ async def create_configs(
     num_versions: int = 1
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
-    
-    # Validate question counts before creating configs
-    for topic_id in exam_specs["topics"]:
-        result = await session.exec(select(Topic).where(Topic.id == int(topic_id)))
-        topic = result.first()
+
+    topic_ids = [int(tid) for tid in exam_specs["topics"]]
+
+    # Fetch all topics in one query
+    topics_result = await session.exec(select(Topic).where(Topic.id.in_(topic_ids)))
+    topics_by_id = {t.id: t for t in topics_result.all()}
+
+    # Validate question counts
+    for topic_id in topic_ids:
+        topic = topics_by_id.get(topic_id)
         if topic:
             count_result = await session.exec(
                 select(func.count(Question.id)).where(Question.topic_id == topic.id)
             )
             available_questions = count_result.one_or_none() or 0
             requested_questions = exam_specs["number_questions"].get(str(topic_id), 0)
-            
             if requested_questions > available_questions:
                 raise ValueError(
                     f"Topic '{topic.name}' has only {available_questions} questions, "
@@ -72,17 +76,15 @@ async def create_configs(
     await session.refresh(exam_config)
 
     topic_configs = []
-    for topic_id in exam_specs["topics"]:
-        result = await session.exec(select(Topic).where(Topic.id == int(topic_id)))
-        topic = result.first()
+    for topic_id in topic_ids:
+        topic = topics_by_id.get(topic_id)
         if topic:
-            topic_config = TopicConfig(
+            topic_configs.append(TopicConfig(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][str(topic_id)],
                 relative_weight=exam_specs["relative_quotations"][str(topic_id)],
-            )
-            topic_configs.append(topic_config)
+            ))
 
     session.add_all(topic_configs)
     await session.commit()
@@ -166,10 +168,12 @@ async def generate_exams_to_disk(
         os.makedirs(exams_dir)
         os.makedirs(keys_dir)
 
+        # Read template files once
+        tex_files = [f for f in os.listdir(TEMPLATES_DIR) if f.endswith(".tex")]
+
         # Copy base templates
-        for f in os.listdir(TEMPLATES_DIR):
-            if f.endswith(".tex"):
-                shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+        for f in tex_files:
+            shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
 
         # Write custom date.tex
         if exam_date:
