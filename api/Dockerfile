@@ -1,21 +1,19 @@
 FROM python:3.12-slim
 
 # Install LaTeX and required packages
-# RUN apk add --no-cache texlive texmf-dist-latexextra
 RUN apt-get update && apt-get install -y \
     texlive \
     texlive-latex-extra \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv.
+# Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Copy the application into the container.
-COPY . /app
-
-# Install the application dependencies.
 WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-cache
 
-# Run the application.
+COPY . .
+
 CMD ["/app/.venv/bin/fastapi", "run", "src/main.py", "--port", "80", "--host", "0.0.0.0", "--proxy-headers"]
