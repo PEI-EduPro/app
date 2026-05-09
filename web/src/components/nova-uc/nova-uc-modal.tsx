@@ -1,4 +1,4 @@
-import { NovaUCForm } from "@/components/nova-uc-form";
+import { NovaUCForm } from "@/components/nova-uc/nova-uc-form";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
@@ -9,7 +9,12 @@ interface UcModalProps {
   lockRegente?: boolean;
 }
 
-export function NovaUcModal({ onClose, ucId, ucName, lockRegente }: UcModalProps) {
+export function NovaUcModal({
+  onClose,
+  ucId,
+  ucName,
+  lockRegente,
+}: UcModalProps) {
   const isEdit = !!ucId;
   return (
     <div
@@ -24,11 +29,21 @@ export function NovaUcModal({ onClose, ucId, ucName, lockRegente }: UcModalProps
           <span className="font-rubik text-2xl font-bold">
             {isEdit ? ucName : "Nova Unidade Curricular"}
           </span>
-          <Button variant="ghost" size="icon" className="cursor-pointer" onClick={onClose}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="cursor-pointer"
+            onClick={onClose}
+          >
             <X />
           </Button>
         </div>
-        <NovaUCForm ucId={ucId} onSuccess={onClose} onCancel={onClose} lockRegente={lockRegente} />
+        <NovaUCForm
+          ucId={ucId}
+          onSuccess={onClose}
+          onCancel={onClose}
+          lockRegente={lockRegente}
+        />
       </div>
     </div>
   );

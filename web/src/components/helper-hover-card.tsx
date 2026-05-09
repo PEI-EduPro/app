@@ -29,7 +29,7 @@ export default function HelperHoverCard({
         side={side}
         className="bg-gray-100 w-100 border border-gray-300 text-gray-700 shadow-md"
       >
-        <p className="text-sm">{content}</p>
+        <div className="text-sm">{content}</div>
       </HoverCardContent>
     </HoverCard>
   );

@@ -11,13 +11,21 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { Trash2Icon } from "lucide-react";
+import { DownloadIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
-import type { ExamConfigI } from "@/lib/types";
+import type { ExamConfigI, GenerationStatus } from "@/lib/types";
 import { ExamConfigCard } from "@/components/exam-config-card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { useDeleteExamConfig } from "@/hooks/use-exams";
+
+const statusConfig: Record<GenerationStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  PENDING:    { label: "Pendente",    variant: "secondary" },
+  PROCESSING: { label: "A processar", variant: "default" },
+  COMPLETED:  { label: "Concluído",   variant: "outline" },
+  FAILED:     { label: "Falhado",     variant: "destructive" },
+};
+import { useDeleteExamConfig, useDownloadExamConfig } from "@/hooks/use-exams";
 import { decodeId } from "@/lib/id-encoder";
 
 export default function ExamCard({
@@ -35,6 +43,7 @@ export default function ExamCard({
   const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
   const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
   const deleteMutation = useDeleteExamConfig(decodeId(ucId));
+  const downloadMutation = useDownloadExamConfig();
 
   const totalQuestions =
     examConfig.topic_configs?.reduce(
@@ -61,6 +70,10 @@ export default function ExamCard({
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          <Badge variant={statusConfig[examConfig.status].variant}>
+            {statusConfig[examConfig.status].label}
+          </Badge>
+          <div className="w-px h-8 bg-border" />
           <div className="text-center">
             <p className="text-xs text-muted-foreground leading-none mb-0.5">
               Variações
@@ -88,6 +101,21 @@ export default function ExamCard({
             </p>
           </div>
         </div>
+
+        {examConfig.status === "COMPLETED" && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => {
+              e.stopPropagation();
+              downloadMutation.mutate(id);
+            }}
+            disabled={downloadMutation.isPending}
+            className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-primary hover:bg-primary/10 rounded-full"
+          >
+            <DownloadIcon className="h-4 w-4" />
+          </Button>
+        )}
 
         <AlertDialog>
           <AlertDialogTrigger asChild>

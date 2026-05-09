@@ -12,7 +12,7 @@ import { z } from "zod";
 import { decodeId } from "@/lib/id-encoder";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { LoaderCircle, Pencil } from "lucide-react";
-import { NovaUcModal } from "@/components/nova-uc-modal";
+import { NovaUcModal } from "@/components/nova-uc/nova-uc-modal";
 
 const detalheUCSearchSchema = z.object({
   ucId: z.string(),

@@ -37,24 +37,20 @@ async def create_configs(
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
     
-    # Using a dummy user ID since authentication is disabled
-    dummy_user_id = "default_user"
-
     # Validate question counts before creating configs
-    for topic_name in exam_specs["topics"]:
-        result = await session.exec(select(Topic).where(Topic.name == topic_name))
+    for topic_id in exam_specs["topics"]:
+        result = await session.exec(select(Topic).where(Topic.id == int(topic_id)))
         topic = result.first()
         if topic:
-            # Count available questions for this topic
             count_result = await session.exec(
                 select(func.count(Question.id)).where(Question.topic_id == topic.id)
             )
             available_questions = count_result.one_or_none() or 0
-            requested_questions = exam_specs["number_questions"].get(topic_name, 0)
+            requested_questions = exam_specs["number_questions"].get(str(topic_id), 0)
             
             if requested_questions > available_questions:
                 raise ValueError(
-                    f"Topic '{topic_name}' has only {available_questions} questions, "
+                    f"Topic '{topic.name}' has only {available_questions} questions, "
                     f"but {requested_questions} were requested."
                 )
 
@@ -78,16 +74,15 @@ async def create_configs(
     await session.refresh(exam_config)
 
     topic_configs = []
-    for topic_name in exam_specs["topics"]:
-        result = await session.exec(select(Topic).where(Topic.name == topic_name))
+    for topic_id in exam_specs["topics"]:
+        result = await session.exec(select(Topic).where(Topic.id == int(topic_id)))
         topic = result.first()
         if topic:
             topic_config = TopicConfig(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
-                num_questions=exam_specs["number_questions"][topic_name],
-                relative_weight=exam_specs["relative_quotations"][topic_name],
-                #creator_keycloak_id=dummy_user_id
+                num_questions=exam_specs["number_questions"][str(topic_id)],
+                relative_weight=exam_specs["relative_quotations"][str(topic_id)],
             )
             topic_configs.append(topic_config)
 
