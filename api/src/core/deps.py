@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import List
 import jwt
 
 from fastapi import Depends, HTTPException, status
@@ -115,8 +116,6 @@ def require_subject_student(subject_id: str):
 def require_edit_question_bank(subject_id: str):
     group_name = f"/s{subject_id}/edit_question_bank"
     return require_group(group_name)
-
-from typing import List
 
 def verify_permission(user_info: User, permissions: List[str], allow_manager: bool = False) -> bool:
     """

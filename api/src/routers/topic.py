@@ -1,14 +1,16 @@
 # src/routers/topic.py
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.services import topic
-from src.services import question
+
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
-from src.models.topic import TopicCreate, TopicPublic
 from src.models.common import MessageResponse
+from src.models.topic import TopicCreate, TopicPublic
 from src.models.user import User
-import logging
+from src.services import topic
+from src.services import question
 
 
 logger = logging.getLogger(__name__)

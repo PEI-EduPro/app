@@ -9,7 +9,7 @@ from src.models.topic import Topic, TopicPublic
 from src.models.subject import Subject, SubjectUpdate
 from src.core.keycloak import keycloak_client
 from src.core.deps import verify_regent_exists
-from src.services import exam as exam_service
+from src.services.exam import delete_exam_config
 from src.models.exam_config import ExamConfig
 
 
@@ -175,7 +175,7 @@ async def delete_subject_service(session: AsyncSession, subject_id: int):
     result = await session.exec(select(ExamConfig).where(ExamConfig.subject_id == subject_id))
     exam_configs = result.all()
     for ec in exam_configs:
-        await exam_service.delete_exam_config(session, ec.id)
+        await delete_exam_config(session, ec.id)
 
     # 3. Delete DB Subject
     # This cascades to Topics, Questions, Options, and any remaining related data via SQLModel relationships

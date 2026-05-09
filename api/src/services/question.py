@@ -1,13 +1,15 @@
 import logging
+from typing import Optional, List
+
 from fastapi import HTTPException
 from pydantic import ValidationError
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.utils import parse_moodle_xml
-from src.models.question_option import QuestionOption, QuestionOptionPublic
+
 from src.models.question import Question, QuestionCreate, QuestionPublic, QuestionUpdate
+from src.models.question_option import QuestionOption, QuestionOptionPublic
 from src.models.topic import Topic
-from typing import Optional, List
+from src.utils import parse_moodle_xml
 
 logger = logging.getLogger(__name__)
 

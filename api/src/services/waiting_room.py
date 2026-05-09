@@ -1,14 +1,17 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
+import json
+import logging
+import traceback
+from typing import Optional, List, Dict
+
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.core.keycloak import keycloak_client
 from src.models.exam_config import ExamConfig
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
 from src.models.subject import Subject
 from src.services.exam import get_exams_by_config_id
 from src.services.warning import calculate_and_persist_warnings
-from src.core.keycloak import keycloak_client
-from typing import Optional, List, Dict
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 

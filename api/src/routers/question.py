@@ -1,15 +1,17 @@
+import logging
 from typing import List
+
 from fastapi import APIRouter, Body, Depends, HTTPException, status
-from src.models.question_option import QuestionOptionPublic
-from src.services import question
-from src.services import topic as topic_service
+from sqlmodel.ext.asyncio.session import AsyncSession
+
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
-from src.models.question import QuestionCreate, QuestionPublic, QuestionUpdate
 from src.models.common import XMLImportResponse
+from src.models.question import QuestionCreate, QuestionPublic, QuestionUpdate
+from src.models.question_option import QuestionOptionPublic
 from src.models.user import User
-from sqlmodel.ext.asyncio.session import AsyncSession
-import logging
+from src.services import question
+from src.services import topic as topic_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

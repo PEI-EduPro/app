@@ -1,14 +1,16 @@
+import logging
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import List
+
 from src.core.db import get_session
-from src.models.user import User
+from src.core.deps import get_current_user_info, verify_permission
 from src.models.exam_config import ExamConfig
+from src.models.user import User
 from src.models.waiting_room import WaitingRoom
 from src.models.warning import ExamWarningResponse, ResolveWarningsRequest, WarningsWithStudentsResponse
-from src.core.deps import get_current_user_info, verify_permission
 from src.services.warning import get_warnings_by_waiting_room_id, resolve_warnings_service, get_filtered_students
-import logging
 
 logger = logging.getLogger(__name__)
 router = APIRouter()

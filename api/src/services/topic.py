@@ -1,8 +1,10 @@
+from typing import Optional, List
+
 from fastapi import HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from src.models.topic import Topic, TopicCreate, TopicPublic, TopicUpdate
-from typing import Optional, List
 
 
 async def create_topic(
