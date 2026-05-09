@@ -63,7 +63,6 @@ def mock_exam_no_capture(mock_exam_config):
 @pytest.fixture
 def email_options_all_enabled():
     return {
-        "student_identification": True,
         "exam_capture": True,
         "question_weights": True,
         "red_green_cross_table": True,
@@ -74,7 +73,6 @@ def email_options_all_enabled():
 @pytest.fixture
 def email_options_minimal():
     return {
-        "student_identification": True,
         "exam_capture": False,
         "question_weights": False,
         "red_green_cross_table": False,

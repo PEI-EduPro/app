@@ -16,19 +16,17 @@
 <body style="font-family: Arial, sans-serif; color: #333;">
 
     <!-- Student Identification -->
-    {% if options.student_identification %}
-        <p>Identificação do aluno:</p>
-        <table class="data-table">
-            <tr>
-                <th>Nome</th>
-                <th>NMEC</th>
-            </tr>
-            <tr>
-                <td>{{ student_name }}</td>
-                <td>{{ nmec }}</td>
-            </tr>
-        </table><br>
-    {% endif %}
+    <p>Identificação do aluno:</p>
+    <table class="data-table">
+        <tr>
+            <th>Nome</th>
+            <th>NMEC</th>
+        </tr>
+        <tr>
+            <td>{{ student_name }}</td>
+            <td>{{ nmec }}</td>
+        </tr>
+    </table><br>
 
     <!-- Exam Capture Image -->
     {% if options.exam_capture %}
