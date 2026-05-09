@@ -1,6 +1,6 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { DeleteUcDialog } from "@/components/delete-uc-dialog";
-import { NovaUcModal } from "@/components/nova-uc-modal";
+import { NovaUcModal } from "@/components/nova-uc/nova-uc-modal";
 import { UCCard } from "@/components/uc-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";

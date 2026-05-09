@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status,
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlmodel import select
+from sqlalchemy.orm import selectinload
 from src.services import exam
 from src.services.exam import build_exam_questions, generate_exams_task
 from src.services import waiting_room as waiting_room_service
@@ -13,11 +14,11 @@ from src.models.user import User
 from src.models.exam import CorrectByHandRequest
 from src.models.exam_config import ExamConfigResponse, GenerationStatus
 from src.models.common import MessageResponse
+from src.models.topic_config import TopicConfig, TopicConfigDTO
 from src.models.waiting_room import WaitingRoom, WaitingRoomState
-from src.models.exam import Exam, ExamRead, ExamPublic, ExamUpdate, ExamCreate, CorrectByHandRequest
-from src.models.exam_config import ExamConfig, ExamConfigResponse, ExamGenerateRequest, GenerationStatus
-from src.models.common import MessageResponse, StatusResponse
-from src.models.topic_config import TopicConfigDTO
+from src.models.exam import CorrectByHandRequest
+from src.models.exam_config import ExamConfigResponse, GenerationStatus
+from src.models.common import MessageResponse
 from src.core.deps import get_current_user_info, verify_permission
 import base64
 import logging
@@ -186,6 +187,13 @@ async def generate_exams_async(
 
         logger.info(f"Started async generation for {num_variations} variations. Config ID: {exam_config.id}")
 
+        tc_result = await session.exec(
+            select(TopicConfig)
+            .where(TopicConfig.exam_config_id == exam_config.id)
+            .options(selectinload(TopicConfig.topic))
+        )
+        loaded_topic_configs = tc_result.all()
+
         topic_configs_dto = [
             TopicConfigDTO(
                 id=tc.id,
@@ -193,7 +201,7 @@ async def generate_exams_async(
                 topic_name=tc.topic.name if tc.topic else "Unknown",
                 num_questions=tc.num_questions,
                 relative_weight=tc.relative_weight
-            ) for tc in topic_configs
+            ) for tc in loaded_topic_configs
         ]
 
         return ExamConfigResponse(

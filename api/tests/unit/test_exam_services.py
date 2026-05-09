@@ -221,9 +221,9 @@ async def test_create_configs_with_student_tuples(session):
     exam_specs = {
         "subject_id": subject.id,
         "fraction": 75,
-        "topics": ["Test Topic"],
-        "number_questions": {"Test Topic": 5},
-        "relative_quotations": {"Test Topic": 2.0}
+        "topics": [str(topic.id)],
+        "number_questions": {str(topic.id): 5},
+        "relative_quotations": {str(topic.id): 2.0}
     }
     
     student_tuples = [
@@ -276,9 +276,9 @@ async def test_create_configs_without_student_tuples(session):
     exam_specs = {
         "subject_id": subject.id,
         "fraction": 50,
-        "topics": ["Test Topic"],
-        "number_questions": {"Test Topic": 3},
-        "relative_quotations": {"Test Topic": 1.5}
+        "topics": [str(topic.id)],
+        "number_questions": {str(topic.id): 3},
+        "relative_quotations": {str(topic.id): 1.5}
     }
     
     # Test the function without student tuples
@@ -341,9 +341,9 @@ async def test_create_configs_with_empty_student_tuples(session):
     exam_specs = {
         "subject_id": subject.id,
         "fraction": 60,
-        "topics": ["Test Topic"],
-        "number_questions": {"Test Topic": 4},
-        "relative_quotations": {"Test Topic": 1.8}
+        "topics": [str(topic.id)],
+        "number_questions": {str(topic.id): 4},
+        "relative_quotations": {str(topic.id): 1.8}
     }
     
     # Test with empty list
@@ -376,9 +376,9 @@ async def test_create_configs_with_malformed_student_tuples(session):
     exam_specs = {
         "subject_id": subject.id,
         "fraction": 80,
-        "topics": ["Test Topic"],
-        "number_questions": {"Test Topic": 2},
-        "relative_quotations": {"Test Topic": 1.0}
+        "topics": [str(topic.id)],
+        "number_questions": {str(topic.id): 2},
+        "relative_quotations": {str(topic.id): 1.0}
     }
     
     # Test with malformed tuples - should raise ValueError

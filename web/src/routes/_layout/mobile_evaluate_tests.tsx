@@ -58,8 +58,8 @@ function CameraCapture({
           screenshotQuality={1}
           forceScreenshotSourceSize={true}
           videoConstraints={{
-            width: 1280,
-            height: 720,
+            width: 3840,
+            height: 2160,
             facingMode: "environment",
           }}
           className="w-full h-64 object-cover"
