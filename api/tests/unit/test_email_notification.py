@@ -99,7 +99,7 @@ async def test_notify_student_success(session, mock_subject, mock_exam_config, m
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv, \
@@ -112,7 +112,7 @@ async def test_notify_student_success(session, mock_subject, mock_exam_config, m
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -125,7 +125,6 @@ async def test_notify_student_success(session, mock_subject, mock_exam_config, m
         
         assert result == {"message": "Email enviado com sucesso"}
         mock_get_config.assert_called_once_with(session, mock_exam_config.id)
-        mock_get_subject.assert_called_once_with(session, mock_subject.id)
         mock_template.assert_called_once_with('email_to_student.html')
         mock_server.starttls.assert_called_once()
         mock_server.send_message.assert_called_once()
@@ -149,7 +148,7 @@ async def test_notify_student_no_capture(session, mock_subject, mock_exam_config
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv:
@@ -161,7 +160,7 @@ async def test_notify_student_no_capture(session, mock_subject, mock_exam_config
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -203,7 +202,7 @@ async def test_notify_student_smtp_failure(session, mock_subject, mock_exam_conf
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv:
@@ -215,7 +214,7 @@ async def test_notify_student_smtp_failure(session, mock_subject, mock_exam_conf
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -249,7 +248,7 @@ async def test_notify_student_template_rendering(session, mock_subject, mock_exa
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv, \
@@ -263,7 +262,7 @@ async def test_notify_student_template_rendering(session, mock_subject, mock_exa
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -300,7 +299,7 @@ async def test_notify_student_answer_grid_calculation(session, mock_subject, moc
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv, \
@@ -313,7 +312,7 @@ async def test_notify_student_answer_grid_calculation(session, mock_subject, moc
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -358,7 +357,7 @@ async def test_notify_student_score_calculation(session, mock_subject, mock_exam
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv, \
@@ -371,7 +370,7 @@ async def test_notify_student_score_calculation(session, mock_subject, mock_exam
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -410,7 +409,7 @@ async def test_notify_student_email_subject_format(session, mock_subject, mock_e
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv:
@@ -422,7 +421,7 @@ async def test_notify_student_email_subject_format(session, mock_subject, mock_e
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"
@@ -456,7 +455,7 @@ async def test_notify_student_missing_capture_file(session, mock_subject, mock_e
     await session.commit()
     
     with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
-         patch("src.services.exam.get_subject_by_id", new_callable=AsyncMock) as mock_get_subject, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
          patch("src.services.exam.jinja_env.get_template") as mock_template, \
          patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
          patch("src.services.exam.os.getenv") as mock_getenv, \
@@ -469,7 +468,7 @@ async def test_notify_student_missing_capture_file(session, mock_subject, mock_e
         }.get(key, default)
         
         mock_get_config.return_value = mock_exam_config
-        mock_get_subject.return_value = mock_subject
+        mock_session_get.return_value = mock_subject
         
         mock_html_template = MagicMock()
         mock_html_template.render.return_value = "<html>Test Email</html>"

@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
 from src.services import exam
 from src.services.exam import build_exam_questions, generate_exams_task
 from src.services import waiting_room as waiting_room_service

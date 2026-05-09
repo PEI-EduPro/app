@@ -406,9 +406,9 @@ async def notify_students_via_email(
     exams = exam_config.exams
 
     for exam in exams:
-        # Check for exams with no association
-        if not (exam and exams.student_email and exam.nmec and exams.student_name):
+        if not (exam.student_email and exam.nmec and exam.student_name):
             logger.error(f"Exam {exam.id} is not associated with any student!")
+            continue
 
         try:
             await exam_service.notify_student(session, exam, email_options.model_dump())

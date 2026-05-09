@@ -988,6 +988,10 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
 
     if not exam:
         raise HTTPException(status_code=404, detail="Exam not found")
+
+    if not exam.student_email:
+        raise HTTPException(status_code=422, detail=f"Exam {exam.id} has no student email")
+
     
     exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
     subject = await session.get(Subject, exam_config.subject_id)
@@ -1030,14 +1034,11 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
 
     results_details = dict()
     for q in range(len(exam.answer_key)):
-        print("q " + str(q))
-
         results_details[str(q)] = {"correct": 0, "incorrect": 0}
         correct = chr(int(exam.answer_key[str(q)]) + 65)
 
-        for letter in student_answers[str(q)]:
-            print("letter" + letter)
-            if student_answers[str(q)][letter]:
+        for letter, selected in student_answers.get(str(q), {}).items():
+            if selected:
                 if correct == letter:
                     results_details[str(q)]["correct"] += 1
                 else:
@@ -1096,7 +1097,7 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
     msg.attach(MIMEText(html_body, 'html'))
 
     # Attach student capture
-    if has_capture:
+    if has_capture and email_options.get("exam_capture"):
         try:
             with open(exam.capture_path, "rb") as img:
                 mime_image_capture = MIMEImage(img.read())
