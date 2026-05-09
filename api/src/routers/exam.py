@@ -3,12 +3,19 @@ from typing import List
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status, Response, BackgroundTasks
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import select
+from sqlalchemy.orm import selectinload
 from src.services import exam
 from src.services.exam import build_exam_questions, generate_exams_task
 from src.services import waiting_room as waiting_room_service
 from src.services.waiting_room import get_waiting_room
 from src.core.db import get_session, async_session
 from src.models.user import User
+from src.models.exam import CorrectByHandRequest
+from src.models.exam_config import ExamConfigResponse, GenerationStatus
+from src.models.common import MessageResponse
+from src.models.topic_config import TopicConfig, TopicConfigDTO
+from src.models.waiting_room import WaitingRoom, WaitingRoomState
 from src.models.exam import CorrectByHandRequest
 from src.models.exam_config import ExamConfigResponse, GenerationStatus
 from src.models.common import MessageResponse
@@ -180,6 +187,13 @@ async def generate_exams_async(
 
         logger.info(f"Started async generation for {num_variations} variations. Config ID: {exam_config.id}")
 
+        tc_result = await session.exec(
+            select(TopicConfig)
+            .where(TopicConfig.exam_config_id == exam_config.id)
+            .options(selectinload(TopicConfig.topic))
+        )
+        loaded_topic_configs = tc_result.all()
+
         topic_configs_dto = [
             TopicConfigDTO(
                 id=tc.id,
@@ -187,7 +201,7 @@ async def generate_exams_async(
                 topic_name=tc.topic.name if tc.topic else "Unknown",
                 num_questions=tc.num_questions,
                 relative_weight=tc.relative_weight
-            ) for tc in topic_configs
+            ) for tc in loaded_topic_configs
         ]
 
         return ExamConfigResponse(
@@ -329,6 +343,25 @@ async def delete_exam_config(
         raise HTTPException(status_code=404, detail=str(e))
 
     verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    # Check if associated waiting rooms are in PREPARATION state
+    # In theory, there is only one waiting room for the exam config
+    wr_stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
+    wr_result = await session.exec(wr_stmt)
+    waiting_rooms = wr_result.all()
+    
+    for wr in waiting_rooms:
+        if wr.state != WaitingRoomState.PREPARATION:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot delete exam configuration because its waiting room is in {wr.state} state. It must be in preparation state."
+            )
+    
+    # The previous check is missing another passing clause.
+    # If the entire exam process has already been completed, aka, the students already got their grades
+    # It should be possible to delete an exam_config.
+    # With that said, that is dependent on another implementation. So I am leaving this comment here
+    # To remember in the future to do so.
 
     success = await exam.delete_exam_config(session, exam_config_id)
     if not success:
