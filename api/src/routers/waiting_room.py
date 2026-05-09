@@ -408,17 +408,12 @@ async def notify_students_via_email(
     for exam in exams:
         # Check if exam is associated with a student (skips unused exams)
         if not (exam.student_email and exam.nmec and exam.student_name):
-            logger.error(f"Exam {exam.id} is not associated with any student!")
+            logger.warning(f"Exam {exam.id} is not associated with any student!")
             continue
 
         # Check if exam was corrected
         if not (exam.capture_path and exam.correction_path and exam.grade and exam.results):
-            logger.error(f"Exam {exam.id} has not yet been corrected!")
-            continue
-
-        # Check if exam was validated
-        if not exam.validated:
-            logger.error(f"Exam {exam.id} has not yet been validated!")
+            logger.warning(f"Exam {exam.id} has not yet been corrected!")
             continue
 
         try:
