@@ -251,8 +251,7 @@ async def get_config_status(
     return {
         "id": exam_config.id,
         "status": exam_config.status,
-        "is_ready": exam_config.status == GenerationStatus.COMPLETED,
-        "is_failed": exam_config.status == GenerationStatus.FAILED
+        "is_ready": exam_config.status == GenerationStatus.COMPLETED
     }
 
 
