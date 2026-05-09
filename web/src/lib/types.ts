@@ -36,7 +36,11 @@ export interface NewExamConfigI {
   student_tuples: Array<Array<string>>;
 }
 
-export type GenerationStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
+export type GenerationStatus =
+  | "PENDING"
+  | "PROCESSING"
+  | "COMPLETED"
+  | "FAILED";
 
 export interface ExamConfigI {
   id: number;
@@ -141,4 +145,12 @@ export type OptionKey = "a" | "b" | "c" | "d";
 
 export interface ExamCorrectionI {
   grid: Record<number, Record<OptionKey, boolean>>;
+}
+
+export interface PostEmailI {
+  student_identification: boolean;
+  exam_capture: boolean;
+  question_weights: boolean;
+  red_green_cross_table: boolean;
+  cumulative_score_table: boolean;
 }

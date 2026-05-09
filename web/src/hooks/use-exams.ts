@@ -1,6 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../lib/api-client";
-import { type NewExamConfigI, type ExamConfigI } from "@/lib/types";
+import {
+  type NewExamConfigI,
+  type ExamConfigI,
+  type PostEmailI,
+} from "@/lib/types";
 import { toast } from "sonner";
 
 const saveFile = (blob: Blob, filename: string) => {
@@ -89,9 +93,28 @@ const useDeleteExamConfig = (ucId: number) => {
   });
 };
 
+const usePostGrades = (wrId: number) =>
+  useMutation({
+    mutationFn: (options: PostEmailI) =>
+      apiClient.post(`/exams/waiting_room/${wrId}/post_grades`, { options }),
+    onSuccess: () => {
+      toast.success("Notas lançadas com sucesso!", {
+        position: "top-right",
+        duration: 3000,
+      });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro ao lançar as notas.", {
+        position: "top-right",
+        duration: 3000,
+      });
+    },
+  });
+
 export {
   useAddExamConfig,
   useDownloadExamConfig,
   useGetExamConfig,
   useDeleteExamConfig,
+  usePostGrades,
 };
