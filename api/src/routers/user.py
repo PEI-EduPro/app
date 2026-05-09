@@ -28,7 +28,7 @@ async def create_user_endpoint(
     """
     # Explicitly check for manager role here if you want to avoid the dependency on the router level
     if "manager" not in current_user_info.realm_roles:
-         raise HTTPException(status_code=403, detail="Requires manager role")
+         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires manager role.")
 
     logger.info(f"Manager {current_user_info.username} is attempting to create a new user: {user_data.username}")
     try:
@@ -57,6 +57,8 @@ async def create_user_endpoint(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         # Handle other errors during creation
         logger.error(f"Failed to create user {user_data.username} by manager {current_user_info.username}: {e}")
@@ -80,9 +82,11 @@ async def get_professors(user_info: User = Depends(get_current_user_info)):
             )
             for user in users
         ]
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching professors: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch professors")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch professors")
 
 @router.get("/students", response_model=List[KeycloakUserPublic])
 async def get_students(user_info: User = Depends(get_current_user_info)):
@@ -99,9 +103,11 @@ async def get_students(user_info: User = Depends(get_current_user_info)):
             )
             for user in users
         ]
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error fetching students: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch students")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch students")
 
 @router.get("/debug/token-info", response_model=User)
 async def debug_token_info(

@@ -87,7 +87,7 @@ async def get_question(
     result = await question.get_question_by_id(session,id)
 
     if not result:
-        raise HTTPException(status_code=404, detail="Question not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
         
     topic = await topic_service.get_topic_by_id(session, result.topic_id)
     verify_permission(user_info, [f"/s{topic.subject_id}/view_question_bank", f"/s{topic.subject_id}/regent"])
@@ -103,7 +103,7 @@ async def get_question_options(
     """Get question options info from provided question id"""
     q_result = await question.get_question_by_id(session,id)
     if not q_result:
-        raise HTTPException(status_code=404, detail="Question not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
     verify_permission(user_info, [f"/s{topic.subject_id}/view_question_bank", f"/s{topic.subject_id}/regent"])
@@ -111,7 +111,7 @@ async def get_question_options(
     result = await question.get_question_options_by_question_id(session,id)
 
     if not result:
-        raise HTTPException(status_code=404, detail="Question options not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question options not found.")
     
     return result
 
@@ -126,7 +126,7 @@ async def put_question(
     """Update question info from provided id"""
     q_result = await question.get_question_by_id(session,id)
     if not q_result:
-        raise HTTPException(status_code=404, detail="Question not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
     verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])
@@ -150,7 +150,7 @@ async def delete_question(
     """Delete question from provided id"""
     q_result = await question.get_question_by_id(session,id)
     if not q_result:
-        raise HTTPException(status_code=404, detail="Question not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found.")
         
     topic = await topic_service.get_topic_by_id(session, q_result.topic_id)
     verify_permission(user_info, [f"/s{topic.subject_id}/edit_questions", f"/s{topic.subject_id}/regent"])

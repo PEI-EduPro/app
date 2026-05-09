@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.core.db import get_session
@@ -29,11 +29,11 @@ async def get_waiting_room_warnings(
     """
     waiting_room = await session.get(WaitingRoom, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     # Verify permission - only regent can view warnings for this subject
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
@@ -44,7 +44,7 @@ async def get_waiting_room_warnings(
         return WarningsWithStudentsResponse(warnings=warnings, students=students)
     except Exception as e:
         logger.error(f"Failed to fetch warnings for waiting room {waiting_room_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch warnings for waiting room")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch warnings for waiting room")
 
 
 @router.post("/{waiting_room_id}/resolve", response_model=List[ExamWarningResponse])
@@ -70,11 +70,11 @@ async def resolve_waiting_room_warnings(
     """
     waiting_room = await session.get(WaitingRoom, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
@@ -82,4 +82,4 @@ async def resolve_waiting_room_warnings(
         return await resolve_warnings_service(session, waiting_room_id, body.assignments)
     except Exception as e:
         logger.error(f"Failed to resolve warnings for waiting room {waiting_room_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to resolve warnings for waiting room")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to resolve warnings for waiting room")

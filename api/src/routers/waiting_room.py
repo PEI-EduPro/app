@@ -87,17 +87,17 @@ async def start_waiting_room(
     """
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     # Verify permission - only regent can start waiting room
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
     if waiting_room.state != WaitingRoomState.PREPARATION:
-        raise HTTPException(status_code=400, detail="Waiting room must be in preparation state to be started.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting room must be in preparation state to be started.")
 
     try:
         updated_room = await update_waiting_room_state(session, waiting_room_id, WaitingRoomState.RUNNING)
@@ -131,7 +131,7 @@ async def get_waiting_room_info(
     try:
         info = await get_waiting_room_info_service(session, waiting_room_id, user_info.groups)
         if not info:
-            raise HTTPException(status_code=404, detail="Waiting room or associated exam configuration not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room or associated exam configuration not found.")
         return info
     except HTTPException:
         raise
@@ -159,10 +159,10 @@ async def associate_students_to_exams(
 
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
         
     if waiting_room.state != WaitingRoomState.RUNNING:
-        raise HTTPException(status_code=400, detail="Waiting room must be in running state to associate students.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting room must be in running state to associate students.")
 
     try:
         exam_id = int(qrcode_to_nmec.qr)
@@ -176,7 +176,7 @@ async def associate_students_to_exams(
 
         return {"message": "Student associated to exams successfully."}
     except ValueError:
-        raise HTTPException(status_code=400, detail="Invalid exam ID format. Must be an integer.")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid exam ID format. Must be an integer.")
     except Exception as e:
         logger.error(f"Failed to associate students: {e}")
         raise HTTPException(
@@ -200,7 +200,7 @@ async def get_waiting_room_metrics(
     try:
         metrics = await get_waiting_room_metrics_service(session, waiting_room_id)
         if not metrics:
-            raise HTTPException(status_code=404, detail="Waiting room not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
         return metrics
     except HTTPException:
         raise
@@ -269,11 +269,11 @@ async def close_waiting_room(
     """
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     # Verify permission - only regent can close waiting room
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
@@ -289,9 +289,8 @@ async def close_waiting_room(
             message="Waiting room closed successfully. Associations processed."
         )
     except ValueError as ve:
-        # Conflicts found, or invalid state. Raise HTTP 400 Bad Request
         logger.warning(f"Failed to close waiting room due to conflicts or invalid state: {ve}")
-        raise HTTPException(status_code=400, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
     except Exception as e:
         logger.error(f"Failed to close waiting room: {e}")
         raise HTTPException(
@@ -312,11 +311,11 @@ async def get_submitted_exams_count(
     """
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
@@ -341,16 +340,16 @@ async def evaluate_exam_batch(
     """
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
 
     exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
     if waiting_room.state != WaitingRoomState.CLOSED:
-        raise HTTPException(status_code=400, detail="Waiting room must be in the closed state to evaluate exams.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting room must be in the closed state to evaluate exams.")
 
     # Read QR codes and validate all exams belong to this waiting room's exam_config
     exam_data = []
@@ -358,10 +357,10 @@ async def evaluate_exam_batch(
         exam_id, temp_file_path = utils.decode_base64_image(b64_str)
         exam_instance = await get_exam_by_id(session, exam_id)
         if not exam_instance:
-            raise HTTPException(status_code=404, detail=f"Exam {exam_id} not found.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Exam {exam_id} not found.")
         if exam_instance.exam_config_id != waiting_room.exam_config_id:
             raise HTTPException(
-                status_code=400,
+                status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Exam {exam_id} does not belong to this waiting room's exam configuration."
             )
         exam_data.append((exam_instance, temp_file_path))
@@ -381,7 +380,7 @@ async def evaluate_exam_batch(
     has_success = any(r["status"] == "success" for r in results)
 
     if has_errors and not has_success:
-        raise HTTPException(status_code=422, detail=results)
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=results)
     if has_errors:
-        return JSONResponse(status_code=207, content={"results": results})
+        return JSONResponse(status_code=status.HTTP_207_MULTI_STATUS, content={"results": results})
     return {"results": results}

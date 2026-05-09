@@ -61,7 +61,7 @@ async def read_topic(
     result = await topic.get_topic_by_id(session,id)
     
     if not result:
-        raise HTTPException(status_code=404, detail="Topic not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
         
     verify_permission(user_info, [f"/s{result.subject_id}"])
     return TopicPublic.model_validate(result)
@@ -76,7 +76,7 @@ async def update_topic(
     """Update topic"""
     existing_topic = await topic.get_topic_by_id(session, id)
     if not existing_topic:
-        raise HTTPException(status_code=404, detail="Topic not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
         
     verify_permission(user_info, [f"/s{existing_topic.subject_id}/edit_topics", f"/s{existing_topic.subject_id}/regent"])
     return await topic.update_topic(session, topic_data, id)
@@ -90,9 +90,9 @@ async def delete_topic(
     """Delete topic"""
     existing_topic = await topic.get_topic_by_id(session, id)
     if not existing_topic:
-        raise HTTPException(status_code=404, detail="Topic not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")
         
     verify_permission(user_info, [f"/s{existing_topic.subject_id}/edit_topics", f"/s{existing_topic.subject_id}/regent"])
     if await topic.delete_topic(session, id):
         return {"message": "Topic deleted successfully"}
-    raise HTTPException(status_code=404, detail="Topic not found")
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topic not found.")

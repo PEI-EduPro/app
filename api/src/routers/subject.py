@@ -64,12 +64,12 @@ async def create_subject_endpoint(
             regent_username=result["regent_username"]
         )
     except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
-    except HTTPException as he:
-        raise he
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating subject: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create subject")
 
 @router.get("/", response_model=List[SubjectRead])
 async def get_subjects(
@@ -86,7 +86,7 @@ async def get_subject(subject_id: int, session: AsyncSession = Depends(get_sessi
     """Get subject by ID."""
     subject = await get_subject_by_id(session, subject_id)
     if not subject:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
     return subject
 
 @router.put("/{subject_id}", response_model=SubjectRead)
@@ -115,7 +115,7 @@ async def update_subject(
     if not is_manager:
         current = await get_subject_by_id(session, subject_id)
         if not current:
-            raise HTTPException(status_code=404, detail="Subject not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
         name_changed = subject_update.name is not None and subject_update.name != current.name
         regent_changed = False
         if subject_update.regent_keycloak_id is not None:
@@ -133,9 +133,9 @@ async def update_subject(
     try:
         return await update_subject_service(session, subject_id, subject_update)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
     except RuntimeError as re:
-        raise HTTPException(status_code=500, detail=str(re))
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(re))
 
 @router.delete("/{subject_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_manager)])
 async def delete_subject(
@@ -148,10 +148,12 @@ async def delete_subject(
     try:
         await delete_subject_service(session, subject_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting subject: {e}")
-        raise HTTPException(status_code=500, detail="Failed to delete subject")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to delete subject")
 
 # --- Keycloak Management Endpoints ---
 
@@ -178,7 +180,7 @@ async def get_subject_students(
             ) for s in students
         ]
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
 
 @router.get("/{subject_id}/professors", response_model=List[StudentInfo])
 async def get_subject_professors(
@@ -200,7 +202,7 @@ async def get_subject_professors(
             ) for p in professors
         ]
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
 
 @router.get("/{subject_id}/regent", response_model=StudentInfo)
 async def get_subject_regent(
@@ -220,7 +222,7 @@ async def get_subject_regent(
             last_name=regent.get('lastName')
         )
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found or no regent assigned")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found or no regent assigned")
 
 @router.post("/{subject_id}/students", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_students_to_subject(
@@ -237,10 +239,12 @@ async def add_students_to_subject(
         await add_students_service(session, subject_id, request.student_keycloak_ids)
         return {"message": "Students added successfully"}
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to add students to subject {subject_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to add students to subject")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to add students to subject")
 
 @router.post("/{subject_id}/professors", status_code=status.HTTP_201_CREATED, response_model=MessageResponse)
 async def add_professor_to_subject(
@@ -263,10 +267,12 @@ async def add_professor_to_subject(
         )
         return {"message": "Professor added successfully."}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to add professor to subject {subject_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to add professor to subject")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to add professor to subject")
 
 @router.put("/{subject_id}/professors/{professor_id}", response_model=MessageResponse)
 async def update_professor_permissions(
@@ -290,10 +296,12 @@ async def update_professor_permissions(
         )
         return {"message": "Permissions updated successfully."}
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to update professor {professor_id} permissions for subject {subject_id}: {e}")
-        raise HTTPException(status_code=500, detail="Failed to update professor permissions")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update professor permissions")
 
 @router.delete("/{subject_id}/professors/{professor_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_professor_from_subject(
@@ -309,9 +317,9 @@ async def remove_professor_from_subject(
     try:
         await remove_professor_service(session, subject_id, professor_id)
     except ValueError:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
     except RuntimeError:
-        raise HTTPException(status_code=500, detail="Failed to remove professor")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to remove professor")
 
 # --- Existing Endpoints (Kept from current version) ---
 
@@ -325,7 +333,7 @@ async def get_all_topics_by_subject(
     verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     result = await get_all_subject_topics(session, subject_id)
     if not result:
-        raise HTTPException(status_code=404, detail="Topics not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Topics not found.")
     return result
 
 
@@ -339,7 +347,7 @@ async def get_all_by_subject(
     verify_permission(user_info, [f"/s{subject_id}/view_question_bank", f"/s{subject_id}/regent"])
     result = await get_topics_questions_and_options_by_subject_id(session, subject_id)
     if not result:
-        raise HTTPException(status_code=404, detail="Subject not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subject not found.")
     return result
 
 # Note: get_subject_topics in the previous file seemed redundant with get_all_topics_by_subject, 

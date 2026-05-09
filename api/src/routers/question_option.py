@@ -59,7 +59,7 @@ async def update_question_option(
     """Update a question option"""
     existing_option = await session.get(QuestionOption, id)
     if not existing_option:
-        raise HTTPException(status_code=404, detail="Question option not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question option not found.")
         
     q = await question_service.get_question_by_id(session, existing_option.question_id)
     topic = await topic_service.get_topic_by_id(session, q.topic_id)
@@ -68,7 +68,7 @@ async def update_question_option(
     try:
         result = await question_option.update_question_option(session, id, option_data)
         if not result:
-            raise HTTPException(status_code=404, detail="Question option not found")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question option not found.")
         return result
     except HTTPException:
         raise
@@ -85,7 +85,7 @@ async def delete_question_option(
     """Delete a question option"""
     existing_option = await session.get(QuestionOption, id)
     if not existing_option:
-        raise HTTPException(status_code=404, detail="Question option not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question option not found.")
         
     q = await question_service.get_question_by_id(session, existing_option.question_id)
     topic = await topic_service.get_topic_by_id(session, q.topic_id)
@@ -93,7 +93,7 @@ async def delete_question_option(
     try:
         if await question_option.delete_question_option(session, id):
             return {"message": "Question option deleted successfully"}
-        raise HTTPException(status_code=404, detail="Question option not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question option not found.")
     except HTTPException:
         raise
     except Exception as e:

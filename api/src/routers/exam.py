@@ -89,7 +89,7 @@ async def generate_exams(
     """
     subject_id = exam_specs.get("subject_id")
     if not subject_id:
-        raise HTTPException(status_code=400, detail="subject_id is required in exam_specs")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subject_id is required in exam_specs")
 
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     try:
@@ -134,6 +134,8 @@ async def generate_exams(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(ve)
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to create configs: {e}")
         logger.error(traceback.format_exc())
@@ -156,7 +158,7 @@ async def generate_exams_async(
     """
     subject_id = exam_specs.get("subject_id")
     if not subject_id:
-        raise HTTPException(status_code=400, detail="subject_id is required in exam_specs")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="subject_id is required in exam_specs")
 
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     
@@ -224,11 +226,13 @@ async def generate_exams_async(
         )
 
     except ValueError as ve:
-        raise HTTPException(status_code=400, detail=str(ve))
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(ve))
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to initiate async generation: {e}")
         logger.error(traceback.format_exc())
-        raise HTTPException(status_code=500, detail="Failed to initiate async exam generation")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to initiate async exam generation")
 
 
 @router.get("/config/{exam_config_id}/status")
@@ -240,7 +244,7 @@ async def get_config_status(
     """Get the current generation status of an exam configuration."""
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
@@ -261,15 +265,15 @@ async def download_exam_zip(
     """Download the generated ZIP file for an exam configuration."""
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
     if exam_config.status != GenerationStatus.COMPLETED:
-        raise HTTPException(status_code=400, detail=f"Generation is not completed. Current status: {exam_config.status}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Generation is not completed. Current status: {exam_config.status}")
 
     if not exam_config.zip_path or not os.path.exists(exam_config.zip_path):
-        raise HTTPException(status_code=404, detail="Generated ZIP file not found on server.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Generated ZIP file not found on server.")
 
     return FileResponse(
         path=exam_config.zip_path,
@@ -293,7 +297,7 @@ async def store_student_list(
     verify_permission(user_info, [f"/s{group_name}/regent"])
 
     if file.content_type not in ("text/csv", "text/plain", "application/octet-stream"):
-        raise HTTPException(status_code=400, detail="Only CSV files are accepted.")
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Only CSV files are accepted.")
     
     # Read file contents asynchronously
     contents = await file.read()
@@ -303,7 +307,7 @@ async def store_student_list(
 
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     await process_student_list_csv(session, exam_config_id, contents)    
     return {"message": "Student list stored successfully."}
@@ -318,13 +322,13 @@ async def retrieve_student_list(
     try:
         group_name = await get_subject_id_by_exam_config_id(exam_config_id, session)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     verify_permission(user_info, [f"/w{group_name}/vigilante", f"/w{group_name}/regent"])
 
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     return ExamConfigResponse(
         id=exam_config.id,
@@ -349,7 +353,7 @@ async def delete_exam_config_endpoint(
     try:
         subject_id = await get_subject_id_by_exam_config_id(exam_config_id, session)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
@@ -374,7 +378,7 @@ async def delete_exam_config_endpoint(
 
     success = await delete_exam_config(session, exam_config_id)
     if not success:
-        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
@@ -396,13 +400,13 @@ async def validate_exam(
 
     exam_instance = await get_exam_by_id(session, exam_id)
     if not exam_instance:
-        raise HTTPException(status_code=404, detail="Exam not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
 
     subject_id = await get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
     if exam_instance.grade is None or exam_instance.results is None or exam_instance.capture_path is None:
-        raise HTTPException(status_code=400, detail="Exam has not been corrected yet.")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam has not been corrected yet.")
 
     exam_instance.validated = True
     session.add(exam_instance)
@@ -424,7 +428,7 @@ async def get_all_exams_info(
     """
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
-        raise HTTPException(status_code=404, detail="Waiting room not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
     exam_config_id = waiting_room.exam_config_id
 
     subject_id = await get_subject_id_by_exam_config_id(exam_config_id, session)
@@ -475,7 +479,7 @@ async def get_exam_info(
     """
     e = await get_exam_by_id(session, exam_id)
     if not e:
-        raise HTTPException(status_code=404, detail="Exam not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
 
     subject_id = await get_subject_id_by_exam_config_id(e.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
@@ -518,7 +522,7 @@ async def correct_by_hand_job(
     """
     exam_instance = await get_exam_by_id(session, exam_id)
     if not exam_instance:
-        raise HTTPException(status_code=404, detail="Exam not found.")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
 
     subject_id = await get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
@@ -526,7 +530,7 @@ async def correct_by_hand_job(
     try:
         updated = await correct_by_hand(session, exam_id, body.grid)
     except ValueError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
     exam_config = await get_exam_config_by_id(session, updated.exam_config_id)
     fraction = exam_config.fraction if exam_config else 0
