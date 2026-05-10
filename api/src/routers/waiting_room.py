@@ -8,6 +8,7 @@ from src.models.exam_config import ExamConfig
 from src.models.waiting_room import WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, EvaluateBatchRequest, QRCodeToNMEC
 from src.models.common import MessageResponse
 from src.models.email_options import EmailOptionsPayload
+from src.models.warning import Warning
 import src.services.waiting_room as waiting_room_service
 import src.services.exam as exam_service
 from src.core.deps import get_current_user_info, verify_permission
@@ -15,7 +16,6 @@ from src.services.omr import evaluate_exam
 from src import utils
 import logging
 import traceback
-
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -403,17 +403,42 @@ async def notify_students_via_email(
     if waiting_room.state != WaitingRoomState.CLOSED:
         raise HTTPException(status_code=400, detail="Waiting room must be in the closed state to notify students.")
     
+    # Check if waiting room has any warnings pending resolution
+    stmt = select(Warning).where(Warning.exam_config_id == exam_config.id)
+    result = await session.exec(stmt)
+    pending_warnings = result.all()
+    
+    if pending_warnings:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot notify students. There are {len(pending_warnings)} pending warning(s) that must be resolved first."
+        )
+    
     exams = exam_config.exams
+    
+    # Pre-Notification Checks
+    for exam in exams:
+        # Only alert for exams that actually have an association
+        if exam.student_email and exam.nmec and exam.student_name:
+
+            # Check if exam was corrected
+            if not (exam.capture_path and exam.correction_path and exam.grade and exam.results):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Exam {exam.id} has not yet been corrected!"
+                )
+
+            # Check if exam was manually validated by the professor
+            if not exam.validated:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot notify students. Exam {exam.id} has not been validated."
+                )
 
     for exam in exams:
         # Check if exam is associated with a student (skips unused exams)
         if not (exam.student_email and exam.nmec and exam.student_name):
             logger.warning(f"Exam {exam.id} is not associated with any student!")
-            continue
-
-        # Check if exam was corrected
-        if not (exam.capture_path and exam.correction_path and exam.grade and exam.results):
-            logger.warning(f"Exam {exam.id} has not yet been corrected!")
             continue
 
         try:
