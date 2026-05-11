@@ -19,7 +19,6 @@ from src.models.waiting_room import WaitingRoom, WaitingRoomState
 from src.models.exam import CorrectByHandRequest
 from src.models.exam_config import ExamConfigResponse, GenerationStatus
 from src.models.common import MessageResponse
-from src.models.topic_config import TopicConfigDTO
 from src.core.deps import get_current_user_info, verify_permission
 import base64
 import logging
@@ -435,13 +434,13 @@ async def get_all_exams_info(
 
     result = []
     for e in exams:
-        corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+        corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
 
         capture_b64 = None
-        if corrected and os.path.exists(e.capture_path):
-            with open(e.capture_path, "rb") as f:
+        if corrected and os.path.exists(e.correction_path):
+            with open(e.correction_path, "rb") as f:
                 capture_b64 = base64.b64encode(f.read()).decode("utf-8")
-
+                
         result.append({
             "corrected": corrected,
             "nmec": e.nmec,
@@ -475,11 +474,11 @@ async def get_exam_info(
     subject_id = await exam.get_subject_id_by_exam_config_id(e.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
-    corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+    corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
 
     capture_b64 = None
-    if corrected and os.path.exists(e.capture_path):
-        with open(e.capture_path, "rb") as f:
+    if corrected and os.path.exists(e.correction_path):
+        with open(e.correction_path, "rb") as f:
             capture_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     questions = []

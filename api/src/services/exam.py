@@ -1,31 +1,44 @@
-import logging
-import random
-import os
-import shutil
-import tempfile
-import subprocess
 import csv
 import io
 import json
+import logging
+import os
+import random
+import shutil
+import smtplib
+import subprocess
+import tempfile
 import traceback
-from typing import Tuple, List, Dict, Optional
-from sqlmodel import select, func
+from email.mime.image import MIMEImage
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from typing import Dict, List, Optional, Tuple
+
+from fastapi import HTTPException
+from jinja2 import Environment, FileSystemLoader
 from sqlalchemy.orm import selectinload
+from sqlmodel import func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
-from src.models.exam_config import ExamConfig, GenerationStatus
-from src.models.topic_config import TopicConfig
-from src.models.topic import Topic
+
+from src.core.keycloak import keycloak_client
+
 from src.models.exam import Exam
+from src.models.exam_config import ExamConfig, GenerationStatus
 from src.models.question import Question
 from src.models.question_option import QuestionOption
 from src.models.subject import Subject
+from src.models.topic import Topic
+from src.models.topic_config import TopicConfig
 from src.models.waiting_room import WaitingRoom
 from src.models.warning import Warning
-from src.core.keycloak import keycloak_client
+
+
 
 logger = logging.getLogger(__name__)
 
-TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "latex_templates")
+LATEX_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates/latex")
+HTML_TEMPLATES_DIR = os.path.join(os.path.dirname(__file__), "..", "templates/html")
+jinja_env = Environment(loader=FileSystemLoader(HTML_TEMPLATES_DIR))
 STORAGE_DIR = os.getenv("STORAGE_DIR", "storage")
 
 
@@ -169,9 +182,9 @@ async def generate_exams_to_disk(
         os.makedirs(keys_dir)
 
         # Copy base templates
-        for f in os.listdir(TEMPLATES_DIR):
+        for f in os.listdir(LATEX_TEMPLATES_DIR):
             if f.endswith(".tex"):
-                shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+                shutil.copy(os.path.join(LATEX_TEMPLATES_DIR, f), tmpdir)
 
         # Write custom date.tex
         if exam_date:
@@ -208,9 +221,9 @@ async def generate_exams_to_disk(
             if version_idx in versions_cache:
                 questions_latex, answers_map, answer_key, relative_weights, num_questions = versions_cache[version_idx]
             else:
-                for f in os.listdir(TEMPLATES_DIR):
+                for f in os.listdir(LATEX_TEMPLATES_DIR):
                     if f.endswith(".tex") and not (f == "date.tex" and exam_date):
-                        shutil.copy(os.path.join(TEMPLATES_DIR, f), tmpdir)
+                        shutil.copy(os.path.join(LATEX_TEMPLATES_DIR, f), tmpdir)
 
                 # Gather questions for this variation
                 all_questions = []
@@ -723,8 +736,9 @@ async def process_student_list_csv(
     for row in reader:
         nmec = row.get("nmec")
         name = row.get("name")
+        email = row.get("email")
         if nmec and name:
-            nmec_dict[nmec] = name
+            nmec_dict[nmec] = {"name": name, "email": email or ""}
 
     nmec_name_list = json.dumps(nmec_dict)
 
@@ -963,3 +977,151 @@ def build_exam_questions(exam: Exam, fraction: float) -> list:
         })
 
     return questions
+
+async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[str, bool]):
+    """Notify student associated with the corresponding exam"""
+
+    if not exam:
+        raise HTTPException(status_code=404, detail="Exam not found")
+
+    if not exam.student_email:
+        raise HTTPException(status_code=422, detail=f"Exam {exam.id} has no student email")
+
+    
+    exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
+    subject = await session.get(Subject, exam_config.subject_id)
+
+    # 1. PREPARE DATA FOR TEMPLATE
+    has_capture = bool(exam.capture_path and os.path.exists(exam.capture_path))
+    student_answers = json.loads(exam.results) if isinstance(exam.results, str) else (exam.results or {})
+    
+    # Pre-calculate the Answer Grid 
+    answer_grid = []
+    for row_idx, row_label in enumerate(['A', 'B', 'C', 'D']):
+        row_cells = []
+        for q_idx in range(len(exam.answer_key)):
+            q_str = str(q_idx)
+            is_selected = student_answers.get(q_str, {}).get(row_label, False)
+            is_correct = (exam.answer_key.get(q_str) == row_idx) or (exam.answer_key.get(int(q_idx)) == row_idx)
+            
+            bg_class = ""
+            if is_correct:
+                bg_class = "bg-green"
+            elif is_selected and not is_correct:
+                bg_class = "bg-red"
+                
+            row_cells.append({
+                "is_selected": is_selected,
+                "bg_class": bg_class
+            })
+        answer_grid.append({"label": row_label, "cells": row_cells})
+
+    # Pre-calculate Question Weights and Scores
+    sorted_weight_indices = sorted([int(k) for k in exam.relative_weights.keys()])
+    question_stats = []
+    for idx in sorted_weight_indices:
+        weight = exam.relative_weights[str(idx)]
+        question_stats.append({
+            "num": f"{idx + 1:02d}",
+            "weight": weight,
+            "penalty": weight * exam_config.fraction / 100
+        })
+
+    results_details = dict()
+    for q in range(len(exam.answer_key)):
+        results_details[str(q)] = {"correct": 0, "incorrect": 0}
+        correct = chr(int(exam.answer_key[str(q)]) + 65)
+
+        for letter, selected in student_answers.get(str(q), {}).items():
+            if selected:
+                if correct == letter:
+                    results_details[str(q)]["correct"] += 1
+                else:
+                    results_details[str(q)]["incorrect"] += 1
+    
+    # Pre-calculate Cumulative Scores
+    sorted_detail_indices = sorted([int(k) for k in results_details.keys()])
+    score_details = []
+    cumulative_score = 0.0
+
+    for idx in sorted_detail_indices:
+        correct = results_details[str(idx)]["correct"]
+        incorrect = results_details[str(idx)]["incorrect"]
+        weight = exam.relative_weights.get(str(idx), 0)
+        penalty = weight * exam_config.fraction / 100
+        score = correct * weight - incorrect * penalty
+        
+        cumulative_score += score
+
+        score_class = ""
+        if score > 0.001:
+            score_class = "bg-green"
+        elif score < -0.001:
+            score_class = "bg-red"
+
+        score_details.append({
+            "num": f"{idx + 1:02d}",
+            "correct": correct,
+            "incorrect": incorrect,
+            "score_display": f"{score:+.2f}",
+            "score_class": score_class,
+            "cumulative": cumulative_score
+        })
+
+    # 2. RENDER HTML FROM TEMPLATE
+    template = jinja_env.get_template('email_to_student.html')
+    html_body = template.render(
+        options=email_options,
+        student_name=exam.student_name,
+        nmec=exam.nmec,
+        grade=exam.grade,
+        has_capture=has_capture,
+        answer_key=exam.answer_key,
+        answer_grid=answer_grid,
+        question_stats=question_stats,
+        score_details=score_details,
+        fraction=exam_config.fraction
+    )
+
+    # 3. CONSTRUCT AND SEND EMAIL (Unchanged)
+    msg = MIMEMultipart()
+    msg['From'] = os.getenv("SENDER_EMAIL")
+    msg['To'] = exam.student_email
+    msg['Subject'] = f"Nota de {exam_config.exam_name} de {subject.name}"
+    
+    msg.attach(MIMEText(html_body, 'html'))
+
+    # Attach student capture
+    if has_capture and email_options.get("exam_capture"):
+        try:
+            with open(exam.capture_path, "rb") as img:
+                mime_image_capture = MIMEImage(img.read())
+                mime_image_capture.add_header("Content-ID", "<student_capture>")
+                mime_image_capture.add_header("Content-Disposition", "inline", filename="student_capture.jpg")
+                msg.attach(mime_image_capture)
+        except Exception as e:
+            logger.error(f"Failed to attach student capture image: {e}")
+
+    # Attach signature
+    img_path = os.path.join(os.path.dirname(__file__), "..", "img", "signature.jpg")
+    try:
+        with open(img_path, "rb") as img:
+            mime_image = MIMEImage(img.read())
+            mime_image.add_header("Content-ID", "<signature_image>")
+            mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
+            msg.attach(mime_image)
+    except Exception as e:
+         logger.error(f"Failed to attach signature image: {e}")
+
+    # Send
+    try:
+        server = smtplib.SMTP("smtp.gmail.com", int(os.getenv("EMAIL_NOTIFIER_PORT")))
+        server.starttls()
+        server.login(os.getenv("SENDER_EMAIL"), os.getenv("EMAIL_CODE"))
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        logger.error(f"Erro ao enviar email: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
+
+    return {"message": "Email enviado com sucesso"}
