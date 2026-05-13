@@ -40,7 +40,7 @@ app = FastAPI(
     description="Backend API with Keycloak authentication",
     version="1.0.0",
     lifespan=lifespan,
-    root_path="/api"
+    root_path="/edupro/api"
 )
 
 app.add_middleware(
