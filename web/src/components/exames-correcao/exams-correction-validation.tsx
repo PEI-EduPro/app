@@ -73,7 +73,7 @@ export default function ExamsCorrectionValidation({ wrId }: { wrId: number }) {
       <div className="flex flex-1 min-h-0">
         <ExamTestList wrId={wrId} selected={selected} onSelect={handleSelect} />
 
-        <div className="flex-1 p-6 flex items-start min-w-0">
+        <div className="flex-1 px-6 flex items-start min-w-0">
           {selected !== null ? (
             <ExamTestValidation
               examId={selected}

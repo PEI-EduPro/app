@@ -96,14 +96,16 @@ const useDeleteExamConfig = (ucId: number) => {
 const usePostGrades = (wrId: number) =>
   useMutation({
     mutationFn: (options: PostEmailI) =>
-      apiClient.post(`/exams/waiting_room/${wrId}/post_grades`, { options }),
+      apiClient.post(`/waiting-rooms/${wrId}/notify-students`, options),
     onSuccess: () => {
+      toast.dismiss();
       toast.success("Notas lançadas com sucesso!", {
         position: "top-right",
         duration: 3000,
       });
     },
     onError: () => {
+      toast.dismiss();
       toast.error("Ocorreu um erro ao lançar as notas.", {
         position: "top-right",
         duration: 3000,

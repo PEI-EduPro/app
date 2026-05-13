@@ -105,7 +105,8 @@ function RouteComponent() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#41B5C0]/15 border border-[#41B5C0]/30">
           <span className="w-2 h-2 rounded-full bg-[#41B5C0] animate-pulse" />
           <span className="text-sm font-semibold text-[#3263A8]">
-            {submitedExams?.count || 0}/{roomDetails?.total_exams} exames
+            {submitedExams?.submitted_count || 0}/{roomDetails?.total_exams}{" "}
+            exames
           </span>
         </div>
 

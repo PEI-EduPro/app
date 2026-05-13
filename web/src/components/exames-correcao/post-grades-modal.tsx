@@ -10,6 +10,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { usePostGrades } from "@/hooks/use-exams";
+import { toast } from "sonner";
 
 const TOGGLE_OPTIONS = [
   { key: "exam_capture", label: "Captura do exame" },
@@ -59,12 +60,15 @@ export default function PostGradesModal({
         </div>
         <DialogFooter
           className="
-        !justify-start"
+        justify-start!"
         >
           <Button
             className="cursor-pointer"
             onClick={() => {
-              postGrades({ student_identification: true, ...options });
+              toast.loading("A lançar as notas...", {
+                position: "top-right",
+              });
+              postGrades(options);
               onOpenChange(false);
             }}
           >

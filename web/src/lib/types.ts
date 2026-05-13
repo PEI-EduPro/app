@@ -148,7 +148,6 @@ export interface ExamCorrectionI {
 }
 
 export interface PostEmailI {
-  student_identification: boolean;
   exam_capture: boolean;
   question_weights: boolean;
   red_green_cross_table: boolean;
