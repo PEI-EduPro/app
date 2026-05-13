@@ -1,4 +1,5 @@
 import xml.etree.ElementTree as ET
+import defusedxml.ElementTree as DefusedET
 import tempfile
 from pathlib import Path
 from latex import build_pdf
@@ -6,7 +7,7 @@ from latex import build_pdf
 
 def xml_to_pdf(xml_content: str, exam_id: int, subject_name: str = None) -> bytes:
     """Converts Exam XML to PDF bytes."""
-    root = ET.fromstring(xml_content)
+    root = DefusedET.fromstring(xml_content)
     latex_content, t_variants_content = xml_to_latex(root, exam_id)
     return compile_latex_to_pdf(latex_content, t_variants_content, subject_name)
 
@@ -56,7 +57,7 @@ MAIN_TEMPLATE = r"""\documentclass[a4paper,addpoints,10pt]{exam}
 
 def compile_latex_to_pdf(latex_content: str, t_variants_content: str, subject_name: str = None) -> bytes:
     """Compile LaTeX string to PDF and return bytes."""
-    templates_dir = Path(__file__).parent.parent / "latex_templates"
+    templates_dir = Path(__file__).parent.parent / "templates/latex"
     
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)

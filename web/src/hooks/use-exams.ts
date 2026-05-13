@@ -6,14 +6,11 @@ import { toast } from "sonner";
 const saveFile = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
-
   a.href = url;
   a.download = filename;
-
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-
   window.URL.revokeObjectURL(url);
 };
 
@@ -21,23 +18,57 @@ const useAddExamConfig = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationKey: ["createExam", "download"],
     mutationFn: (props: NewExamConfigI) =>
-      apiClient.download("/exams/generate/", props),
+      apiClient.post<ExamConfigI>("/exams/generate_async/", props),
 
-    onSuccess: (zipBlob: Blob) => {
-      saveFile(zipBlob, "generated_exam.zip");
-
+    onSuccess: () => {
+      toast.dismiss();
+      toast.success("Exame criado com sucesso!", {
+        position: "top-right",
+        duration: 3000,
+      });
       queryClient.invalidateQueries({ queryKey: ["examConfig"] });
+    },
+
+    onError: () => {
+      toast.dismiss();
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+        position: "top-right",
+        duration: 3000,
+      });
     },
   });
 };
+
+const useDownloadExamConfig = () =>
+  useMutation({
+    mutationFn: (id: number) =>
+      apiClient.download(`/exams/config/${id}/download`),
+
+    onSuccess: (blob: Blob) => {
+      saveFile(blob, "generated_exam.zip");
+    },
+
+    onError: () => {
+      toast.error("Erro ao descarregar o exame.", {
+        position: "top-right",
+        duration: 3000,
+      });
+    },
+  });
 
 const useGetExamConfig = (ucId: number) =>
   useQuery<ExamConfigI[]>({
     queryKey: ["examConfig", ucId],
     queryFn: () => apiClient.get(`/exams/subject/${ucId}/configs`),
     enabled: !!ucId,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      const hasActive = data?.some(
+        (c) => c.status === "PENDING" || c.status === "PROCESSING",
+      );
+      return hasActive ? 3000 : false;
+    },
   });
 
 const useDeleteExamConfig = (ucId: number) => {
@@ -58,4 +89,9 @@ const useDeleteExamConfig = (ucId: number) => {
   });
 };
 
-export { useAddExamConfig, useGetExamConfig, useDeleteExamConfig };
+export {
+  useAddExamConfig,
+  useDownloadExamConfig,
+  useGetExamConfig,
+  useDeleteExamConfig,
+};

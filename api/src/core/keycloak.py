@@ -70,8 +70,10 @@ class KeycloakClient:
             if isinstance(token_audience, str):
                 token_audience = [token_audience]
             
-            if not any(aud in allowed_audiences for aud in token_audience):
-                logger.error(f"Audience mismatch. Expected one of {allowed_audiences}, Got: {token_audience}")
+            azp = token_info.get('azp', '')
+            
+            if azp != 'frontend' and not any(aud in allowed_audiences for aud in token_audience):
+                logger.error(f"Audience mismatch. Expected one of {allowed_audiences} or azp='frontend', Got aud: {token_audience}, azp: {azp}")
                 return None
             
             logger.info(f"Token verified successfully for user: {token_info.get('preferred_username', token_info.get('sub', 'unknown'))}")
@@ -754,6 +756,39 @@ class KeycloakClient:
         except Exception as e:
             logger.error(f"Keycloak Admin API error during waiting room group creation: {e}")
             raise e
+
+    async def delete_waiting_room_groups(self, waiting_room_id: int) -> bool:
+        """
+        Deletes Keycloak groups for a specific waiting room.
+        """
+        logger.info(f"Deleting groups for waiting room ID: {waiting_room_id}")
+        
+        base_group_name = f"w{waiting_room_id}"
+        subgroups = ["regent", "vigilant"]
+        
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # Get all groups to find IDs
+            all_groups = await loop.run_in_executor(None, lambda: self.admin_client.get_groups())
+            group_map = {g['name']: g['id'] for g in all_groups}
+
+            for sub in subgroups:
+                full_name = f"{base_group_name}/{sub}"
+                group_id = group_map.get(full_name)
+                
+                if group_id:
+                    logger.info(f"Deleting group: {full_name} (ID: {group_id})")
+                    await loop.run_in_executor(
+                        None,
+                        lambda gid=group_id: self.admin_client.delete_group(gid)
+                    )
+            
+            return True
+
+        except Exception as e:
+            logger.error(f"Error deleting waiting room groups for {waiting_room_id}: {e}")
+            return False
 
 keycloak_client = KeycloakClient()
 

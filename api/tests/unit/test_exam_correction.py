@@ -31,6 +31,7 @@ async def _setup_exam(session, exam_config_id, *, corrected=False):
         grade=18.0 if corrected else None,
         results=json.dumps({"0": {"A": False, "B": True, "C": False, "D": False}}) if corrected else None,
         capture_path="/tmp/exam.jpg" if corrected else None,
+        correction_path="/tmp/exam.jpg" if corrected else None,
     )
     session.add(e)
     await session.commit()

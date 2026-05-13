@@ -9,15 +9,46 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ci_db
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
 
       - name: Build images
         working-directory: deployment
         run: docker compose build
 
+      - name: Check migrations are up to date
+        run: |
+          docker run --rm --network host \
+            -e POSTGRES_SERVER=localhost \
+            -e POSTGRES_USER=postgres \
+            -e POSTGRES_PASSWORD=postgres \
+            -e POSTGRES_DB=ci_db \
+            -e POSTGRES_PORT=5432 \
+            -e KEYCLOAK_SERVER_URL=http://localhost \
+            -e KEYCLOAK_ISSUER_URL=http://localhost \
+            -e KEYCLOAK_REALM=ci \
+            -e KEYCLOAK_CLIENT_ID=ci \
+            -e KEYCLOAK_CLIENT_SECRET=ci \
+            -e KEYCLOAK_ADMIN_USERNAME=ci \
+            -e KEYCLOAK_ADMIN_PASSWORD=ci \
+            edupro-migrate sh -c "/app/.venv/bin/alembic upgrade head && /app/.venv/bin/alembic check"
+
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v5.4.2
 
       - name: Run tests
         run: ./run_tests.sh

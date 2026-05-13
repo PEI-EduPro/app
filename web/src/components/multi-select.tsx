@@ -1059,7 +1059,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                         )}
                         aria-hidden="true"
                       >
-                        <CheckIcon className="h-4 w-4" />
+                        <CheckIcon className="h-4 w-4 !text-white" />
                       </div>
                       <span>
                         (Selecionar todos
@@ -1104,7 +1104,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                               )}
                               aria-hidden="true"
                             >
-                              <CheckIcon className="h-4 w-4" />
+                              <CheckIcon className="h-4 w-4 !text-white" />
                             </div>
                             {option.icon && (
                               <option.icon
@@ -1147,7 +1147,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                             )}
                             aria-hidden="true"
                           >
-                            <CheckIcon className="h-4 w-4" />
+                            <CheckIcon className="h-4 w-4 !text-white" />
                           </div>
                           {option.icon && (
                             <option.icon

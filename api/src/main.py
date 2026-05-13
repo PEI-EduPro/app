@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from src.core.db import create_db_and_tables
 from src.core.config import setup_logging
@@ -45,11 +46,25 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost",
+        "https://localhost",
+        "https://mednat.ieeta.pt:9042",
+    ],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+        return response
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 # Include routers
 from src.routers import user, subject, topic, question, question_option, exam, waiting_room, warning

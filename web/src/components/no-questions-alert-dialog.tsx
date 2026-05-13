@@ -1,29 +1,29 @@
-import { Link } from "@tanstack/react-router";
-import { encodeId } from "@/lib/id-encoder";
 import {
   AlertDialog,
-  AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogMedia,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { CircleAlert } from "lucide-react";
 
 export function NoQuestionsAlertDialog({
   open,
   onOpenChange,
-  ucId,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  ucId: number;
 }) {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
+          <AlertDialogMedia className="bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+            <CircleAlert />
+          </AlertDialogMedia>
           <AlertDialogTitle>Sem questões disponíveis</AlertDialogTitle>
           <AlertDialogDescription>
             Esta unidade curricular não tem nenhum tópico com questões
@@ -32,10 +32,7 @@ export function NoQuestionsAlertDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Fechar</AlertDialogCancel>
-          <Link to="/banco-questoes" search={{ ucId: encodeId(ucId) }}>
-            <AlertDialogAction>Ir para o Banco de Questões</AlertDialogAction>
-          </Link>
+          <AlertDialogCancel size="lg" className="cursor-pointer w-full">Fechar</AlertDialogCancel>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

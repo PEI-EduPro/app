@@ -22,7 +22,7 @@ async def test_generate_exam(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
     
-    topic = Topic(name="Exam Topic", subject_id=sub.id)
+    topic = Topic(name="Test Topic", subject_id=sub.id)
     session.add(topic)
     await session.commit()
     await session.refresh(topic)
@@ -54,9 +54,9 @@ async def test_generate_exam(client, mock_auth, session):
             "subject_id": sub.id,
             "fraction": 0,
             "exam_title": "Test Exam",
-            "topics": ["Exam Topic"],
-            "number_questions": {"Exam Topic": 2},
-            "relative_quotations": {"Exam Topic": 1.0},
+            "topics": [str(topic.id)],
+            "number_questions": {str(topic.id): 2},
+            "relative_quotations": {str(topic.id): 1.0},
             "num_variations": 1
         }
 
@@ -134,7 +134,7 @@ async def test_store_student_list(client, mock_auth, session):
     await session.refresh(exam_config)
     
     # Create CSV content
-    csv_content = "nmec,name\n12345,John Doe\n67890,Jane Smith"
+    csv_content = "nmec,name,email\n12345,John Doe,john@doe.com\n67890,Jane Smith,jane@smith.com"
     csv_file = io.BytesIO(csv_content.encode())
     
     files = {"file": ("students.csv", csv_file, "text/csv")}
@@ -151,8 +151,10 @@ async def test_store_student_list(client, mock_auth, session):
     # Verify data was stored
     await session.refresh(exam_config)
     stored_data = json.loads(exam_config.nmec_name_list)
-    assert stored_data["12345"] == "John Doe"
-    assert stored_data["67890"] == "Jane Smith"
+    assert stored_data["12345"]["name"] == "John Doe"
+    assert stored_data["12345"]["email"] == "john@doe.com"
+    assert stored_data["67890"]["name"] == "Jane Smith"
+    assert stored_data["67890"]["email"] == "jane@smith.com"
 
 
 @pytest.mark.asyncio
@@ -313,9 +315,9 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
             "subject_id": sub.id,
             "fraction": 0,
             "exam_title": "Test Exam",
-            "topics": ["Exam Topic"],
-            "number_questions": {"Exam Topic": 2},
-            "relative_quotations": {"Exam Topic": 1.0},
+            "topics": [str(topic.id)],
+            "number_questions": {str(topic.id): 2},
+            "relative_quotations": {str(topic.id): 1.0},
             "num_variations": 1,
             "professors": ["Prof A", "Prof B"],
             "student_tuples": [
@@ -420,9 +422,9 @@ async def test_generate_exam_with_waiting_room(client, mock_auth, session):
             "subject_id": sub.id,
             "fraction": 0,
             "exam_title": "Test Exam",
-            "topics": ["Exam Topic"],
-            "number_questions": {"Exam Topic": 2},
-            "relative_quotations": {"Exam Topic": 1.0},
+            "topics": [str(topic.id)],
+            "number_questions": {str(topic.id): 2},
+            "relative_quotations": {str(topic.id): 1.0},
             "num_variations": 1,
             "vigilant_keycloak_ids": ["vigilant1", "vigilant2"]
         }

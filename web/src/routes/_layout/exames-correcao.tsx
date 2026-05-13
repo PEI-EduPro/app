@@ -4,8 +4,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { CustomSwitch } from "@/components/custom-switch";
-import StudentsQRCodes from "@/components/students-qrcodes";
-import ExamsCorrectionValidation from "@/components/exams-correction-validation";
+import StudentsQRCodes from "@/components/exames-correcao/students-qrcodes";
+import ExamsCorrectionValidation from "@/components/exames-correcao/exams-correction-validation";
 
 const examesUCSearchSchema = z.object({
   ucId: z.string(),
@@ -30,17 +30,13 @@ function RouteComponent() {
   const [checked, setChecked] = useState<boolean>(false);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-6 w-full">
+    <div className="flex flex-col h-screen overflow-hidden py-3.5 px-4 md:px-6 w-full">
       <div className="shrink-0">
         <AppBreadcrumb
           page={wrName}
           crumbs={[
             { name: "Unidades Curriculares", link: "/unidades-curriculares" },
             { name: ucName, link: `/detalhes-uc?ucId=${ucId}` },
-            {
-              name: "Exames",
-              link: `/exames-uc?ucId=${ucId}&ucName=${ucName}`,
-            },
           ]}
         />
 
@@ -55,8 +51,8 @@ function RouteComponent() {
               />
             </div>
             <div className="flex flex-col gap-2.5 items-center">
-              <span className="font-rubik text-5xl">{wrName}</span>
-              <span className="font-rubik text-4xl text-primary">
+              <span className="font-rubik typography-h1">{wrName}</span>
+              <span className="font-rubik typography-h2 text-primary">
                 {checked ? "Testes" : "Alunos"}
               </span>
             </div>

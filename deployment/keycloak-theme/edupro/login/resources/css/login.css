@@ -1,0 +1,410 @@
+/* ============================================================
+   Edu-Pro Keycloak Login Theme
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* ── Background: dark navy + three color blurs (matches index.tsx) ── */
+body {
+  margin: 0;
+  font-family: "Nunito Sans", sans-serif;
+  font-size: 17px;
+  color: #ffffff;
+  min-height: 100vh;
+  background-color: #2E2B50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+/* top-left teal blur */
+body::before {
+  content: "";
+  position: fixed;
+  top: -8rem;
+  left: -8rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 9999px;
+  background: #41B5C0;
+  opacity: 0.20;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* bottom-right blue blur */
+body::after {
+  content: "";
+  position: fixed;
+  bottom: -8rem;
+  right: -8rem;
+  width: 24rem;
+  height: 24rem;
+  border-radius: 9999px;
+  background: #3263A8;
+  opacity: 0.30;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* center green blur (extra element via the wrapper) */
+#kc-container-wrapper::before {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 37rem;
+  height: 37rem;
+  border-radius: 9999px;
+  background: #9EE78F;
+  opacity: 0.05;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* bottom fade (matches index.tsx) */
+#kc-container-wrapper::after {
+  content: "";
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6rem;
+  background: linear-gradient(to top, #2E2B50, transparent);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Page layout ── */
+#kc-container-wrapper,
+.login-pf-page,
+.pf-v5-c-login {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+
+.pf-v5-c-login__container {
+  width: 100%;
+  max-width: 420px;
+}
+
+/* ── Card ── */
+#kc-container,
+.card-pf {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 1rem;
+  padding: 2.5rem 2.5rem 2rem;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.35);
+}
+
+/* ── Logo: floating above the form (matches animate-float) ── */
+#kc-header,
+.login-pf-header {
+  text-align: center;
+  margin-bottom: 1.75rem;
+}
+
+#kc-header-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* floating logo container */
+#kc-header-wrapper::before {
+  content: "";
+  display: block;
+  width: 96px;
+  height: 96px;
+  animation: float 4s ease-in-out infinite;
+  position: relative;
+}
+
+/* teal glow behind logo */
+#kc-header-wrapper {
+  position: relative;
+}
+
+#kc-header-wrapper::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 96px;
+  height: 96px;
+  border-radius: 9999px;
+  background: #41B5C0;
+  opacity: 0.20;
+  filter: blur(20px);
+  pointer-events: none;
+  animation: float 4s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* glow needs its own translate offset */
+#kc-header-wrapper::after {
+  animation: float-glow 4s ease-in-out infinite;
+}
+
+@keyframes float-glow {
+  0%, 100% { transform: translateX(-50%) translateY(0px); }
+  50%       { transform: translateX(-50%) translateY(-10px); }
+}
+
+#kc-header-wrapper span,
+.login-pf-header h1 {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+/* ── Header / logo area ── */
+#kc-header, .pf-v5-c-login__header {
+  text-align: center;
+}
+
+#kc-page-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+  font-family: "Nunito Sans", sans-serif;
+  font-size: 1.4rem;
+  font-weight: 800;
+}
+
+/* ── Logo above form ── */
+.kc-logo-img {
+  display: block;
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  margin: 0 auto 0.5rem;
+  animation: float 4s ease-in-out infinite;
+  filter: drop-shadow(0 6px 16px rgba(0,0,0,0.4));
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-10px); }
+}
+
+/* ── Labels ── */
+label, .pf-v5-c-form__label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.85);
+  margin-bottom: 0.3rem;
+  display: block;
+}
+
+/* ── Inputs ── */
+input[type="text"],
+input[type="password"],
+input[type="email"],
+.pf-v5-c-form-control {
+  width: 100%;
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 0.75rem;
+  font-family: inherit;
+  font-size: 1rem;
+  color: #ffffff;
+  background: rgba(255,255,255,0.08);
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pf-v5-c-button.pf-m-control {
+  background-color: transparent;
+}
+
+input[type="text"]::placeholder,
+input[type="password"]::placeholder,
+input[type="email"]::placeholder {
+  color: rgba(255,255,255,0.35);
+}
+
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="email"]:focus,
+.pf-v5-c-form-control:focus {
+  border-color: #41B5C0;
+  box-shadow: 0 0 0 3px rgba(65,181,192,0.25);
+  background: rgba(255,255,255,0.12);
+}
+
+/* ── Primary button ── */
+input[type="submit"],
+.btn-primary,
+.pf-v5-c-button.pf-m-primary {
+  width: 100%;
+  padding: 0.75rem;
+  background: #41B5C0;
+  color: #ffffff;
+  border: none;
+  border-radius: 0.75rem;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s, box-shadow 0.2s;
+  margin-top: 0.5rem;
+  box-shadow: 0 4px 20px rgba(65,181,192,0.30);
+}
+
+input[type="submit"]:hover,
+.btn-primary:hover,
+.pf-v5-c-button.pf-m-primary:hover {
+  background: #3263A8;
+  box-shadow: 0 4px 20px rgba(50,99,168,0.40);
+}
+
+input[type="submit"]:active,
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* ── Links ── */
+a {
+  color: #9EE78F;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+a:hover {
+  color: #E3F6A2;
+  text-decoration: underline;
+}
+
+/* ── Alerts ── */
+.alert-error,
+.pf-v5-c-alert.pf-m-danger {
+  background: rgba(192,57,43,0.2);
+  border: 1.5px solid rgba(192,57,43,0.4);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #ffaaaa;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.alert-warning,
+.pf-v5-c-alert.pf-m-warning {
+  background: rgba(255,193,7,0.15);
+  border: 1.5px solid rgba(255,193,7,0.3);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #ffe082;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.alert-success,
+.pf-v5-c-alert.pf-m-success {
+  background: rgba(158,231,143,0.15);
+  border: 1.5px solid rgba(158,231,143,0.3);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  color: #9EE78F;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+/* ── Remember me ── */
+#rememberMe { accent-color: #41B5C0; }
+
+/* ── Registration / forgot links ── */
+.login-pf-signup,
+#kc-registration {
+  text-align: center;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ── Social providers ── */
+.social-section .zocial,
+.pf-v5-c-button.pf-m-secondary {
+  border: 1.5px solid rgba(255,255,255,0.15);
+  border-radius: 0.75rem;
+  background: rgba(255,255,255,0.06);
+  color: #ffffff;
+  font-family: inherit;
+  font-weight: 600;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.social-section .zocial:hover,
+.pf-v5-c-button.pf-m-secondary:hover {
+  border-color: #41B5C0;
+  background: rgba(65,181,192,0.12);
+}
+
+/* ── Responsive ── */
+@media (max-width: 480px) {
+  #kc-container-wrapper,
+  .login-pf-page,
+  .pf-v5-c-login {
+    padding: 1rem 0.75rem;
+  }
+
+  #kc-container,
+  .card-pf,
+  .pf-v5-c-login__container {
+    padding: 1.25rem 1rem 1rem;
+    max-width: 100%;
+    border-radius: 0.75rem;
+  }
+
+  .kc-logo-img {
+    width: 56px;
+    height: 56px;
+  }
+
+  #kc-page-title {
+    font-size: 1.1rem;
+  }
+
+  .pf-v5-c-form__group {
+    margin-bottom: 0.5rem;
+  }
+
+  label, .pf-v5-c-form__label {
+    font-size: 0.82rem;
+    margin-bottom: 0.2rem;
+  }
+
+  input[type="text"],
+  input[type="password"],
+  input[type="email"],
+  .pf-v5-c-form-control {
+    font-size: 0.9rem;
+  }
+}

@@ -1,6 +1,6 @@
 from typing import Optional, List
 from sqlmodel import Field, SQLModel, Relationship
-from enum import Enum
+
 
 
 class Topic(SQLModel, table=True):

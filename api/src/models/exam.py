@@ -1,7 +1,7 @@
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import Column, JSON
-from enum import Enum
+
 
 
 # Exam model
@@ -12,9 +12,13 @@ class Exam(SQLModel, table=True):
     exam_config_id: int = Field(foreign_key="exam_config.id")
     exam_xml: Optional[str] = Field(default=None)
     nmec: Optional[int] = Field(default=None)
+    student_name: Optional[str] = Field(default=None)
+    student_email: Optional[str] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
-    capture_path: Optional[str] = Field(default=None)
+    results_details: Optional[Dict[int, int]] = Field(default_factory=dict, sa_column=Column(JSON))
+    capture_path: Optional[str] = Field(default=None)       # raw cropped image
+    correction_path: Optional[str] = Field(default=None)    # corrected cropped image
     batch_number: Optional[int] = Field(default=None)
     validated: bool = Field(default=False)
     answer_key: Optional[Dict[int, int]] = Field(default_factory=dict, sa_column=Column(JSON))
@@ -39,6 +43,7 @@ class ExamUpdate(SQLModel):
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
     capture_path: Optional[str] = Field(default=None)
+    correction_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
 
 
@@ -50,6 +55,8 @@ class ExamRead(SQLModel):
     nmec: Optional[int] = Field(default=None)
     grade: Optional[float] = Field(default=None)
     results: Optional[str] = Field(default=None)
+    capture_path: Optional[str] = Field(default=None)
+    correction_path: Optional[str] = Field(default=None)
     batch_number: Optional[int] = Field(default=None)
 
 class ExamPublic(SQLModel):

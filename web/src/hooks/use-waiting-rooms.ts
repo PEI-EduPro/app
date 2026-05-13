@@ -154,10 +154,18 @@ const useResolveWarnings = (roomId: number) => {
   });
 };
 
-const useGetExamsResponses = (roomId: number) =>
+const useGetExamsResponses = (roomId: number, refetchInterval?: number) =>
   useQuery<ExamResponseI[]>({
     queryKey: ["exams_responses", roomId],
     queryFn: () => apiClient.get(`/exams/${roomId}/all_exams_info`),
+    refetchInterval,
+  });
+
+const useGetExamInfo = (examId: number | null) =>
+  useQuery<ExamResponseI>({
+    queryKey: ["exam_info", examId],
+    queryFn: () => apiClient.get(`/exams/${examId}/exam_info`),
+    enabled: examId !== null,
   });
 
 const useValidateExam = (roomId: number) => {
@@ -221,6 +229,7 @@ export {
   useGetWarnings,
   useResolveWarnings,
   useGetExamsResponses,
+  useGetExamInfo,
   useValidateExam,
   useCorrectExam,
   useGetSubmitedExams,
