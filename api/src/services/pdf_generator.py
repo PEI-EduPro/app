@@ -57,7 +57,7 @@ MAIN_TEMPLATE = r"""\documentclass[a4paper,addpoints,10pt]{exam}
 
 def compile_latex_to_pdf(latex_content: str, t_variants_content: str, subject_name: str = None) -> bytes:
     """Compile LaTeX string to PDF and return bytes."""
-    templates_dir = Path(__file__).parent.parent / "latex_templates"
+    templates_dir = Path(__file__).parent.parent / "templates/latex"
     
     with tempfile.TemporaryDirectory() as tmpdir:
         tmpdir_path = Path(tmpdir)

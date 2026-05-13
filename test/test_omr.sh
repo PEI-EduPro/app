@@ -12,7 +12,7 @@ CLIENT_SECRET="**"  # <--- paste KEYCLOAK_CLIENT_SECRET from deployment/.env
 # USERNAME="professor1"
 USERNAME="orp"
 # PASSWORD="password"
-PASSWORD="admin"
+PASSWORD="adminadminadmin1"
 
 IMAGE_PATH="${1:-}"  # Pass image path as first argument
 
@@ -45,7 +45,25 @@ echo "Token obtained."
 
 # --- CALL OMR ENDPOINT ---
 echo ""
-echo "--- Sending image to OMR evaluation endpoint ---"
-curl -v -X POST "$API_BASE/exams/evaluate" \
+echo "--- Building JSON payload file ---"
+# Create a secure temporary file
+TEMP_JSON=$(mktemp)
+
+# 1. Write the opening JSON brackets
+echo -n '{"files": ["' > "$TEMP_JSON"
+
+# 2. Convert to Base64 and append DIRECTLY to the file 
+# (This completely bypasses the shell's argument limits!)
+base64 -w 0 "$IMAGE_PATH" >> "$TEMP_JSON"
+
+# 3. Write the closing JSON brackets
+echo '"]}' >> "$TEMP_JSON"
+
+echo "--- Sending JSON payload to OMR evaluation endpoint ---"
+curl -v -X POST "$API_BASE/waiting-rooms/1/evaluate" \
   -H "Authorization: Bearer $TOKEN" \
-  -F "file=@$IMAGE_PATH"
+  -H "Content-Type: application/json" \
+  -d @"$TEMP_JSON"
+
+# Clean up the temporary file
+rm "$TEMP_JSON"
