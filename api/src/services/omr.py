@@ -1,13 +1,17 @@
-from src.models.exam import Exam
-from src.services.exam import get_exam_config_by_id
-from sqlmodel.ext.asyncio.session import AsyncSession
+import json
+import logging
+import os
 
-from imutils.perspective import order_points
+import cv2
 import imutils
 import numpy as np
-import cv2
-import json
-import os
+from imutils.perspective import order_points
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.models.exam import Exam
+from src.services.exam import get_exam_config_by_id
+
+logger = logging.getLogger(__name__)
 
 # Settings (tune if needed)
 NOISE_THRESHOLD = 30
@@ -34,7 +38,7 @@ async def evaluate_exam(
     retval, bbox = qr_detector.detect(image)
 
     if not retval or bbox is None:
-        raise Exception("Could not detect the QR code. Please check image clarity.")
+        raise ValueError("Could not detect the QR code. Please check image clarity.")
 
     # Extract QR Code bounding box geometry
     qr_pts = bbox[0]
@@ -254,7 +258,7 @@ async def evaluate_exam(
         total_exam_score += q_score
 
     total_exam_score = max(0.0, total_exam_score)
-    print(f"\nFINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
+    logger.info(f"FINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
     # Save the padded image as the final capture path
     dir_name = os.path.dirname(image_path)

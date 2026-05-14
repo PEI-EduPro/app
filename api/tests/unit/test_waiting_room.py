@@ -283,7 +283,7 @@ async def test_student_to_exam_qr_invalid_exam_id(client, mock_auth_user, setup_
         json={"qr": "invalid_id", "nmec": 12345}
     )
     
-    assert response.status_code == 400
+    assert response.status_code == 422
     assert "Invalid exam ID format" in response.json()["detail"]
 
 @pytest.mark.asyncio

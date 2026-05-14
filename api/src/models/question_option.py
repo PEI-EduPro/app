@@ -21,7 +21,6 @@ class QuestionOptionCreate(SQLModel):
     question_id: int
     option_text: str = Field(max_length=500)
     value: bool = False
-    #order_position: Optional[int] = None
 
 class QuestionOptionUpdate(SQLModel):
     """Schema for updating question option data"""

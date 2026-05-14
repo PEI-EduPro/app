@@ -1,8 +1,10 @@
+from typing import List, Optional
+
 from fastapi import HTTPException
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
+
 from src.models.question_option import QuestionOption, QuestionOptionCreate, QuestionOptionPublic, QuestionOptionUpdate
-from typing import List, Optional
 
 async def create_question_options(
     session: AsyncSession,

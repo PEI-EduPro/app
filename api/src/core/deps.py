@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from typing import List
 import jwt
 
 from fastapi import Depends, HTTPException, status
@@ -39,7 +40,7 @@ async def get_current_user_info(credentials: HTTPAuthorizationCredentials = Depe
         groups = await keycloak_client.get_user_group_paths(user_id)
         logger.debug(f"Fetched fresh groups for {username}: {groups}")
     except Exception as e:
-        logger.warning(f"Could not fetch fresh groups, falling back to token claims: {e}")
+        logger.error(f"Could not fetch fresh groups for {username}, falling back to stale token claims: {e}")
         groups = token_info.get("groups", [])
 
     # Auto-assign 'professor' role directly if the user has no specific role yet
@@ -115,8 +116,6 @@ def require_subject_student(subject_id: str):
 def require_edit_question_bank(subject_id: str):
     group_name = f"/s{subject_id}/edit_question_bank"
     return require_group(group_name)
-
-from typing import List
 
 def verify_permission(user_info: User, permissions: List[str], allow_manager: bool = False) -> bool:
     """
