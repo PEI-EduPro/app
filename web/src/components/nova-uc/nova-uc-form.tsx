@@ -1,7 +1,13 @@
 import { useForm, Controller } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAddUc, useUpdateUc, useGetUcProfessors, useGetUcRegent } from "@/hooks/use-ucs";
+import { CancelConfirmDialog } from "./cancel-confirm-dialog";
+import {
+  useAddUc,
+  useUpdateUc,
+  useGetUcProfessors,
+  useGetUcRegent,
+} from "@/hooks/use-ucs";
 import { useGetProfessors } from "@/hooks/use-users";
 import { cn } from "@/lib/utils";
 import { Search } from "lucide-react";
@@ -13,10 +19,17 @@ type UCFormT = {
   professores: string[];
 };
 
-function formatName(p: { firstName?: string; lastName?: string; first_name?: string; last_name?: string; username?: string; email?: string }) {
-  return (p.firstName && p.lastName)
+function formatName(p: {
+  firstName?: string;
+  lastName?: string;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  email?: string;
+}) {
+  return p.firstName && p.lastName
     ? `${p.firstName} ${p.lastName}`
-    : (p.first_name && p.last_name)
+    : p.first_name && p.last_name
       ? `${p.first_name} ${p.last_name}`
       : p.username || p.email || "";
 }
@@ -30,97 +43,155 @@ interface UCFormProps {
   lockRegente?: boolean;
 }
 
-function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialProfessores = [], lockRegente = false }: UCFormProps) {
+function SearchableList({
+  items,
+  search,
+  onSearch,
+  selected,
+  onToggle,
+  loading = false,
+}: {
+  items: {
+    id: string;
+    email?: string;
+    firstName?: string;
+    lastName?: string;
+    first_name?: string;
+    last_name?: string;
+    username?: string;
+  }[];
+  search: string;
+  onSearch: (v: string) => void;
+  selected: string | string[];
+  onToggle: (id: string) => void;
+  multi?: boolean;
+  loading?: boolean;
+}) {
+  const selectedIds = Array.isArray(selected)
+    ? selected
+    : selected
+      ? [selected]
+      : [];
+  const selectedItems = items.filter((p) => selectedIds.includes(p.id));
+
+  return (
+    <div className="flex flex-col gap-2">
+      {selectedItems.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {selectedItems.map((p) => (
+            <span
+              key={p.id}
+              onClick={() => onToggle(p.id)}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary cursor-pointer hover:bg-red-100 hover:text-red-600 transition-colors"
+            >
+              {formatName(p)} ×
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Pesquisar por nome ou email..."
+          value={search}
+          onChange={(e) => onSearch(e.target.value)}
+          className="pl-9 shadow-none"
+        />
+      </div>
+      <div className="border rounded-md overflow-y-auto h-48">
+        {loading ? (
+          <div className="p-3 text-sm text-muted-foreground">A carregar...</div>
+        ) : items.length === 0 ? (
+          <div className="p-3 text-sm text-muted-foreground">
+            Nenhum resultado.
+          </div>
+        ) : (
+          items.map((p) => {
+            const isSelected = selectedIds.includes(p.id);
+            if (isSelected) return null;
+            return (
+              <div
+                key={p.id}
+                onClick={() => onToggle(p.id)}
+                className="px-3 py-2 cursor-pointer text-sm hover:bg-muted/50 transition-colors"
+              >
+                <div>{formatName(p)}</div>
+                {p.email && (
+                  <div className="text-xs text-muted-foreground">{p.email}</div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function UCFormInner({
+  onSuccess,
+  onCancel,
+  ucId,
+  initialRegente = "",
+  initialProfessores = [],
+  lockRegente = false,
+}: UCFormProps) {
   const isEdit = !!ucId;
   const { mutate: addUc } = useAddUc(onSuccess);
   const { mutate: updateUc } = useUpdateUc(ucId ?? 0);
-  const { data: professors = [], isLoading: loadingProfessors } = useGetProfessors();
+  const { data: professors = [], isLoading: loadingProfessors } =
+    useGetProfessors();
   const [regenteSearch, setRegenteSearch] = useState("");
   const [professoresSearch, setProfessoresSearch] = useState("");
 
   const { handleSubmit, control, reset, watch, formState } = useForm<UCFormT>({
-    defaultValues: { nome: "", regente: initialRegente, professores: initialProfessores },
+    defaultValues: {
+      nome: "",
+      regente: initialRegente,
+      professores: initialProfessores,
+    },
   });
 
   const selectedRegente = watch("regente");
 
   const filteredRegente = professors.filter((p) => {
     const q = regenteSearch.toLowerCase();
-    return formatName(p).toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q);
+    return (
+      formatName(p).toLowerCase().includes(q) ||
+      (p.email || "").toLowerCase().includes(q)
+    );
   });
 
   const filteredProfessores = professors
     .filter((p) => p.id !== selectedRegente)
     .filter((p) => {
       const q = professoresSearch.toLowerCase();
-      return formatName(p).toLowerCase().includes(q) || (p.email || "").toLowerCase().includes(q);
+      return (
+        formatName(p).toLowerCase().includes(q) ||
+        (p.email || "").toLowerCase().includes(q)
+      );
     });
 
   const onSubmit = (formData: UCFormT) => {
     if (isEdit) {
-      updateUc({ regent_keycloak_id: formData.regente, professor_keycloak_ids: formData.professores });
+      updateUc({
+        regent_keycloak_id: formData.regente,
+        professor_keycloak_ids: formData.professores,
+      });
       onSuccess?.();
     } else {
-      addUc({ name: formData.nome, regent_keycloak_id: formData.regente, professor_keycloak_ids: formData.professores });
+      addUc({
+        name: formData.nome,
+        regent_keycloak_id: formData.regente,
+        professor_keycloak_ids: formData.professores,
+      });
       reset();
     }
   };
 
-  function SearchableList({
-    items,
-    search,
-    onSearch,
-    selected,
-    onToggle,
-    multi = false,
-  }: {
-    items: typeof professors;
-    search: string;
-    onSearch: (v: string) => void;
-    selected: string | string[];
-    onToggle: (id: string) => void;
-    multi?: boolean;
-  }) {
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Pesquisar por nome ou email..."
-            value={search}
-            onChange={(e) => onSearch(e.target.value)}
-            className="pl-9 shadow-none"
-          />
-        </div>
-        <div className="border rounded-md overflow-y-auto h-48">
-          {loadingProfessors ? (
-            <div className="p-3 text-sm text-muted-foreground">A carregar...</div>
-          ) : items.length === 0 ? (
-            <div className="p-3 text-sm text-muted-foreground">Nenhum resultado.</div>
-          ) : (
-            items.map((p) => {
-              const isSelected = multi ? (selected as string[]).includes(p.id) : selected === p.id;
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => onToggle(p.id)}
-                  className={cn(
-                    "px-3 py-2 cursor-pointer text-sm hover:bg-muted transition-colors",
-                    isSelected && "bg-primary/10 font-medium text-primary",
-                  )}
-                >
-                  <div>{formatName(p)}</div>
-                  {p.email && <div className="text-xs text-muted-foreground">{p.email}</div>}
-                </div>
-              );
-            })
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  const lockedRegentProfessor = lockRegente ? professors.find((p) => p.id === initialRegente) : undefined;
+  const lockedRegentProfessor = lockRegente
+    ? professors.find((p) => p.id === initialRegente)
+    : undefined;
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-6">
@@ -159,7 +230,9 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
             <div className="border rounded-md px-3 py-2.5 text-sm bg-muted/50 text-muted-foreground select-none">
               {lockedRegentProfessor ? (
                 <>
-                  <div className="font-medium text-foreground">{formatName(lockedRegentProfessor)}</div>
+                  <div className="font-medium text-foreground">
+                    {formatName(lockedRegentProfessor)}
+                  </div>
                   {lockedRegentProfessor.email && (
                     <div className="text-xs">{lockedRegentProfessor.email}</div>
                   )}
@@ -178,7 +251,10 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
                   search={regenteSearch}
                   onSearch={setRegenteSearch}
                   selected={field.value}
-                  onToggle={(id) => field.onChange(field.value === id ? "" : id)}
+                  onToggle={(id) =>
+                    field.onChange(field.value === id ? "" : id)
+                  }
+                  loading={loadingProfessors}
                 />
               )}
             />
@@ -186,7 +262,7 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
         </div>
 
         <div className="flex-1 flex flex-col gap-2">
-          <label className="text-sm font-medium">Professores</label>
+          <label className="text-sm font-medium">Outros Docentes</label>
           <Controller
             control={control}
             name="professores"
@@ -204,6 +280,7 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
                   )
                 }
                 multi
+                loading={loadingProfessors}
               />
             )}
           />
@@ -211,21 +288,29 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
       </div>
 
       <div className="flex gap-3">
-        <Button
-          type="button"
-          variant="destructive"
-          className="cursor-pointer"
-          onClick={() => { reset(); onCancel?.(); }}
-        >
-          Cancelar
-        </Button>
+        <CancelConfirmDialog
+          onConfirm={() => {
+            reset();
+            onCancel?.();
+          }}
+          isDirty={
+            isEdit
+              ? watch("regente") !== initialRegente ||
+                watch("professores").slice().sort().join(",") !==
+                  initialProfessores.slice().sort().join(",")
+              : true
+          }
+        />
         <Button
           type="submit"
           className="cursor-pointer"
           disabled={
             (!isEdit && (!watch("nome") || watch("nome").trim() === "")) ||
             !watch("regente") ||
-            (isEdit && watch("regente") === initialRegente && watch("professores").slice().sort().join(",") === initialProfessores.slice().sort().join(","))
+            (isEdit &&
+              watch("regente") === initialRegente &&
+              watch("professores").slice().sort().join(",") ===
+                initialProfessores.slice().sort().join(","))
           }
         >
           {isEdit ? "Guardar" : "Criar"}
@@ -235,12 +320,27 @@ function UCFormInner({ onSuccess, onCancel, ucId, initialRegente = "", initialPr
   );
 }
 
-function EditUCFormLoader({ ucId, onSuccess, onCancel, lockRegente }: { ucId: number; onSuccess?: () => void; onCancel?: () => void; lockRegente?: boolean }) {
+function EditUCFormLoader({
+  ucId,
+  onSuccess,
+  onCancel,
+  lockRegente,
+}: {
+  ucId: number;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+  lockRegente?: boolean;
+}) {
   const { data: regent, isLoading: loadingRegent } = useGetUcRegent(ucId);
-  const { data: professors, isLoading: loadingProfs } = useGetUcProfessors(ucId);
+  const { data: professors, isLoading: loadingProfs } =
+    useGetUcProfessors(ucId);
 
   if (loadingRegent || loadingProfs) {
-    return <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
+    return (
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
   }
 
   return (
@@ -257,6 +357,14 @@ function EditUCFormLoader({ ucId, onSuccess, onCancel, lockRegente }: { ucId: nu
 }
 
 export function NovaUCForm(props: UCFormProps = {}) {
-  if (props.ucId) return <EditUCFormLoader ucId={props.ucId} onSuccess={props.onSuccess} onCancel={props.onCancel} lockRegente={props.lockRegente} />;
+  if (props.ucId)
+    return (
+      <EditUCFormLoader
+        ucId={props.ucId}
+        onSuccess={props.onSuccess}
+        onCancel={props.onCancel}
+        lockRegente={props.lockRegente}
+      />
+    );
   return <UCFormInner {...props} />;
 }
