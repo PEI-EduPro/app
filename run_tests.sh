@@ -67,6 +67,11 @@ echo -e "\n${GREEN}Infrastructure is Ready!${NC}"
 # 2. Run Tests
 cd api
 
+COVERAGE_ARGS=""
+if [ "${COVERAGE:-false}" = "true" ]; then
+    COVERAGE_ARGS="--cov=src --cov-report=xml:coverage.xml --cov-report=term-missing"
+fi
+
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)
 STORAGE_DIR=$STORAGE_DIR \
@@ -83,7 +88,7 @@ KEYCLOAK_CLIENT_ID=api-backend \
 KEYCLOAK_CLIENT_SECRET="test" \
 KEYCLOAK_ADMIN_USERNAME=admin \
 KEYCLOAK_ADMIN_PASSWORD=admin \
-uv run pytest tests/unit
+uv run pytest tests/unit $COVERAGE_ARGS
 
 echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Run integration tests (connects to ISOLATED Docker services)
@@ -104,6 +109,6 @@ KEYCLOAK_CLIENT_ID=api-backend \
 KEYCLOAK_CLIENT_SECRET="**********" \
 KEYCLOAK_ADMIN_USERNAME=admin \
 KEYCLOAK_ADMIN_PASSWORD=admin \
-uv run pytest tests/integration
+uv run pytest tests/integration $COVERAGE_ARGS
 
 echo -e "${GREEN}All tests passed successfully!${NC}"

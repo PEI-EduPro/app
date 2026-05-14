@@ -10,10 +10,12 @@ from src import utils
 from src.core.db import get_session
 from src.core.deps import get_current_user_info, verify_permission
 from src.models.common import MessageResponse
+from src.models.email_options import EmailOptionsPayload
 from src.models.exam_config import ExamConfig
 from src.models.user import User
 from src.models.waiting_room import WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, EvaluateBatchRequest, QRCodeToNMEC
-from src.services.exam import get_exam_by_id, get_exams_by_config_id
+from src.models.warning import Warning
+from src.services.exam import get_exam_by_id, get_exams_by_config_id, notify_student
 from src.services.omr import evaluate_exam
 from src.services.waiting_room import (
     associate_student_to_exam_service,
@@ -388,3 +390,72 @@ async def evaluate_exam_batch(
     if has_errors:
         return JSONResponse(status_code=status.HTTP_207_MULTI_STATUS, content={"results": results})
     return {"results": results}
+
+@router.post("/{waiting_room_id}/notify-students")
+async def notify_students_via_email(
+    waiting_room_id: int,
+    email_options: EmailOptionsPayload,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Notify students about their exam score.
+    """
+
+    waiting_room = await get_waiting_room(session, waiting_room_id)
+    if not waiting_room:
+        raise HTTPException(status_code=404, detail="Waiting room not found.")
+
+    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if waiting_room.state != WaitingRoomState.CLOSED:
+        raise HTTPException(status_code=400, detail="Waiting room must be in the closed state to notify students.")
+    
+    # Check if waiting room has any warnings pending resolution
+    stmt = select(Warning).where(Warning.exam_config_id == exam_config.id)
+    result = await session.exec(stmt)
+    pending_warnings = result.all()
+    
+    if pending_warnings:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"Cannot notify students. There are {len(pending_warnings)} pending warning(s) that must be resolved first."
+        )
+    
+    exams = exam_config.exams
+    
+    # Pre-Notification Checks
+    for exam in exams:
+        # Only alert for exams that actually have an association
+        if exam.student_email and exam.nmec and exam.student_name:
+
+            # Check if exam was corrected
+            if not (exam.capture_path and exam.correction_path and exam.grade and exam.results):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Exam {exam.id} has not yet been corrected!"
+                )
+
+            # Check if exam was manually validated by the professor
+            if not exam.validated:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Cannot notify students. Exam {exam.id} has not been validated."
+                )
+
+    for exam in exams:
+        # Check if exam is associated with a student (skips unused exams)
+        if not (exam.student_email and exam.nmec and exam.student_name):
+            logger.warning(f"Exam {exam.id} is not associated with any student!")
+            continue
+
+        try:
+            await notify_student(session, exam, email_options.model_dump())
+        except Exception as e:
+            logger.error(f"Failed to send email for exam {exam.id}: {e}")
+
+    return {"message": f"Successfully notified students in waiting room {waiting_room_id}."}

@@ -127,6 +127,8 @@ async def evaluate_exam(
     outer_paper = cv2.warpPerspective(image, M, (warped_w, warped_h))
     outer_gray = cv2.warpPerspective(gray, M, (warped_w, warped_h))
 
+    clean_crop = outer_paper.copy()
+
     # Apply Thresholding to the entire padded area
     outer_thresh = cv2.threshold(outer_gray, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 
@@ -244,14 +246,19 @@ async def evaluate_exam(
     dir_name = os.path.dirname(image_path)
     base_name = os.path.basename(image_path)
     name_parts = base_name.rsplit(".", 1)
-    safe_name = f"{name_parts[0]}_omr_correction.{name_parts[1]}"
-    correction_path = os.path.join(dir_name, safe_name)
+    safe_correction_name = f"{name_parts[0]}_omr_correction.{name_parts[1]}"
+    safe_clean_name = f"{name_parts[0]}_clean.{name_parts[1]}"
+    clean_path = os.path.join(dir_name, safe_clean_name)
+    cv2.imwrite(clean_path, clean_crop)
+    correction_path = os.path.join(dir_name, safe_correction_name)
     cv2.imwrite(correction_path, outer_paper)
 
     # Persist results to the database
     exam.grade = total_exam_score
     exam.results = json.dumps(answered_dict)
-    exam.capture_path = correction_path
+
+    exam.capture_path = clean_path          
+    exam.correction_path = correction_path
 
     session.add(exam)
     await session.commit()

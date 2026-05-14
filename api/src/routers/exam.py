@@ -95,7 +95,6 @@ async def generate_exams(
     try:
         num_variations = exam_specs.get("num_variations", 1) # Total exams
         num_versions = exam_specs.get("number_versions", num_variations) # Unique shuffles
-        professors = exam_specs.get("professors", [])
         student_tuples = exam_specs.get("student_tuples", [])  # List of (nmec, name, email)
         vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
 
@@ -443,13 +442,13 @@ async def get_all_exams_info(
 
     result = []
     for e in exams:
-        corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+        corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
 
         capture_b64 = None
-        if corrected and os.path.exists(e.capture_path):
-            with open(e.capture_path, "rb") as f:
+        if corrected and os.path.exists(e.correction_path):
+            with open(e.correction_path, "rb") as f:
                 capture_b64 = base64.b64encode(f.read()).decode("utf-8")
-
+                
         result.append({
             "corrected": corrected,
             "nmec": e.nmec,
@@ -483,11 +482,11 @@ async def get_exam_info(
     subject_id = await get_subject_id_by_exam_config_id(e.exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
-    corrected = e.grade is not None and e.results is not None and e.capture_path is not None
+    corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
 
     capture_b64 = None
-    if corrected and os.path.exists(e.capture_path):
-        with open(e.capture_path, "rb") as f:
+    if corrected and os.path.exists(e.correction_path):
+        with open(e.correction_path, "rb") as f:
             capture_b64 = base64.b64encode(f.read()).decode("utf-8")
 
     questions = []
