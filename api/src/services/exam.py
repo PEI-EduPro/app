@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 import json
@@ -1086,15 +1087,15 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         answer_grid=answer_grid,
         question_stats=question_stats,
         score_details=score_details,
-        fraction=exam_config.fraction
+        fraction=exam_config.fraction,
     )
 
-    # 3. CONSTRUCT AND SEND EMAIL (Unchanged)
+    # 3. CONSTRUCT AND SEND EMAIL
     msg = MIMEMultipart()
     msg['From'] = os.getenv("SENDER_EMAIL")
     msg['To'] = exam.student_email
     msg['Subject'] = f"Nota de {exam_config.exam_name} de {subject.name}"
-    
+
     msg.attach(MIMEText(html_body, 'html'))
 
     # Attach student capture
@@ -1117,15 +1118,19 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
             mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
             msg.attach(mime_image)
     except Exception as e:
-         logger.error(f"Failed to attach signature image: {e}")
+        logger.error(f"Failed to attach signature image: {e}")
 
     # Send
-    try:
+    def send_email():
         server = smtplib.SMTP("smtp.gmail.com", int(os.getenv("EMAIL_NOTIFIER_PORT")))
         server.starttls()
         server.login(os.getenv("SENDER_EMAIL"), os.getenv("EMAIL_CODE"))
         server.send_message(msg)
         server.quit()
+
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, send_email)
     except Exception as e:
         logger.error(f"Erro ao enviar email: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")

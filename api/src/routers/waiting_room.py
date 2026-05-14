@@ -426,7 +426,7 @@ async def notify_students_via_email(
             detail=f"Cannot notify students. There are {len(pending_warnings)} pending warning(s) that must be resolved first."
         )
     
-    exams = exam_config.exams
+    exams = await exam_service.get_exams_by_config_id(session, exam_config.id)
     
     # Pre-Notification Checks
     for exam in exams:
@@ -434,7 +434,7 @@ async def notify_students_via_email(
         if exam.student_email and exam.nmec and exam.student_name:
 
             # Check if exam was corrected
-            if not (exam.capture_path and exam.correction_path and exam.grade and exam.results):
+            if not (exam.capture_path and exam.correction_path and exam.grade is not None and exam.results):
                 raise HTTPException(
                     status_code=400,
                     detail=f"Exam {exam.id} has not yet been corrected!"

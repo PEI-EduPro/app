@@ -230,7 +230,7 @@ input[type="password"],
 input[type="email"],
 .pf-v5-c-form-control {
   width: 100%;
-  border: 1.5px solid rgba(255,255,255,0.15);
+  border: 1.5px solid rgba(255,255,255,0.15) !important;
   border-radius: 0.75rem;
   font-family: inherit;
   font-size: 1rem;
@@ -238,6 +238,19 @@ input[type="email"],
   background: rgba(255,255,255,0.08);
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
+  /* neutralise PatternFly bottom-border-only variables */
+  --pf-v5-c-form-control--BorderTopWidth: 0;
+  --pf-v5-c-form-control--BorderRightWidth: 0;
+  --pf-v5-c-form-control--BorderLeftWidth: 0;
+  --pf-v5-c-form-control--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--before--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--focus--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--m-expanded--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--m-success--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--m-warning--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--m-error--after--BorderBottomWidth: 0;
+  --pf-v5-c-form-control--BorderBottomColor: transparent;
 }
 
 .pf-v5-c-button.pf-m-control {
@@ -254,7 +267,7 @@ input[type="text"]:focus,
 input[type="password"]:focus,
 input[type="email"]:focus,
 .pf-v5-c-form-control:focus {
-  border-color: #41B5C0;
+  border-color: #41B5C0 !important;
   box-shadow: 0 0 0 3px rgba(65,181,192,0.25);
   background: rgba(255,255,255,0.12);
 }
