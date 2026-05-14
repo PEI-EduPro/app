@@ -56,40 +56,58 @@ async def evaluate_exam(
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
 
     # 3. Dynamically find the target box (The solid grid)
-    targetCnt = None
+    candidates = []
     for c in cnts:
-        # Wrap the contour in a Convex Hull first ---
-        hull = cv2.convexHull(c)
+        area = cv2.contourArea(c)
         
-        # Calculate perimeter and approximate the polygon based on the HULL
-        peri = cv2.arcLength(hull, True)
+        # Calculate bounding box and aspect ratio
+        x, y, w, h = cv2.boundingRect(c)
+        aspect_ratio = w / float(h) if h > 0 else 0
         
-        # You can also slightly increase the smoothing threshold from 0.02 to 0.03 for extra safety
-        approx = cv2.approxPolyDP(hull, 0.03 * peri, True) 
-        # --------------------------------------------------------
+        c_cx = x + (w / 2.0)
+        x_diff = abs(qr_cx - c_cx)
         
-        if len(approx) == 4:
-            area = cv2.contourArea(c) # keep using original area for size checks
-            x, y, w, h = cv2.boundingRect(approx)
-            aspect_ratio = w / float(h) if h > 0 else 0
+        # Flexible location checks: Grid should be near the QR code
+        # We allow it to be below or side-by-side
+        is_vertically_near = y > (qr_y_min - qr_h)
+        is_horizontally_near = x_diff < (qr_w * 10.0) # Lenient alignment
+        
+        # Area check: must be at least comparable to the QR code
+        is_significant = area > (qr_w * qr_h * 0.5)
+        
+        if is_vertically_near and is_horizontally_near and is_significant and aspect_ratio > 0.5:
+            # Solidity check to ensure it's a solid-ish block (like a grid)
+            hull = cv2.convexHull(c)
+            hull_area = cv2.contourArea(hull)
+            solidity = area / hull_area if hull_area > 0 else 0
             
-            c_cx = x + (w / 2.0)
-            x_diff = abs(qr_cx - c_cx)
-            
-            is_below = y > (qr_y_max - (qr_h * 0.5))
-            is_aligned_horizontally = x_diff < (qr_w * 2.0)
-            is_larger_than_qr = area > (qr_w * qr_h * 2.0)
-            
-            if is_below and is_aligned_horizontally and is_larger_than_qr and aspect_ratio > 3.0:
-                targetCnt = approx
-                break
+            if solidity > 0.3: # Grids are relatively solid, but allow for noise/marks
+                candidates.append(c)
 
-    if targetCnt is None:
-        raise Exception("Found the QR Code, but could not locate the answer grid below it.")
+    if not candidates:
+        raise Exception("Found the QR Code, but could not locate the answer grid near it.")
+
+    # Sort candidates by area and pick the largest one that is below/beside the QR
+    candidates = sorted(candidates, key=cv2.contourArea, reverse=True)
+    best_c = candidates[0]
+    
+    # Try to approximate to 4 points for perspective transform
+    # Use the convex hull to smooth out any "X" marks that might protrude
+    hull = cv2.convexHull(best_c)
+    peri = cv2.arcLength(hull, True)
+    approx = cv2.approxPolyDP(hull, 0.02 * peri, True)
+    
+    if len(approx) == 4:
+        target_cnt = approx
+    else:
+        # Fallback: use the bounding box corners if approximation fails
+        # This ensures we always have 4 points for the perspective transform
+        x, y, w, h = cv2.boundingRect(hull)
+        target_cnt = np.array([[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]])
 
     # Capture dotted line area
     # Order the points of the solid grid
-    rect = order_points(targetCnt.reshape(4, 2))
+    rect = order_points(target_cnt.reshape(4, 2))
     (tl, tr, br, bl) = rect
 
     # Calculate width and height of the inner grid

@@ -130,7 +130,11 @@ export default function ExamTestValidation({
 
   useEffect(() => {
     if (exam?.questions) {
-      onExamLoaded(exam.grade ?? null, buildGrid(exam.questions), exam.validated);
+      onExamLoaded(
+        exam.grade ?? null,
+        buildGrid(exam.questions),
+        exam.validated,
+      );
     }
   }, [exam]);
 
@@ -142,7 +146,7 @@ export default function ExamTestValidation({
         <img
           src={`data:image/jpeg;base64,${exam.capture}`}
           alt="Test example"
-          className="h-fit object-contain rounded-md border"
+          className="h-fit object-contain rounded-md border w-full max-h-50"
         />
       )}
       <AnswerGrid

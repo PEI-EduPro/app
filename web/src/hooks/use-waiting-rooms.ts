@@ -213,7 +213,7 @@ const useCorrectExam = (roomId: number) => {
 };
 
 const useGetSubmitedExams = (roomId: number) =>
-  useQuery<{ count: number }>({
+  useQuery<{ submitted_count: number }>({
     queryKey: ["submited_exams", roomId],
     queryFn: () => apiClient.get(`/waiting-rooms/${roomId}/submitted_count`),
   });
