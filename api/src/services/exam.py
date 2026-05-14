@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 import json
@@ -49,18 +50,22 @@ async def create_configs(
     num_versions: int = 1
 ) -> Tuple[ExamConfig, List[TopicConfig]]:
     """Create ExamConfig and TopicConfigs."""
-    
-    # Validate question counts before creating configs
-    for topic_id in exam_specs["topics"]:
-        result = await session.exec(select(Topic).where(Topic.id == int(topic_id)))
-        topic = result.first()
+
+    topic_ids = [int(tid) for tid in exam_specs["topics"]]
+
+    # Fetch all topics in one query
+    topics_result = await session.exec(select(Topic).where(Topic.id.in_(topic_ids)))
+    topics_by_id = {t.id: t for t in topics_result.all()}
+
+    # Validate question counts
+    for topic_id in topic_ids:
+        topic = topics_by_id.get(topic_id)
         if topic:
             count_result = await session.exec(
                 select(func.count(Question.id)).where(Question.topic_id == topic.id)
             )
             available_questions = count_result.one_or_none() or 0
             requested_questions = exam_specs["number_questions"].get(str(topic_id), 0)
-            
             if requested_questions > available_questions:
                 raise ValueError(
                     f"Topic '{topic.name}' has only {available_questions} questions, "
@@ -70,7 +75,6 @@ async def create_configs(
     # Convert student_tuples to JSON string if provided
     nmec_name_list = None
     if student_tuples:
-        import json
         student_dict = {str(nmec): {"name": name, "email": email} for nmec, name, email in student_tuples}
         nmec_name_list = json.dumps(student_dict)
 
@@ -80,24 +84,21 @@ async def create_configs(
         nmec_name_list=nmec_name_list,
         exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None),
         num_versions=num_versions
-        #creator_keycloak_id=dummy_user_id
     )
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
 
     topic_configs = []
-    for topic_id in exam_specs["topics"]:
-        result = await session.exec(select(Topic).where(Topic.id == int(topic_id)))
-        topic = result.first()
+    for topic_id in topic_ids:
+        topic = topics_by_id.get(topic_id)
         if topic:
-            topic_config = TopicConfig(
+            topic_configs.append(TopicConfig(
                 exam_config_id=exam_config.id,
                 topic_id=topic.id,
                 num_questions=exam_specs["number_questions"][str(topic_id)],
                 relative_weight=exam_specs["relative_quotations"][str(topic_id)],
-            )
-            topic_configs.append(topic_config)
+            ))
 
     session.add_all(topic_configs)
     await session.commit()
@@ -180,6 +181,9 @@ async def generate_exams_to_disk(
         keys_dir = os.path.join(tmpdir, "answer_keys")
         os.makedirs(exams_dir)
         os.makedirs(keys_dir)
+
+        # Read template files once
+        tex_files = [f for f in os.listdir(LATEX_TEMPLATES_DIR) if f.endswith(".tex")]
 
         # Copy base templates
         for f in os.listdir(LATEX_TEMPLATES_DIR):
@@ -391,7 +395,10 @@ async def generate_exams_task(
                         await fail_session.commit()
                         logger.info(f"ExamConfig {exam_config_id} status updated to FAILED")
             except Exception as e2:
-                logger.error(f"Failed to set status to FAILED for ExamConfig {exam_config_id}: {e2}")
+                logger.critical(
+                    f"ExamConfig {exam_config_id} is stuck in PENDING. "
+                    f"Generation error: {e} | Status update error: {e2}"
+                )
 
 def _generate_questions_latex(questions: list, topic_weights: Dict[int, float], opts_by_q: Dict[int, list], num_options: int = 4) -> Tuple[str, Dict[int, str]]:
     """Generate LaTeX for questions and return answer map."""
@@ -1080,15 +1087,15 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         answer_grid=answer_grid,
         question_stats=question_stats,
         score_details=score_details,
-        fraction=exam_config.fraction
+        fraction=exam_config.fraction,
     )
 
-    # 3. CONSTRUCT AND SEND EMAIL (Unchanged)
+    # 3. CONSTRUCT AND SEND EMAIL
     msg = MIMEMultipart()
     msg['From'] = os.getenv("SENDER_EMAIL")
     msg['To'] = exam.student_email
     msg['Subject'] = f"Nota de {exam_config.exam_name} de {subject.name}"
-    
+
     msg.attach(MIMEText(html_body, 'html'))
 
     # Attach student capture
@@ -1111,15 +1118,19 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
             mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
             msg.attach(mime_image)
     except Exception as e:
-         logger.error(f"Failed to attach signature image: {e}")
+        logger.error(f"Failed to attach signature image: {e}")
 
     # Send
-    try:
+    def send_email():
         server = smtplib.SMTP("smtp.gmail.com", int(os.getenv("EMAIL_NOTIFIER_PORT")))
         server.starttls()
         server.login(os.getenv("SENDER_EMAIL"), os.getenv("EMAIL_CODE"))
         server.send_message(msg)
         server.quit()
+
+    try:
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, send_email)
     except Exception as e:
         logger.error(f"Erro ao enviar email: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")

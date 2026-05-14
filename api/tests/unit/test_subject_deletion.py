@@ -41,7 +41,7 @@ async def test_delete_subject_comprehensive(client, mock_auth, session):
     await session.refresh(exam_config)
 
     # 2. Mock exam_service.delete_exam_config and keycloak_client
-    with patch("src.services.subject.exam_service.delete_exam_config", new_callable=AsyncMock) as mock_exam_delete, \
+    with patch("src.services.subject.delete_exam_config", new_callable=AsyncMock) as mock_exam_delete, \
          patch("src.services.subject.keycloak_client.delete_subject_groups", new_callable=AsyncMock) as mock_kc_subject_delete:
         
         async def side_effect_delete(s, ec_id):

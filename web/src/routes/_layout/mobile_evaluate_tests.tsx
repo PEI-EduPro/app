@@ -92,9 +92,7 @@ function RouteComponent() {
     <div className="py-3.5 px-4 w-full flex flex-col min-h-screen">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Detalhes"}
-        crumbs={[
-          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-        ]}
+        crumbs={[{ name: "Salas", link: "/unidades-curriculares" }]}
       />
 
       <div className="flex flex-col items-center flex-1 gap-4">
@@ -105,7 +103,8 @@ function RouteComponent() {
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#41B5C0]/15 border border-[#41B5C0]/30">
           <span className="w-2 h-2 rounded-full bg-[#41B5C0] animate-pulse" />
           <span className="text-sm font-semibold text-[#3263A8]">
-            {submitedExams?.count || 0}/{roomDetails?.total_exams} exames
+            {submitedExams?.submitted_count || 0}/{roomDetails?.total_exams}{" "}
+            exames
           </span>
         </div>
 

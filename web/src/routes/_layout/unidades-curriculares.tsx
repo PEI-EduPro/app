@@ -70,7 +70,7 @@ function UCS() {
   return (
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-4 md:px-6 w-full">
       <div className="shrink-0">
-        <AppBreadcrumb page="Unidades Curriculares" />
+        <AppBreadcrumb page={isMobile ? "Salas" : "Unidades Curriculares"} />
 
         <div className="font-rubik flex justify-center mb-7 md:mb-8 font-bold text-foreground animate-fade-in-up typography-h1">
           Unidades Curriculares

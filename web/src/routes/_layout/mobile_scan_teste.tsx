@@ -74,9 +74,7 @@ function RouteComponent() {
     <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Scan de Exames"}
-        crumbs={[
-          { name: "Unidades Curriculares", link: "/unidades-curriculares" },
-        ]}
+        crumbs={[{ name: "Salas", link: "/unidades-curriculares" }]}
       />
 
       <h1 className="font-rubik text-center text-base font-bold text-foreground mb-2 animate-fade-in-up truncate">

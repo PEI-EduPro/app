@@ -1,14 +1,17 @@
-from sqlmodel.ext.asyncio.session import AsyncSession
+import json
+import logging
+import traceback
+from typing import Optional, List, Dict
+
 from sqlmodel import select
-from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+from src.core.keycloak import keycloak_client
 from src.models.exam_config import ExamConfig
+from src.models.waiting_room import WaitingRoom, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, StudentInfo
 from src.models.subject import Subject
 from src.services.exam import get_exams_by_config_id
 from src.services.warning import calculate_and_persist_warnings
-from src.core.keycloak import keycloak_client
-from typing import Optional, List, Dict
-import json
-import logging
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +89,7 @@ async def get_waiting_room_info_service(session: AsyncSession, waiting_room_id: 
                     )
                 )
         except json.JSONDecodeError:
-            pass
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
 
     # Role extraction logic
     user_role = "Unknown"
@@ -127,22 +130,14 @@ async def associate_student_to_exam_service(
     waiting_room = await get_waiting_room(session, waiting_room_id)
     if not waiting_room:
         return None
-        
+
     association_string = f"{exam_id}:{student_nmec}"
-    
-    # We allow adding it even if technically one side might exist according to the TODO rules
-    # It will be validated later.
-    
-    # ensure it's not a duplicate exactly
     if association_string not in waiting_room.associations:
-        # Create a new list to ensure SQLAlchemy detects the change to the JSON column
-        new_associations = list(waiting_room.associations)
-        new_associations.append(association_string)
-        waiting_room.associations = new_associations
+        waiting_room.associations = [*waiting_room.associations, association_string]
         session.add(waiting_room)
         await session.commit()
         await session.refresh(waiting_room)
-        
+
     return waiting_room
 
 async def get_waiting_room_metrics_service(
@@ -188,7 +183,7 @@ async def close_waiting_room_service(session: AsyncSession, waiting_room_id: int
         try:
             nmec_to_name = json.loads(exam_config.nmec_name_list)
         except json.JSONDecodeError:
-            pass
+            logger.error(f"Failed to parse nmec_name_list for exam_config {waiting_room.exam_config_id}: invalid JSON")
 
     # 4. Detect conflicts, persist warnings, and write clean exam.nmec values
     await calculate_and_persist_warnings(session, waiting_room.exam_config_id, waiting_room.associations, nmec_to_name)
