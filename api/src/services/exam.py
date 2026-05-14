@@ -183,7 +183,7 @@ async def generate_exams_to_disk(
         os.makedirs(keys_dir)
 
         # Read template files once
-        tex_files = [f for f in os.listdir(TEMPLATES_DIR) if f.endswith(".tex")]
+        tex_files = [f for f in os.listdir(LATEX_TEMPLATES_DIR) if f.endswith(".tex")]
 
         # Copy base templates
         for f in os.listdir(LATEX_TEMPLATES_DIR):
