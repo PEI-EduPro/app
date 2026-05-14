@@ -10,7 +10,11 @@ interface UcTabsProps {
   isRegente: boolean;
 }
 
-export default function UcTabs({ realId, ucName, isRegente }: UcTabsProps) {
+export default function UcTabs({
+  realId,
+  ucName,
+  isRegente,
+}: Readonly<UcTabsProps>) {
   return (
     <Tabs
       defaultValue={isRegente ? "banco-perguntas" : "exames"}

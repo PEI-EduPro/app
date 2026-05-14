@@ -98,16 +98,16 @@ async def evaluate_exam(
     approx = cv2.approxPolyDP(hull, 0.02 * peri, True)
     
     if len(approx) == 4:
-        targetCnt = approx
+        target_cnt = approx
     else:
         # Fallback: use the bounding box corners if approximation fails
         # This ensures we always have 4 points for the perspective transform
         x, y, w, h = cv2.boundingRect(hull)
-        targetCnt = np.array([[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]])
+        target_cnt = np.array([[[x, y]], [[x + w, y]], [[x + w, y + h]], [[x, y + h]]])
 
     # Capture dotted line area
     # Order the points of the solid grid
-    rect = order_points(targetCnt.reshape(4, 2))
+    rect = order_points(target_cnt.reshape(4, 2))
     (tl, tr, br, bl) = rect
 
     # Calculate width and height of the inner grid

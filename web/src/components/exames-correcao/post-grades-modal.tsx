@@ -25,11 +25,11 @@ export default function PostGradesModal({
   wrId,
   open,
   onOpenChange,
-}: {
+}: Readonly<{
   wrId: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-}) {
+}>) {
   const { mutate: postGrades } = usePostGrades(wrId);
   const [options, setOptions] = useState<Record<ToggleKey, boolean>>({
     exam_capture: false,
