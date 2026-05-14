@@ -540,7 +540,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
             <p className="text-gray-500">
               {search
                 ? "Nenhum tópico encontrado"
-                : "Nenhum tópico criado ainda"}
+                : "Para começar, adicione um tópico e acrescente perguntas ou importe um ficheiro XML."}
             </p>
           </Card>
         )}

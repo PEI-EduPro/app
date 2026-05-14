@@ -39,21 +39,17 @@ export default function QuestionModal({
     { id: 4, value: "" },
   ]);
   const [correctAnswer, setCorrectAnswer] = useState<number | null>(null);
-  const [showError, setShowError] = useState(false);
-  const [showQuestionError, setShowQuestionError] = useState(false);
-  const [showDuplicateError, setShowDuplicateError] = useState(false);
 
   useEffect(() => {
     if (editingQuestion?.question) {
       const q = editingQuestion.question;
       setQuestionText(q.text);
-
-      // Convert options object to array
-      const optionsArray = Object.entries(q.options).map(([key, value]) => ({
-        id: parseInt(key),
-        value,
-      }));
-      setOptions(optionsArray);
+      setOptions(
+        Object.entries(q.options).map(([key, value]) => ({
+          id: parseInt(key),
+          value,
+        })),
+      );
       setCorrectAnswer(q.answer);
     } else if (isOpen) {
       setQuestionText("");
@@ -65,37 +61,22 @@ export default function QuestionModal({
       ]);
       setCorrectAnswer(null);
     }
-    setShowError(false);
-    setShowQuestionError(false);
-    setShowDuplicateError(false);
   }, [editingQuestion, isOpen]);
+
+  const optionValues = options.map((o) => o.value.trim().toLowerCase());
+  const hasDuplicates = optionValues.length !== new Set(optionValues).size;
+  const hasEmptyOptions = options.some((o) => !o.value.trim());
+  const isValid =
+    questionText.trim() !== "" &&
+    !hasEmptyOptions &&
+    correctAnswer !== null &&
+    !hasDuplicates;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isValid) return;
 
-    if (!questionText.trim()) {
-      setShowQuestionError(true);
-      return;
-    }
-
-    // Check for empty options
-    const emptyOptions = options.filter((opt) => !opt.value.trim());
-
-    if (correctAnswer === null || emptyOptions.length > 0) {
-      setShowError(true);
-      return;
-    }
-
-    // Check for duplicate options
-    const optionValues = options.map((opt) => opt.value.trim().toLowerCase());
-    const hasDuplicates = optionValues.length !== new Set(optionValues).size;
-    if (hasDuplicates) {
-      setShowDuplicateError(true);
-      return;
-    }
-
-    // Convert options array back to object
-    const optionsObject: { [key: number]: string } = {};
+    const optionsObject: Record<number, string> = {};
     options.forEach((opt) => {
       optionsObject[opt.id] = opt.value.trim();
     });
@@ -103,7 +84,7 @@ export default function QuestionModal({
     const questionData: Omit<Question, "id"> = {
       text: questionText.trim(),
       options: optionsObject,
-      answer: correctAnswer,
+      answer: correctAnswer!,
     };
 
     if (editingQuestion) {
@@ -117,7 +98,6 @@ export default function QuestionModal({
 
   const handleOptionChange = (id: number, value: string) => {
     setOptions(options.map((opt) => (opt.id === id ? { ...opt, value } : opt)));
-    setShowDuplicateError(false);
   };
 
   const addOption = () => {
@@ -132,14 +112,8 @@ export default function QuestionModal({
       });
       return;
     }
-
-    const newOptions = options.filter((opt) => opt.id !== id);
-    setOptions(newOptions);
-
-    // Reset correct answer if it was the removed option
-    if (correctAnswer === id) {
-      setCorrectAnswer(null);
-    }
+    setOptions(options.filter((opt) => opt.id !== id));
+    if (correctAnswer === id) setCorrectAnswer(null);
   };
 
   if (!isOpen) return null;
@@ -165,32 +139,24 @@ export default function QuestionModal({
             {/* Question Text */}
             <div className="mb-6">
               <Label className="block text-sm font-medium text-gray-700 mb-2">
-                Texto da Questão
+                Texto da Questão<span className="text-red-500 ml-1">*</span>
               </Label>
               <Textarea
                 value={questionText}
-                onChange={(e) => {
-                  setQuestionText(e.target.value);
-                  setShowQuestionError(false);
-                }}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none"
+                onChange={(e) => setQuestionText(e.target.value)}
+                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition resize-none ${
+                  questionText.trim() === ""
+                    ? "border-red-300"
+                    : "border-gray-300"
+                }`}
                 placeholder="Escreva a questão aqui..."
                 rows={3}
               />
-              {showQuestionError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
-                  <p className="text-sm text-red-700">
-                    Por favor, insira o{" "}
-                    <span className="font-medium">texto da questão</span> antes
-                    de continuar.
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Options */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-col mb-6 gap-2">
+              <div className="flex items-center justify-between">
                 <Label className="block text-sm font-medium text-gray-700">
                   Opções de Resposta
                 </Label>
@@ -204,83 +170,74 @@ export default function QuestionModal({
                 </Button>
               </div>
 
-              <div className="space-y-3">
-                {options.map((option, index) => (
-                  <div
-                    key={option.id}
-                    className="flex items-center gap-3 group"
-                  >
-                    <Input
-                      type="radio"
-                      id={`option-${option.id}`}
-                      name="correct-answer"
-                      checked={correctAnswer === option.id}
-                      onChange={() => {
-                        setCorrectAnswer(option.id);
-                        setShowError(false);
-                      }}
-                      className={`h-5 w-5 ${showError ? "accent-red-500 border-red-500" : "text-blue-600"}`}
-                      style={showError ? { accentColor: "#ef4444" } : {}}
-                    />
-                    <Label
-                      htmlFor={`option-${option.id}`}
-                      className="flex-1 flex items-center gap-3"
-                    >
-                      <span className="w-8 text-sm font-medium text-gray-500">
-                        {index + 1}.
-                      </span>
-                      <Input
-                        value={option.value}
-                        onChange={(e) =>
-                          handleOptionChange(option.id, e.target.value)
-                        }
-                        className={`flex-1 px-3 py-2 border rounded-lg outline-none transition
-                        ${
-                          correctAnswer === option.id
-                            ? "border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                            : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        }`}
-                        placeholder={`Opção ${index + 1}`}
-                      />
-                    </Label>
-                    {options.length > 2 && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => removeOption(option.id)}
-                        className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        title="Remover opção"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              {showError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
-                  <p className="text-sm text-red-700">
-                    Por favor,{" "}
-                    <span className="font-medium">
-                      preencha todas as opções
-                    </span>{" "}
-                    e selecione a{" "}
-                    <span className="font-medium">resposta correta</span>.
-                  </p>
-                </div>
-              )}
-              {showDuplicateError && (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-lg mt-3">
-                  <p className="text-sm text-red-700">
-                    Não é permitido ter{" "}
-                    <span className="font-medium">opções duplicadas</span>.
-                  </p>
-                </div>
-              )}
-              {!showError && !showDuplicateError && (
-                <p className="text-sm text-gray-500 mt-3">
-                  Selecione a opção correta clicando no círculo ao lado
+              {(correctAnswer === null || hasDuplicates) && (
+                <p className="text-sm text-red-500 mt-1">
+                  {correctAnswer === null && hasDuplicates
+                    ? "Selecione a resposta correta e remova as opções duplicadas."
+                    : correctAnswer === null
+                      ? "Selecione a resposta correta."
+                      : "Não é permitido ter opções duplicadas."}
                 </p>
               )}
+
+              <div className="space-y-3">
+                {options.map((option, index) => {
+                  const isDuplicate =
+                    option.value.trim() !== "" &&
+                    optionValues.filter(
+                      (v) => v === option.value.trim().toLowerCase(),
+                    ).length > 1;
+                  const isEmpty = option.value.trim() === "";
+
+                  return (
+                    <div
+                      key={option.id}
+                      className="flex items-center gap-3 group"
+                    >
+                      <Input
+                        type="radio"
+                        id={`option-${option.id}`}
+                        name="correct-answer"
+                        checked={correctAnswer === option.id}
+                        onChange={() => setCorrectAnswer(option.id)}
+                        className="h-5 w-5 text-blue-600"
+                      />
+                      <Label
+                        htmlFor={`option-${option.id}`}
+                        className="flex-1 flex items-center gap-3"
+                      >
+                        <span className="w-8 text-sm font-medium text-gray-500">
+                          {index + 1}.
+                        </span>
+                        <Input
+                          value={option.value}
+                          onChange={(e) =>
+                            handleOptionChange(option.id, e.target.value)
+                          }
+                          className={`flex-1 px-3 py-2 border rounded-lg outline-none transition placeholder:text-gray-300 ${
+                            isDuplicate || isEmpty
+                              ? "border-red-400 focus:ring-2 focus:ring-red-400"
+                              : correctAnswer === option.id
+                                ? "border-green-500 focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                                : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          }`}
+                          placeholder={`Opção ${index + 1}`}
+                        />
+                      </Label>
+                      {options.length > 2 && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => removeOption(option.id)}
+                          className="p-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                          title="Remover opção"
+                        >
+                          <Trash2 size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Actions */}
@@ -292,7 +249,11 @@ export default function QuestionModal({
               >
                 Cancelar
               </Button>
-              <Button type="submit" className="cursor-pointer">
+              <Button
+                type="submit"
+                disabled={!isValid}
+                className="cursor-pointer"
+              >
                 {editingQuestion ? "Guardar" : "Criar"}
               </Button>
             </div>
