@@ -1604,7 +1604,10 @@
     ]
   },
   "internationalizationEnabled": true,
-  "supportedLocales": ["pt", "en"],
+  "supportedLocales": [
+    "pt",
+    "en"
+  ],
   "defaultLocale": "pt",
   "authenticationFlows": [
     {
@@ -2282,7 +2285,7 @@
       "username": "goni",
       "enabled": true,
       "email": "goni@ua.pt",
-      "firstName": "Gon\u00e7alo",
+      "firstName": "Gonçalo",
       "lastName": "Fonseca",
       "credentials": [
         {
@@ -2317,7 +2320,7 @@
       "enabled": true,
       "email": "marta@ua.pt",
       "firstName": "Marta",
-      "lastName": "Conde\u00e7o",
+      "lastName": "Condeço",
       "credentials": [
         {
           "type": "password",
@@ -2350,7 +2353,7 @@
       "username": "jra",
       "enabled": true,
       "email": "jra@ua.pt",
-      "firstName": "Jo\u00e3o",
+      "firstName": "João",
       "lastName": "Almeida",
       "credentials": [
         {
@@ -2368,7 +2371,7 @@
       "enabled": true,
       "email": "susanabras@ua.pt",
       "firstName": "Susana",
-      "lastName": "Br\u00e1s",
+      "lastName": "Brás",
       "credentials": [
         {
           "type": "password",
@@ -2412,6 +2415,856 @@
       ],
       "realmRoles": [
         "manager"
+      ]
+    },
+    {
+      "username": "prof01",
+      "enabled": true,
+      "email": "prof01@ua.pt",
+      "firstName": "Ana",
+      "lastName": "Silva",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof02",
+      "enabled": true,
+      "email": "prof02@ua.pt",
+      "firstName": "Bruno",
+      "lastName": "Santos",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof03",
+      "enabled": true,
+      "email": "prof03@ua.pt",
+      "firstName": "Carlos",
+      "lastName": "Ferreira",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof04",
+      "enabled": true,
+      "email": "prof04@ua.pt",
+      "firstName": "Diana",
+      "lastName": "Pereira",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof05",
+      "enabled": true,
+      "email": "prof05@ua.pt",
+      "firstName": "Eduardo",
+      "lastName": "Oliveira",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof06",
+      "enabled": true,
+      "email": "prof06@ua.pt",
+      "firstName": "Filipa",
+      "lastName": "Costa",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof07",
+      "enabled": true,
+      "email": "prof07@ua.pt",
+      "firstName": "Gustavo",
+      "lastName": "Rodrigues",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof08",
+      "enabled": true,
+      "email": "prof08@ua.pt",
+      "firstName": "Helena",
+      "lastName": "Martins",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof09",
+      "enabled": true,
+      "email": "prof09@ua.pt",
+      "firstName": "Ivo",
+      "lastName": "Jesus",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof10",
+      "enabled": true,
+      "email": "prof10@ua.pt",
+      "firstName": "Joana",
+      "lastName": "Sousa",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof11",
+      "enabled": true,
+      "email": "prof11@ua.pt",
+      "firstName": "Luís",
+      "lastName": "Fernandes",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof12",
+      "enabled": true,
+      "email": "prof12@ua.pt",
+      "firstName": "Maria",
+      "lastName": "Gonçalves",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof13",
+      "enabled": true,
+      "email": "prof13@ua.pt",
+      "firstName": "Nuno",
+      "lastName": "Lopes",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof14",
+      "enabled": true,
+      "email": "prof14@ua.pt",
+      "firstName": "Olga",
+      "lastName": "Marques",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof15",
+      "enabled": true,
+      "email": "prof15@ua.pt",
+      "firstName": "Paulo",
+      "lastName": "Alves",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof16",
+      "enabled": true,
+      "email": "prof16@ua.pt",
+      "firstName": "Raquel",
+      "lastName": "Almeida",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof17",
+      "enabled": true,
+      "email": "prof17@ua.pt",
+      "firstName": "Sérgio",
+      "lastName": "Ribeiro",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof18",
+      "enabled": true,
+      "email": "prof18@ua.pt",
+      "firstName": "Teresa",
+      "lastName": "Pinto",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof19",
+      "enabled": true,
+      "email": "prof19@ua.pt",
+      "firstName": "Ulisses",
+      "lastName": "Carvalho",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof20",
+      "enabled": true,
+      "email": "prof20@ua.pt",
+      "firstName": "Vera",
+      "lastName": "Teixeira",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof21",
+      "enabled": true,
+      "email": "prof21@ua.pt",
+      "firstName": "André",
+      "lastName": "Moreira",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof22",
+      "enabled": true,
+      "email": "prof22@ua.pt",
+      "firstName": "Beatriz",
+      "lastName": "Correia",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof23",
+      "enabled": true,
+      "email": "prof23@ua.pt",
+      "firstName": "Cláudio",
+      "lastName": "Mendes",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof24",
+      "enabled": true,
+      "email": "prof24@ua.pt",
+      "firstName": "Daniela",
+      "lastName": "Nunes",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof25",
+      "enabled": true,
+      "email": "prof25@ua.pt",
+      "firstName": "Ernesto",
+      "lastName": "Soares",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof26",
+      "enabled": true,
+      "email": "prof26@ua.pt",
+      "firstName": "Fátima",
+      "lastName": "Vieira",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof27",
+      "enabled": true,
+      "email": "prof27@ua.pt",
+      "firstName": "Gabriel",
+      "lastName": "Monteiro",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof28",
+      "enabled": true,
+      "email": "prof28@ua.pt",
+      "firstName": "Inês",
+      "lastName": "Cardoso",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof29",
+      "enabled": true,
+      "email": "prof29@ua.pt",
+      "firstName": "Jorge",
+      "lastName": "Rocha",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof30",
+      "enabled": true,
+      "email": "prof30@ua.pt",
+      "firstName": "Lara",
+      "lastName": "Cunha",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof31",
+      "enabled": true,
+      "email": "prof31@ua.pt",
+      "firstName": "Manuel",
+      "lastName": "Pires",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof32",
+      "enabled": true,
+      "email": "prof32@ua.pt",
+      "firstName": "Natália",
+      "lastName": "Azevedo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof33",
+      "enabled": true,
+      "email": "prof33@ua.pt",
+      "firstName": "Óscar",
+      "lastName": "Melo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof34",
+      "enabled": true,
+      "email": "prof34@ua.pt",
+      "firstName": "Patrícia",
+      "lastName": "Fonseca",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof35",
+      "enabled": true,
+      "email": "prof35@ua.pt",
+      "firstName": "Rui",
+      "lastName": "Barbosa",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof36",
+      "enabled": true,
+      "email": "prof36@ua.pt",
+      "firstName": "Sofia",
+      "lastName": "Ramos",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof37",
+      "enabled": true,
+      "email": "prof37@ua.pt",
+      "firstName": "Tomás",
+      "lastName": "Simões",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof38",
+      "enabled": true,
+      "email": "prof38@ua.pt",
+      "firstName": "Ursula",
+      "lastName": "Gomes",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof39",
+      "enabled": true,
+      "email": "prof39@ua.pt",
+      "firstName": "Vítor",
+      "lastName": "Freitas",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof40",
+      "enabled": true,
+      "email": "prof40@ua.pt",
+      "firstName": "Wanda",
+      "lastName": "Matos",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof41",
+      "enabled": true,
+      "email": "prof41@ua.pt",
+      "firstName": "Alexandre",
+      "lastName": "Coelho",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof42",
+      "enabled": true,
+      "email": "prof42@ua.pt",
+      "firstName": "Bárbara",
+      "lastName": "Machado",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof43",
+      "enabled": true,
+      "email": "prof43@ua.pt",
+      "firstName": "Cristina",
+      "lastName": "Figueiredo",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof44",
+      "enabled": true,
+      "email": "prof44@ua.pt",
+      "firstName": "Diogo",
+      "lastName": "Tavares",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof45",
+      "enabled": true,
+      "email": "prof45@ua.pt",
+      "firstName": "Elsa",
+      "lastName": "Borges",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof46",
+      "enabled": true,
+      "email": "prof46@ua.pt",
+      "firstName": "Fernando",
+      "lastName": "Andrade",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof47",
+      "enabled": true,
+      "email": "prof47@ua.pt",
+      "firstName": "Graça",
+      "lastName": "Campos",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof48",
+      "enabled": true,
+      "email": "prof48@ua.pt",
+      "firstName": "Hugo",
+      "lastName": "Dias",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof49",
+      "enabled": true,
+      "email": "prof49@ua.pt",
+      "firstName": "Isabel",
+      "lastName": "Henriques",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
+      ]
+    },
+    {
+      "username": "prof50",
+      "enabled": true,
+      "email": "prof50@ua.pt",
+      "firstName": "Joaquim",
+      "lastName": "Paiva",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "adminadminadmin1",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "professor"
       ]
     }
   ]

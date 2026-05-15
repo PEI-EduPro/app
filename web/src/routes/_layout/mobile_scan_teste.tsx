@@ -2,7 +2,7 @@ import { AppBreadcrumb } from "@/components/app-breadcrumb";
 import { CustomTable } from "@/components/custom-table";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { LoaderCircle, RotateCcw, Trash2Icon } from "lucide-react";
+import { LoaderCircle, RotateCcw, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import z from "zod";
 import { Button } from "@/components/ui/button";
@@ -112,7 +112,7 @@ function RouteComponent() {
                     <AlertDialogContent>
                       <AlertDialogHeader>
                         <AlertDialogMedia className="bg-destructive/10 text-destructive">
-                          <Trash2Icon />
+                          <TriangleAlert />
                         </AlertDialogMedia>
                         <AlertDialogTitle>Fechar Exame</AlertDialogTitle>
                         <AlertDialogDescription>
