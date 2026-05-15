@@ -16,4 +16,4 @@ RUN uv sync --frozen --no-cache
 
 COPY . .
 
-CMD ["/app/.venv/bin/fastapi", "run", "src/main.py", "--port", "80", "--host", "0.0.0.0", "--proxy-headers"]
+CMD ["uv", "run", "fastapi", "run", "src/main.py", "--port", "80", "--host", "0.0.0.0", "--proxy-headers"]
