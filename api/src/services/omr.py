@@ -1,26 +1,23 @@
 from src.models.exam import Exam
 from src.services.exam import get_exam_config_by_id
 from sqlmodel.ext.asyncio.session import AsyncSession
-
 from imutils.perspective import order_points
 import imutils
 import numpy as np
 import cv2
 import json
-import os
 import logging
-import tensorflow as tf
-from tensorflow.keras import models
+from tensorflow.keras.models import load_model
 
 logger = logging.getLogger(__name__)
 
 # Settings
 NUM_OPTIONS = 4
-MODEL_FILE = "src/cnn_models/13_05_2026.h5"
+MODEL_FILE = "src/cnn_models/15_05_2026.keras"
 
 logger.info(f"Loading existing CNN model {MODEL_FILE}...")
 # Load globally so it only boots once when your server starts
-model = tf.keras.models.load_model(MODEL_FILE)  
+model = load_model(MODEL_FILE)
 classes = ['empty', 'erased', 'selected']
 
 async def evaluate_exam(
@@ -38,10 +35,10 @@ async def evaluate_exam(
     relative_weights = {int(k): v for k, v in exam.relative_weights.items()}
     num_questions = len(answer_key)
 
-    # 1. Extract Images via OpenCV (Deskewed with Convex Hull Extreme Points)
+    # Extract Images via OpenCV
     cropped_table, padded_table, pad_x, pad_y, maxW, maxH = isolate_and_crop_table(image_path)
 
-    # 2. Extract Cells & Run CNN (Dynamic width based on num_questions!)
+    # Extract Cells & Run CNN 
     cells = extract_cells_math(cropped_table, num_questions)
     cells_array = np.array(cells).reshape(-1, 32, 32, 1)
     
@@ -59,17 +56,16 @@ async def evaluate_exam(
     answers_details = dict()
     answered_dict = dict()
 
-    # 3. Grade the Exam and Draw Boxes
+    # Grade the Exam and Draw Boxes
     for q in range(num_questions):
         answers_details[q] = {"erased": 0, "correct": 0, "incorrect": 0}
         answered_dict[str(q)] = dict()
-        
+
         valid_selected = []
         erased_selected = []
         
         # Parse CNN predictions for this specific question
         for opt in range(NUM_OPTIONS):
-            # Index math: (row * total_columns) + current_column
             idx = (opt * num_questions) + q 
             pred_name = classes[predicted_classes[idx]]
             
@@ -82,7 +78,7 @@ async def evaluate_exam(
                 erased_selected.append(opt)
                 answers_details[q]["erased"] += 1
 
-        k = answer_key.get(q) # Get the correct answer from the key
+        k = answer_key.get(q)
 
         # Draw the boxes
         for opt in range(NUM_OPTIONS):
@@ -100,16 +96,16 @@ async def evaluate_exam(
 
             # Draw Colored status boxes
             if opt in erased_selected:
-                cv2.rectangle(padded_img, (p_x1, p_y1), (p_x2, p_y2), (255, 0, 0), 2) # Blue
+                cv2.rectangle(padded_img, (p_x1, p_y1), (p_x2, p_y2), (255, 0, 0), 2) # Blue (Erased)
             elif opt in valid_selected:
                 if opt == k:
-                    cv2.rectangle(padded_img, (p_x1, p_y1), (p_x2, p_y2), (0, 255, 0), 2) # Green (Correct)
+                    cv2.rectangle(padded_img, (p_x1, p_y1), (p_x2, p_y2), (30, 179, 0), 2) # Green (Correct)
                     answers_details[q]["correct"] += 1
                 else:
                     cv2.rectangle(padded_img, (p_x1, p_y1), (p_x2, p_y2), (0, 0, 255), 2) # Red (Incorrect)
                     answers_details[q]["incorrect"] += 1
 
-    # 4. Calculate Final Score
+    # Calculate Final Score
     total_exam_score = 0.0
     sum_weights = sum(relative_weights.values())
 
@@ -123,7 +119,7 @@ async def evaluate_exam(
     total_exam_score = max(0.0, total_exam_score)
     print(f"\nFINAL EXAM SCORE: {total_exam_score:.2f} / 20.00")
 
-    # 5. Save Images & Update Database
+    # Save Images & Update Database
     padded_table_path_corrected = image_path.replace(".", "_padded_table_corrected.") 
     cv2.imwrite(padded_table_path_corrected, padded_img)
     print(f"Saved padded visual annotation to: {padded_table_path_corrected}")
@@ -145,12 +141,14 @@ def isolate_and_crop_table(image_path):
     """
     image = cv2.imread(image_path)
     if image is None:
+        logger.error(f"Could not load image at {image_path}")
         raise FileNotFoundError(f"Could not load image at {image_path}")
 
-    # 1. Detect QR Code using the robust multi-pass method
+    # Detect QR Code using the robust multi-pass method
     bbox = get_robust_qr_bbox(image)
 
     if bbox is None:
+        logger.error("Could not detect the QR code after multiple enhancement attempts. Please check image clarity.")
         raise Exception("Could not detect the QR code after multiple enhancement attempts. Please check image clarity.")
 
     # Naming conventions
@@ -167,28 +165,25 @@ def isolate_and_crop_table(image_path):
     qr_h = qr_y_max - qr_y_min
     qr_cx = qr_x_min + (qr_w / 2.0)
 
-    # 2. Preprocess the image for Grid Extraction
+    # Preprocess the image for Grid Extraction
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     edged = cv2.Canny(blurred, 75, 200)
 
-    # ==========================================
-    # IMPLEMENTED METHOD 2: MORPHOLOGICAL CLOSING
-    # ==========================================
-    # Create a large rectangular kernel to bridge the gaps in the dotted border.
-    # If it's not connecting fully, increase (21, 21) to (25, 25) or (31, 31).
-    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (21, 21)) 
+    # Use a small kernel (3x3 or 5x5) so we ONLY fix minor breaks in the solid grid lines.
+    # The widely spaced dots of the outer border will remain disconnected, 
+    # preventing the algorithm from detecting it as the largest contour.
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3)) 
     
     # Apply the close operation
     closed_image = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
-    # ==========================================
 
-    # 3. Find contours on the CLOSED image
+    # Find contours on the CLOSED image
     cnts = cv2.findContours(closed_image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     cnts = imutils.grab_contours(cnts)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
 
-    # 4. Dynamically find the target box (The solid grid)
+    # Dynamically find the target box (The solid grid)
     targetCnt = None
     for c in cnts:
         area = cv2.contourArea(c)
@@ -203,12 +198,11 @@ def isolate_and_crop_table(image_path):
         is_larger_than_qr = area > (qr_w * qr_h * 2.0)
         
         if is_below and is_aligned_horizontally and is_larger_than_qr and aspect_ratio > 3.0:
-            # --- THE FIX: Convex Hull Extreme Points ---
-            # 1. Wrap the grid in a tight polygon to ignore inner lines/noise
+            # Wrap the grid in a tight polygon to ignore inner lines/noise
             hull = cv2.convexHull(c)
             pts = hull.reshape(-1, 2)
             
-            # 2. Find the absolute 4 corners mathematically
+            # Find the absolute 4 corners mathematically
             s = pts.sum(axis=1)
             diff = np.diff(pts, axis=1)
             
@@ -217,14 +211,15 @@ def isolate_and_crop_table(image_path):
             tr = pts[np.argmin(diff)]    # Top-Right
             bl = pts[np.argmax(diff)]    # Bottom-Left
             
-            # 3. Use these exact corners for the perfect perspective warp
+            # Use these exact corners for the perfect perspective warp
             targetCnt = np.array([tl, tr, br, bl], dtype="float32")
             break
 
     if targetCnt is None:
+        logger.error("Found the QR Code, but could not locate the answer grid below it.")
         raise Exception("Found the QR Code, but could not locate the answer grid below it.")
 
-    # 4. Perspective Transform (Tight Crop & Flatten)
+    # Perspective Transform (Tight Crop & Flatten)
     rect = order_points(targetCnt.reshape(4, 2))
     (tl, tr, br, bl) = rect
 
@@ -237,7 +232,7 @@ def isolate_and_crop_table(image_path):
     heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
     maxHeight = max(int(heightA), int(heightB))
 
-    # --- TIGHT CROP (For the CNN to read) ---
+    # TIGHT CROP (For the CNN to read)
     dst_tight = np.array([
         [0, 0], [maxWidth - 1, 0], [maxWidth - 1, maxHeight - 1], [0, maxHeight - 1]
     ], dtype="float32")
@@ -245,7 +240,7 @@ def isolate_and_crop_table(image_path):
     clean_grid = cv2.warpPerspective(image, M_tight, (maxWidth, maxHeight))
     cv2.imwrite(cropped_table_path, clean_grid)
 
-    # --- PADDED CROP (For the Visual Annotation) ---
+    # PADDED CROP (For the Visual Annotation)
     pad_x = int(maxWidth * 0.15)
     pad_y = int(maxHeight * 0.60)
     dst_padded = np.array([
@@ -274,11 +269,11 @@ def extract_cells_math(clean_grid_path, num_questions):
     """
     img = cv2.imread(clean_grid_path)
     if img is None:
+        logger.error(f"Could not load image at {clean_grid_path}")
         raise ValueError(f"Could not load image at {clean_grid_path}")
 
     h, w = img.shape[:2]
     
-    # +1 accounts for the Header row/col
     total_rows = NUM_OPTIONS + 1
     total_cols = num_questions + 1
     
@@ -312,26 +307,26 @@ def get_robust_qr_bbox(image):
     """
     detector = cv2.QRCodeDetector()
     
-    # 1. Original
+    # Original
     retval, bbox = detector.detect(image)
     if retval and bbox is not None: return bbox
 
-    # 2. Grayscale
+    # Grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     retval, bbox = detector.detect(gray)
     if retval and bbox is not None: return bbox
 
-    # 3. Simple Thresh
+    # Simple Thresh
     _, thresh = cv2.threshold(gray, 128, 255, cv2.THRESH_BINARY)
     retval, bbox = detector.detect(thresh)
     if retval and bbox is not None: return bbox
 
-    # 4. Adaptive Thresh
+    # Adaptive Thresh
     adaptive = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 5)
     retval, bbox = detector.detect(adaptive)
     if retval and bbox is not None: return bbox
     
-    # 5. Blurred Adaptive
+    # Blurred Adaptive
     blurred = cv2.GaussianBlur(gray, (3, 3), 0)
     adaptive_blur = cv2.adaptiveThreshold(blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 15, 5)
     retval, bbox = detector.detect(adaptive_blur)
