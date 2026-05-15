@@ -5,7 +5,7 @@ services:
       dockerfile: Dockerfile
     env_file:
       - .env
-    command: ["/app/.venv/bin/alembic", "upgrade", "head"]
+    command: ["uv", "run", "alembic", "upgrade", "head"]
     depends_on:
       db:
         condition: service_healthy
