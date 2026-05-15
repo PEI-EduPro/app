@@ -66,7 +66,11 @@ function StudentPickerDialog({
           onChange={(rows) => setSelection(rows.slice(-1))}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="cursor-pointer">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="cursor-pointer"
+          >
             Cancelar
           </Button>
           <Button
@@ -133,7 +137,7 @@ export default function StudentsQRCodes({ wrId }: { wrId: number }) {
           Não existem problemas de associação.
         </p>
       ) : (
-        <div className="flex-1 overflow-y-auto flex flex-col gap-6 pr-1">
+        <div className="flex-1 overflow-y-auto custom-scrollbar flex flex-col gap-6 pr-1">
           {warnings?.map((qr, idx) => {
             const s = getState(qr.exam_id);
             const rows: StudentRow[] = [

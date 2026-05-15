@@ -22,6 +22,12 @@ services:
     volumes:
       - exam_images:/app/images
       - exam_storage:/app/storage
+      - ../api/src:/app/src
+    dns:
+      - 8.8.8.8
+      - 8.8.4.4
+    extra_hosts:
+      - "smtp.gmail.com:142.250.102.108"
     depends_on:
       db:
         condition: service_healthy

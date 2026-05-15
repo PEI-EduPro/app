@@ -17,7 +17,6 @@ class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
 
     id: Optional[int] = Field(default=None, primary_key=True)
-    #creator_keycloak_id: str = Field(max_length=255)
     fraction: int = Field(default=0)
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
@@ -33,34 +32,29 @@ class ExamConfig(SQLModel, table=True):
 # ExamConfig schemas
 class ExamConfigCreate(SQLModel):
     """Schema for creating a new exam configuration"""
-    # creator_keycloak_id: str  # Commented out
     fraction: int = 0
     subject_id: int
-    nmec_list: Optional[str] #dict{nmec : nome}
+    nmec_list: Optional[str]
     exam_name: Optional[str] = None
 
 class ExamConfigUpdate(SQLModel):
     """Schema for updating exam configuration"""
-    # creator_keycloak_id: Optional[str] = None  # Commented out
     fraction: Optional[int] = None
     subject_id: Optional[int] = None
-    nmec_list: Optional[str] #dict{nmec : nome}
+    nmec_list: Optional[str]
 
 class ExamConfigRead(SQLModel):
     """Schema for reading exam configuration data"""
     id: int
-    # creator_keycloak_id: str  # Commented out
     fraction: int
     subject_id: int
     status: GenerationStatus
     zip_path: Optional[str] = None
-    
 
 class ExamConfigResponse(SQLModel):
     id: int
     subject_id: int
     fraction: int
-    #creator_keycloak_id: str
     topic_configs: List[TopicConfigDTO]
     nmec_name_list: Optional[str]
     num_variations: int
