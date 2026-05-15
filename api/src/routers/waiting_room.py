@@ -426,7 +426,7 @@ async def notify_students_via_email(
             detail=f"Cannot notify students. There are {len(pending_warnings)} pending warning(s) that must be resolved first."
         )
     
-    exams = await exam_service.get_exams_by_config_id(session, exam_config.id)
+    exams = await get_exams_by_config_id(session, exam_config.id)
     
     # Pre-Notification Checks
     for exam in exams:
