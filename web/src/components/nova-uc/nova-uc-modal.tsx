@@ -27,7 +27,7 @@ export function NovaUcModal({
       >
         <div className="flex items-center justify-between">
           <span className="font-rubik text-2xl font-bold">
-            {isEdit ? ucName : "Nova Unidade Curricular"}
+            {isEdit ? `Editar ${ucName}` : "Nova Unidade Curricular"}
           </span>
           <Button
             variant="ghost"

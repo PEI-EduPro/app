@@ -34,7 +34,7 @@ function Index() {
           </h1>
 
           <p className="text-[#E3F6A2]/80 text-lg md:text-xl leading-relaxed max-w-md stagger-3 animate-fade-in-up">
-            Um sistema que gera e avalia <br /> unidades curriculares
+            Um sistema que gera e avalia exames <br /> de unidades curriculares
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 stagger-4 animate-fade-in-up">
