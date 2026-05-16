@@ -33,6 +33,7 @@ export function Step2Cotacoes({
 }: Step2Props) {
   const { watch, setValue, control } = form;
   const [usePercent, setUsePercent] = useState(false);
+  const [percentValues, setPercentValues] = useState<Record<string, number>>({});
 
   const relativeQuotations = watch("relative_quotations");
   const numberQuestions = watch("number_questions");
@@ -50,18 +51,15 @@ export function Step2Cotacoes({
     });
   }
 
-  function handlePercentChange(id: string, raw: string) {
-    if (raw === "") {
-      setRQ(id, NaN);
-      return;
-    }
-    const pct = Math.max(0, Math.min(100, parseFloat(raw) || 0));
-    setRQ(id, pct);
+  // Convert a percentage to a weight that preserves ratios with other topics
+  function percentToWeight(_id: string, pct: number): number {
+    return pct / 10;
   }
 
-  function toPercent(topicId: string): number {
-    if (!totalWeight) return 0;
-    return ((relativeQuotations?.[Number(topicId)] || 0) / totalWeight) * 100;
+  function handlePercentChange(id: string, pct: number) {
+    const clamped = Math.max(0, Math.min(99.9, pct));
+    setPercentValues((p) => ({ ...p, [id]: clamped }));
+    setRQ(id, percentToWeight(id, clamped));
   }
 
   function perQuestionValue(topicId: string): string {
@@ -70,6 +68,22 @@ export function Step2Cotacoes({
     const nq = numberQuestions?.[Number(topicId)] || 1;
     const val = ((w / totalWeight) * 20) / nq;
     return val % 1 === 0 ? val.toString() : val.toFixed(3).replace(/0+$/, "");
+  }
+
+  function switchToPercent() {
+    const initial = Object.fromEntries(
+      selectedTopics.map((t) => {
+        const w = form.getValues("relative_quotations")?.[Number(t.id)] || 0;
+        return [t.id, +(w * 10).toFixed(1)];
+      }),
+    );
+    setPercentValues(initial);
+    setUsePercent(true);
+  }
+
+  function switchToWeights() {
+    setPercentValues({});
+    setUsePercent(false);
   }
 
   return (
@@ -91,14 +105,14 @@ export function Step2Cotacoes({
             <span className="text-muted-foreground">Modo:</span>
             <button
               type="button"
-              onClick={() => setUsePercent(false)}
+              onClick={switchToWeights}
               className={`px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer ${!usePercent ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
             >
               Pesos relativos
             </button>
             <button
               type="button"
-              onClick={() => setUsePercent(true)}
+              onClick={switchToPercent}
               className={`px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer ${usePercent ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
             >
               Percentagem
@@ -120,17 +134,13 @@ export function Step2Cotacoes({
                         className="max-w-22"
                         type="number"
                         min="0"
-                        max="100"
+                        max="99.9"
                         step="0.1"
                         placeholder="0"
-                        value={
-                          totalWeight ? +toPercent(topic.id).toFixed(1) : ""
-                        }
-                        onChange={(e) =>
-                          handlePercentChange(topic.id, e.target.value)
-                        }
-                        onBlur={(e) => {
-                          if (e.target.value === "") setRQ(topic.id, 0);
+                        value={percentValues[topic.id] ?? ""}
+                        onChange={(e) => {
+                          const v = parseFloat(e.target.value);
+                          handlePercentChange(topic.id, isNaN(v) ? 0 : v);
                         }}
                         onKeyDown={(e) => {
                           if (

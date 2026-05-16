@@ -73,7 +73,7 @@ export const NovoExameForm = ({
     "Defina o número de questões a integrar de cada tópico.",
     "Configure o peso de cada tópico na nota final e o desconto por resposta errada.",
     "Defina o título, data, semestre e ano letivo do exame.",
-    "Adicione os vigilantes, importe a lista de alunos e explicite o número de exames e de versões.",
+    "Adicione os vigilantes, importe a lista de alunos e explicite o número de exames e versões.",
     "Reveja toda a configuração antes de gerar o exame.",
   ];
 

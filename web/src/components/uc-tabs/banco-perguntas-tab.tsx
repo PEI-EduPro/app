@@ -1,9 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import TopicModal from "@/components/topic-modal";
-import QuestionModal from "@/components/question-modal";
-import XmlUploadButton from "@/components/xml-upload-button";
+import XmlUploadButton from "@/components/questions/xml-upload-button";
 import {
   useQuestions,
   useCreateTopic,
@@ -41,6 +39,8 @@ import {
   FileCode,
 } from "lucide-react";
 import HelperHoverCard from "../helper-hover-card";
+import QuestionModal from "../questions/question-modal";
+import TopicModal from "../questions/topic-modal";
 
 interface Question {
   id: number;
@@ -168,6 +168,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [showTopicModal, setShowTopicModal] = useState(false);
   const [showQuestionModal, setShowQuestionModal] = useState(false);
+  const [xmlPreviewOpen, setXmlPreviewOpen] = useState(false);
   const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<{
     topicId: number;
@@ -277,6 +278,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
         <div className="flex gap-2 shrink-0 h-auto">
           <HelperHoverCard
             side="right"
+            open={xmlPreviewOpen ? false : undefined}
             content={
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
@@ -373,7 +375,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
                 </div>
               </div>
             }
-            trigger={<XmlUploadButton subjectId={realId} />}
+            trigger={<XmlUploadButton subjectId={realId} onPreviewOpenChange={setXmlPreviewOpen} />}
           />
           <Button
             size="sm"

@@ -200,3 +200,20 @@ export function useGetUCTopics(ucId: number) {
     enabled: !!ucId,
   });
 }
+
+export function useImportQuestionsXml(subjectId: number) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (xmlContent: string) =>
+      apiClient.post(`/questions/${subjectId}/XML`, xmlContent, {
+        headers: { "Content-Type": "application/xml" },
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["questions", subjectId] });
+      toast.success("Questões importadas com sucesso!", { position: "top-right" });
+    },
+    onError: () => {
+      toast.error("Ocorreu um erro, tente novamente mais tarde.", { position: "top-right" });
+    },
+  });
+}
