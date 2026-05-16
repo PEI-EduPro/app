@@ -67,10 +67,7 @@ echo -e "\n${GREEN}Infrastructure is Ready!${NC}"
 # 2. Run Tests
 cd api
 
-COVERAGE_ARGS=""
-if [ "${COVERAGE:-false}" = "true" ]; then
-    COVERAGE_ARGS="--cov=src --cov-report=xml:coverage.xml --cov-report=term-missing"
-fi
+COVERAGE_ARGS="--cov=src --cov-report=xml:coverage.xml --cov-report=term-missing"
 
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)

@@ -153,3 +153,138 @@ async def test_get_user_group_paths(keycloak_client):
     assert len(paths) == 2
     assert "/s1/regent" in paths
     assert "/s2/students" in paths
+
+@pytest.mark.asyncio
+async def test_update_subject_regent(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = [{"name": "s1/regent", "id": "group-123"}]
+    admin_mock.get_group_members.return_value = [{"id": "old-user", "username": "old"}]
+    
+    result = await keycloak_client.update_subject_regent("1", "new-user-id")
+    
+    assert result is True
+    admin_mock.group_user_remove.assert_called_with("old-user", "group-123")
+    admin_mock.group_user_add.assert_called_with("new-user-id", "group-123")
+
+@pytest.mark.asyncio
+async def test_delete_subject_groups(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = [
+        {"name": "s1/regent", "id": "id1"},
+        {"name": "s1/students", "id": "id2"}
+    ]
+    
+    result = await keycloak_client.delete_subject_groups("1")
+    
+    assert result is True
+    # Should call delete_group for all found subgroups
+    assert admin_mock.delete_group.call_count == 2
+
+@pytest.mark.asyncio
+async def test_manage_professor_permissions(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = [
+        {"name": "s1/professors", "id": "prof-id"},
+        {"name": "s1/edit_topics", "id": "edit-id"}
+    ]
+    
+    permissions = {
+        "edit_topics": True,
+        "edit_questions": False
+    }
+    
+    result = await keycloak_client.manage_professor_permissions("1", "user-id", permissions)
+    
+    assert result is True
+    admin_mock.group_user_add.assert_any_call("user-id", "prof-id")
+    admin_mock.group_user_add.assert_any_call("user-id", "edit-id")
+
+@pytest.mark.asyncio
+async def test_create_waiting_room_groups(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.create_group.side_effect = lambda payload: f"id-{payload['name']}"
+    
+    result = await keycloak_client.create_waiting_room_groups(
+        waiting_room_id=5,
+        regent_keycloak_id="r1",
+        vigilant_ids=["v1", "v2"]
+    )
+    
+    assert result is True
+    assert admin_mock.create_group.call_count == 2
+    admin_mock.group_user_add.assert_any_call("r1", "id-w5/regent")
+    admin_mock.group_user_add.assert_any_call("v1", "id-w5/vigilant")
+    admin_mock.group_user_add.assert_any_call("v2", "id-w5/vigilant")
+
+@pytest.mark.asyncio
+async def test_get_subject_members(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = [{"name": "s1/students", "id": "s-id"}]
+    admin_mock.get_group_members.return_value = [{"username": "student1"}]
+    
+    students = await keycloak_client.get_subject_students("1")
+    assert len(students) == 1
+    assert students[0]["username"] == "student1"
+
+@pytest.mark.asyncio
+async def test_replace_subject_students(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = [{"name": "s1/students", "id": "s-id"}]
+    admin_mock.get_group_members.return_value = [{"id": "old-s", "username": "old"}]
+    
+    await keycloak_client.replace_subject_students("1", ["new-s1", "new-s2"])
+    
+    admin_mock.group_user_remove.assert_called_once_with("old-s", "s-id")
+    assert admin_mock.group_user_add.call_count == 2
+
+@pytest.mark.asyncio
+async def test_remove_professor_from_subject(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = [
+        {"name": "s1/professors", "id": "p-id"},
+        {"name": "s1/edit_topics", "id": "e-id"}
+    ]
+    
+    result = await keycloak_client.remove_professor_from_subject("1", "prof-123")
+    
+    assert result is True
+    admin_mock.group_user_remove.assert_any_call("prof-123", "p-id")
+    admin_mock.group_user_remove.assert_any_call("prof-123", "e-id")
+
+@pytest.mark.asyncio
+async def test_verify_token_azp_frontend(keycloak_client):
+    token_payload = {
+        "iss": "http://testserver:8081/realms/master",
+        "aud": ["account"],
+        "azp": "frontend",
+        "sub": "user-123"
+    }
+    
+    with patch("src.core.keycloak.settings") as mock_settings:
+        mock_settings.KEYCLOAK_ISSUER_URL = "http://testserver:8081"
+        mock_settings.KEYCLOAK_REALM = "master"
+        mock_settings.KEYCLOAK_CLIENT_ID = "api-backend"
+        
+        keycloak_client.client.decode_token.return_value = token_payload
+        
+        result = await keycloak_client.verify_token("valid_token")
+        assert result is not None
+        assert result["azp"] == "frontend"
+
+@pytest.mark.asyncio
+async def test_verify_token_audience_mismatch(keycloak_client):
+    token_payload = {
+        "iss": "http://testserver:8081/realms/master",
+        "aud": ["wrong-audience"],
+        "sub": "user-123"
+    }
+    
+    with patch("src.core.keycloak.settings") as mock_settings:
+        mock_settings.KEYCLOAK_ISSUER_URL = "http://testserver:8081"
+        mock_settings.KEYCLOAK_REALM = "master"
+        mock_settings.KEYCLOAK_CLIENT_ID = "api-backend"
+        
+        keycloak_client.client.decode_token.return_value = token_payload
+        
+        result = await keycloak_client.verify_token("valid_token")
+        assert result is None
