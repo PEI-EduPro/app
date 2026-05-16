@@ -202,9 +202,12 @@ async def test_retrieve_student_list(client, mock_auth, session):
             "subject_id": subject.id,
             "fraction": 50,
             "topic_configs": [],
-            "nmec_name_list": student_data
+            "nmec_name_list": student_data,
+            "num_variations": 0,
+            "status": "PENDING",
+            "session_state": "preparation",
+            "associations": []
         }
-        
         response = await client.get(f"/api/exams/exam/{exam_config.id}/student_list")
         
         assert response.status_code == 200
@@ -307,7 +310,7 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
          patch("src.services.exam._update_rules"), \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock) as mock_wr_kc:
 
         mock_wr_kc.return_value = True
 
@@ -351,7 +354,6 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     from src.models.subject import Subject
     from src.models.exam_config import ExamConfig
     from src.models.exam import Exam
-    from src.models.waiting_room import WaitingRoom
 
     subject = Subject(name="Test Subject")
     session.add(subject)
@@ -363,25 +365,20 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     await session.commit()
     await session.refresh(exam_config)
 
-    waiting_room = WaitingRoom(exam_config_id=exam_config.id)
-    session.add(waiting_room)
-    await session.commit()
-    await session.refresh(waiting_room)
-
     # 2 submitted (have capture_path), 1 not submitted
     session.add(Exam(exam_config_id=exam_config.id, capture_path="/some/path/1.jpg"))
     session.add(Exam(exam_config_id=exam_config.id, capture_path="/some/path/2.jpg"))
     session.add(Exam(exam_config_id=exam_config.id, capture_path=None))
     await session.commit()
 
-    response = await client.get(f"/api/waiting-rooms/{waiting_room.id}/submitted_count")
+    response = await client.get(f"/api/exams/{exam_config.id}/session/submitted_count")
 
     assert response.status_code == 200
     assert response.json()["submitted_count"] == 2
 
 
 @pytest.mark.asyncio
-async def test_generate_exam_with_waiting_room(client, mock_auth, session):
+async def test_generate_exam_with_session(client, mock_auth, session):
     """Test generate exam endpoint with waiting room creation"""
     app.dependency_overrides[get_current_user_info] = mock_auth
 
@@ -416,7 +413,7 @@ async def test_generate_exam_with_waiting_room(client, mock_auth, session):
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
          patch("src.services.exam._update_rules"), \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock):
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock):
 
         payload = {
             "subject_id": sub.id,
@@ -434,19 +431,16 @@ async def test_generate_exam_with_waiting_room(client, mock_auth, session):
         assert response.status_code == 200
         assert response.headers["content-type"] == "application/zip"
         
-        # Verify waiting room was created
+        # Verify exam config was created
         from src.services.exam import get_latest_exam_config_id
-        from src.services.waiting_room import get_waiting_room
+        from src.models.exam_config import ExamConfig
         from sqlmodel import select
-        from src.models.waiting_room import WaitingRoom
         
         config_id = await get_latest_exam_config_id(session, sub.id)
-        stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == config_id)
-        result = await session.exec(stmt)
-        waiting_room = result.first()
+        config = await session.get(ExamConfig, config_id)
         
-        assert waiting_room is not None
-        assert waiting_room.exam_config_id == config_id
+        assert config is not None
+        assert config.subject_id == sub.id
 
 @pytest.mark.asyncio
 async def test_generate_exams_no_subject_id(client, mock_auth):
@@ -490,7 +484,7 @@ async def test_generate_exams_async_success(client, mock_auth, session):
     topic_config = TopicConfig(id=1, exam_config_id=1, topic_id=topic.id, num_questions=1, relative_weight=1.0)
     
     with patch("src.routers.exam.create_configs", return_value=(exam_config, [topic_config])), \
-         patch("src.routers.exam.create_waiting_room_service", new_callable=AsyncMock), \
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock), \
          patch("src.routers.exam.generate_exams_task"):
         
         payload = {"subject_id": sub.id, "num_variations": 1}
@@ -582,7 +576,7 @@ async def test_correct_by_hand_job(client, mock_auth, session):
 async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, SessionState, GenerationStatus
     from src.models.topic_config import TopicConfig
     
     sub = Subject(name="S")
@@ -604,7 +598,9 @@ async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session
     mock_config.topic_configs = [mock_tc]
     mock_config.nmec_name_list = None
     mock_config.exams = []
-    mock_config.status = "COMPLETED"
+    mock_config.status = GenerationStatus.COMPLETED
+    mock_config.session_state = SessionState.PREPARATION
+    mock_config.associations = []
 
     with patch("src.routers.exam.get_exam_configs_by_subject", new_callable=AsyncMock) as mock_get:
         mock_get.return_value = [mock_config]
@@ -712,17 +708,13 @@ async def test_retrieve_student_list_value_error(client, mock_auth):
 async def test_delete_exam_config_wrong_state(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
-    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    from src.models.exam_config import ExamConfig, SessionState
     
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id)
+    ec = ExamConfig(subject_id=sub.id, session_state=SessionState.RUNNING)
     session.add(ec)
-    await session.commit()
-    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.RUNNING)
-    session.add(wr)
     await session.commit()
     
     response = await client.delete(f"/api/exams/config/{ec.id}")
@@ -768,16 +760,12 @@ async def test_get_all_exams_info_success(client, mock_auth, session):
     from src.models.subject import Subject
     from src.models.exam_config import ExamConfig
     from src.models.exam import Exam
-    from src.models.waiting_room import WaitingRoom
     
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
     ec = ExamConfig(subject_id=sub.id, fraction=0.5)
     session.add(ec)
-    await session.commit()
-    wr = WaitingRoom(exam_config_id=ec.id)
-    session.add(wr)
     await session.commit()
     
     e = Exam(
@@ -795,12 +783,12 @@ async def test_get_all_exams_info_success(client, mock_auth, session):
          patch("builtins.open", return_value=io.BytesIO(b"fake_image")), \
          patch("src.routers.exam.base64.b64encode", return_value=b"YmFzZTY0"):
         
-        response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
+        response = await client.get(f"/api/exams/{ec.id}/all_exams_info")
         assert response.status_code == 200
         assert response.json()[0]["capture"] == "YmFzZTY0"
 
 @pytest.mark.asyncio
-async def test_get_all_exams_info_wr_not_found(client, mock_auth):
+async def test_get_all_exams_info_config_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
     response = await client.get("/api/exams/99999/all_exams_info")
     assert response.status_code == 404

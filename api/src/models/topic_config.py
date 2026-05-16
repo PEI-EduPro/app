@@ -20,7 +20,7 @@ class TopicConfig(SQLModel, table=True):
 
 # DTOs
 class TopicConfigDTO(SQLModel):
-    id: int
+    id: Optional[int] = None
     topic_id: int
     topic_name: str
     num_questions: int

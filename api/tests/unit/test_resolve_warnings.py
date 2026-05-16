@@ -5,9 +5,8 @@ from src.main import app
 from src.models.user import User
 from src.models.warning import Warning, WarningType
 from src.models.subject import Subject
-from src.models.exam_config import ExamConfig
+from src.models.exam_config import ExamConfig, SessionState
 from src.models.exam import Exam
-from src.models.waiting_room import WaitingRoom, WaitingRoomState
 
 
 @pytest.fixture
@@ -40,7 +39,7 @@ async def setup_data(session):
         "222": {"name": "Bob", "email": "bob@example.com"},
         "333": {"name": "Carol", "email": "carol@example.com"},
     }
-    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict))
+    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict), session_state=SessionState.CLOSED)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -54,37 +53,28 @@ async def setup_data(session):
     await session.refresh(exam2)
     await session.refresh(exam3)
 
-    wr = WaitingRoom(exam_config_id=exam_config.id, state=WaitingRoomState.CLOSED)
-    session.add(wr)
-    await session.commit()
-    await session.refresh(wr)
-
     return {
         "subject_id": subject.id,
         "exam_config_id": exam_config.id,
         "exam_ids": [exam1.id, exam2.id, exam3.id],
-        "waiting_room_id": wr.id,
     }
 
 
-async def _make_waiting_room(session, exam_config_id, associations, waiting_room_id=None):
-    if waiting_room_id:
-        wr = await session.get(WaitingRoom, waiting_room_id)
-        wr.associations = associations
-    else:
-        wr = WaitingRoom(exam_config_id=exam_config_id, state=WaitingRoomState.CLOSED, associations=associations)
-        session.add(wr)
+async def _update_associations(session, exam_config_id, associations):
+    ec = await session.get(ExamConfig, exam_config_id)
+    ec.associations = associations
+    session.add(ec)
     await session.commit()
-    await session.refresh(wr)
-    return wr
+    await session.refresh(ec)
+    return ec
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _url(waiting_room_id):
-    return f"/api/warnings/{waiting_room_id}/resolve"
+def _url(exam_config_id):
+    return f"/api/warnings/{exam_config_id}/resolve"
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +89,7 @@ async def test_resolve_clears_multiple_students_to_exam_warning(client, mock_aut
     exam_id = d["exam_ids"][0]
 
     # exam1 was scanned with both student 111 and 222 → multiple_students_to_exam
-    await _make_waiting_room(session, d["exam_config_id"], [
+    await _update_associations(session, d["exam_config_id"], [
         f"{exam_id}:111",
         f"{exam_id}:222",
     ])
@@ -111,7 +101,7 @@ async def test_resolve_clears_multiple_students_to_exam_warning(client, mock_aut
     ))
     await session.commit()
 
-    response = await client.post(_url(d["waiting_room_id"]), json={
+    response = await client.post(_url(d["exam_config_id"]), json={
         "assignments": [{"exam_id": exam_id, "student_nmec": "111"}]
     })
 
@@ -127,7 +117,7 @@ async def test_resolve_clears_multiple_exams_to_student_warning(client, mock_aut
     exam1_id, exam2_id = d["exam_ids"][0], d["exam_ids"][1]
 
     # student 111 was assigned to both exam1 and exam2
-    await _make_waiting_room(session, d["exam_config_id"], [
+    await _update_associations(session, d["exam_config_id"], [
         f"{exam1_id}:111",
         f"{exam2_id}:111",
     ])
@@ -140,7 +130,7 @@ async def test_resolve_clears_multiple_exams_to_student_warning(client, mock_aut
     await session.commit()
 
     # Fix: assign exam2 to student 222 instead
-    response = await client.post(_url(d["waiting_room_id"]), json={
+    response = await client.post(_url(d["exam_config_id"]), json={
         "assignments": [{"exam_id": exam2_id, "student_nmec": "222"}]
     })
 
@@ -161,16 +151,16 @@ async def test_partial_resolve_leaves_remaining_warnings(client, mock_auth, setu
     # Use completely disjoint student sets so resolving exam1 has no side effects on exam2
     # exam1: 111 vs 222  — resolve to 111
     # exam2: 333 vs 222  — left alone
-    await _make_waiting_room(session, d["exam_config_id"], [
+    await _update_associations(session, d["exam_config_id"], [
         f"{exam1_id}:111",
         f"{exam1_id}:222",
         f"{exam2_id}:333",
         f"{exam2_id}:222",
-    ], waiting_room_id=d["waiting_room_id"])
+    ])
     await session.commit()
 
     # Only resolve exam1 → 111; exam2 conflict (333 vs 222) remains
-    response = await client.post(_url(d["waiting_room_id"]), json={
+    response = await client.post(_url(d["exam_config_id"]), json={
         "assignments": [{"exam_id": exam1_id, "student_nmec": "111"}]
     })
 
@@ -189,14 +179,14 @@ async def test_resolve_updates_exam_nmec_for_clean_assignments(client, mock_auth
     d = setup_data
     exam1_id, exam2_id = d["exam_ids"][0], d["exam_ids"][1]
 
-    await _make_waiting_room(session, d["exam_config_id"], [
+    await _update_associations(session, d["exam_config_id"], [
         f"{exam1_id}:111",
         f"{exam2_id}:111",  # conflict: student 111 on two exams
-    ], waiting_room_id=d["waiting_room_id"])
+    ])
     await session.commit()
 
     # Fix exam2 → student 222, making both clean
-    response = await client.post(_url(d["waiting_room_id"]), json={
+    response = await client.post(_url(d["exam_config_id"]), json={
         "assignments": [{"exam_id": exam2_id, "student_nmec": "222"}]
     })
 
@@ -218,19 +208,19 @@ async def test_resolve_replaces_previous_assignment_for_same_exam(client, mock_a
     d = setup_data
     exam1_id = d["exam_ids"][0]
 
-    await _make_waiting_room(session, d["exam_config_id"], [
+    await _update_associations(session, d["exam_config_id"], [
         f"{exam1_id}:111",
         f"{exam1_id}:222",  # conflict
     ])
     await session.commit()
 
     # First resolve: pick 111
-    await client.post(_url(d["waiting_room_id"]), json={
+    await client.post(_url(d["exam_config_id"]), json={
         "assignments": [{"exam_id": exam1_id, "student_nmec": "111"}]
     })
 
     # Second resolve: change mind, pick 222
-    response = await client.post(_url(d["waiting_room_id"]), json={
+    response = await client.post(_url(d["exam_config_id"]), json={
         "assignments": [{"exam_id": exam1_id, "student_nmec": "222"}]
     })
 
@@ -242,8 +232,8 @@ async def test_resolve_replaces_previous_assignment_for_same_exam(client, mock_a
 
 
 @pytest.mark.asyncio
-async def test_resolve_returns_404_when_no_waiting_room(client, mock_auth, setup_data, session):
-    """Should return 404 when no waiting room exists."""
+async def test_resolve_returns_404_when_no_config(client, mock_auth, setup_data, session):
+    """Should return 404 when no exam config exists."""
     app.dependency_overrides[get_current_user_info] = mock_auth
     d = setup_data
 
@@ -268,7 +258,5 @@ async def test_resolve_forbidden_for_non_regent(client, setup_data, session):
     app.dependency_overrides[get_current_user_info] = non_regent
     d = setup_data
 
-    await _make_waiting_room(session, d["exam_config_id"], [])
-
-    response = await client.post(_url(d["waiting_room_id"]), json={"assignments": []})
+    response = await client.post(_url(d["exam_config_id"]), json={"assignments": []})
     assert response.status_code == 403

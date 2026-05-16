@@ -37,7 +37,7 @@ async def test_generate_exams_async_endpoint(client, mock_auth, session):
 
     # 2. Mock Background Tasks and Keycloak
     with patch("src.routers.exam.BackgroundTasks.add_task") as mock_add_task, \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock) as mock_wr_kc:
         
         mock_wr_kc.return_value = True
         
