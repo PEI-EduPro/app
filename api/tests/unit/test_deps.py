@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from src.core.deps import (
@@ -102,6 +102,7 @@ async def test_get_current_user_info_auto_assign_professor_no_admin(mock_keycloa
     mock_keycloak_client.verify_token = AsyncMock(return_value={
         "sub": "user-123",
         "preferred_username": "testuser",
+        "email": "test@example.com",
         "realm_access": {"roles": []}
     })
     mock_keycloak_client.get_user_group_paths = AsyncMock(return_value=[])
@@ -117,6 +118,7 @@ async def test_get_current_user_info_auto_assign_professor_failure(mock_keycloak
     mock_keycloak_client.verify_token = AsyncMock(return_value={
         "sub": "user-123",
         "preferred_username": "testuser",
+        "email": "test@example.com",
         "realm_access": {"roles": []}
     })
     mock_keycloak_client.get_user_group_paths = AsyncMock(return_value=[])
