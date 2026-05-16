@@ -1,24 +1,20 @@
 import json
 import logging
-import os
-
 import cv2
 import imutils
 import numpy as np
 from imutils.perspective import order_points
 from sqlmodel.ext.asyncio.session import AsyncSession
-
 from src.models.exam import Exam
 from src.services.exam import get_exam_config_by_id
+from tensorflow.keras.models import load_model
 
 logger = logging.getLogger(__name__)
 
 # Settings
 NUM_OPTIONS = 4
 MODEL_FILE = "src/cnn_models/15_05_2026.keras"
-
 logger.info(f"Loading existing CNN model {MODEL_FILE}...")
-# Load globally so it only boots once when your server starts
 model = load_model(MODEL_FILE)
 classes = ['empty', 'erased', 'selected']
 
@@ -38,11 +34,11 @@ async def evaluate_exam(
     num_questions = len(answer_key)
 
     # Extract Images via OpenCV
-    cropped_table, padded_table, pad_x, pad_y, maxW, maxH = isolate_and_crop_table(image_path)
+    cropped_table, padded_table, pad_x, pad_y, maxW, maxH = isolate_and_crop_table(image_path, num_questions)
 
     # Extract Cells & Run CNN 
     cells = extract_cells_math(cropped_table, num_questions)
-    cells_array = np.array(cells).reshape(-1, 32, 32, 1)
+    cells_array = np.array(cells).reshape(-1, 32, 32, 1) / 255.0
     
     predictions = model.predict(cells_array, verbose=0)
     predicted_classes = np.argmax(predictions, axis=1)
@@ -136,7 +132,7 @@ async def evaluate_exam(
     await session.commit()
     await session.refresh(exam)
 
-def isolate_and_crop_table(image_path):
+def isolate_and_crop_table(image_path, num_questions):
     """
     Locates the answer grid using the QR code as an anchor, flattens it, 
     and saves a cleanly cropped image of just the grid.
@@ -185,6 +181,11 @@ def isolate_and_crop_table(image_path):
     cnts = imutils.grab_contours(cnts)
     cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
 
+    # A 1-question grid is very tall (ratio ~ 0.3)
+    # A 20-question grid is very wide (ratio ~ 5.0)
+    min_ratio = 0.2
+    max_ratio = 8.0
+
     # Dynamically find the target box (The solid grid)
     targetCnt = None
     for c in cnts:
@@ -195,11 +196,19 @@ def isolate_and_crop_table(image_path):
         c_cy = y + (h / 2.0)
         x_diff = abs(qr_cx - c_cx)
         
+        # 1. Is it physically located below the QR code?
         is_below = c_cy > (qr_y_max - (qr_h * 0.5))
-        is_aligned_horizontally = x_diff < (qr_w * 2.0)
-        is_larger_than_qr = area > (qr_w * qr_h * 2.0)
         
-        if is_below and is_aligned_horizontally and is_larger_than_qr and aspect_ratio > 3.0:
+        # 2. Is it horizontally aligned with the QR code?
+        is_aligned_horizontally = x_diff < (qr_w * 2.5) # Relaxed to 2.5 just in case
+        
+        # 3. Is it a substantial block on the page? (Relaxed to 0.8x QR size)
+        is_larger_than_qr = area > (qr_w * qr_h * 0.8)
+        
+        # 4. Does the shape make remote sense?
+        is_valid_shape = min_ratio < aspect_ratio < max_ratio
+        
+        if is_below and is_aligned_horizontally and is_larger_than_qr and is_valid_shape:
             # Wrap the grid in a tight polygon to ignore inner lines/noise
             hull = cv2.convexHull(c)
             pts = hull.reshape(-1, 2)
