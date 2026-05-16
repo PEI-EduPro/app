@@ -10,10 +10,10 @@ import { Plus, Search } from "lucide-react";
 import { useGetExamConfig } from "@/hooks/use-exams";
 import { useGetUCTopics } from "@/hooks/use-questions";
 import { useMemo, useState } from "react";
-import ExamCard from "../exam-card";
+import ExamCard from "../novo-exame-steps/exam-card";
 import { Button } from "../ui/button";
 import { encodeId } from "@/lib/id-encoder";
-import { NoQuestionsAlertDialog } from "../no-questions-alert-dialog";
+import { NoQuestionsAlertDialog } from "../questions/no-questions-alert-dialog";
 import { NovoExameForm } from "../novo-exame-steps/novo-exame-form";
 import type { GenerationStatus } from "@/lib/types";
 
@@ -31,8 +31,11 @@ export default function ExamesTab({ realId }: { realId: number }) {
   const filtered = useMemo(() => {
     if (!examConfigs) return [];
     return examConfigs.filter((el, index) => {
-      const matchesStatus = statusFilter === "all" || el.status === statusFilter;
-      const matchesSearch = !search || `Exame ${index + 1}`.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || el.status === statusFilter;
+      const matchesSearch =
+        !search ||
+        `Exame ${index + 1}`.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     });
   }, [examConfigs, statusFilter, search]);
@@ -60,16 +63,29 @@ export default function ExamesTab({ realId }: { realId: number }) {
           <Plus className="h-4 w-4" />
           Novo Exame
         </Button>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+        >
           <SelectTrigger className="w-44 shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
-            <SelectItem className="cursor-pointer" value="PENDING">Pendente</SelectItem>
-            <SelectItem className="cursor-pointer" value="PROCESSING">A processar</SelectItem>
-            <SelectItem className="cursor-pointer" value="COMPLETED">Concluído</SelectItem>
-            <SelectItem className="cursor-pointer" value="FAILED">Falhado</SelectItem>
+            <SelectItem className="cursor-pointer" value="all">
+              Todos
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="PENDING">
+              Pendente
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="PROCESSING">
+              A processar
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="COMPLETED">
+              Concluído
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="FAILED">
+              Falhado
+            </SelectItem>
           </SelectContent>
         </Select>
         <div className="relative flex-1">

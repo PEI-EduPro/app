@@ -11,6 +11,9 @@ export function Step1NumQuestoes({ form, topics, selectedTopics, onNext, onPrev 
   const setNQ = (key: string, val: number) =>
     setValue("number_questions", { ...form.getValues("number_questions"), [key]: val });
 
+  const numberQuestions = watch("number_questions");
+  const totalQuestions = selectedTopics.reduce((s, t) => s + (numberQuestions?.[Number(t.id)] || 0), 0);
+
   return (
     <Form {...form}>
       <form className="flex flex-col flex-1 min-h-0">
@@ -44,6 +47,9 @@ export function Step1NumQuestoes({ form, topics, selectedTopics, onNext, onPrev 
                 </FormItem>
               );
             })}
+          </div>
+          <div className="pt-2 border-t text-sm text-muted-foreground">
+            Total de questões: <span className="font-semibold text-foreground">{totalQuestions}</span>
           </div>
         </div>
         <div className="flex gap-3 mt-4">

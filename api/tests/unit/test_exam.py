@@ -447,3 +447,388 @@ async def test_generate_exam_with_waiting_room(client, mock_auth, session):
         
         assert waiting_room is not None
         assert waiting_room.exam_config_id == config_id
+
+@pytest.mark.asyncio
+async def test_generate_exams_no_subject_id(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.post("/api/exams/generate", json={})
+    assert response.status_code == 400
+    assert "subject_id is required" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_generate_exams_value_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    
+    with patch("src.routers.exam.create_configs_and_exams", side_effect=ValueError("Invalid spec")):
+        response = await client.post("/api/exams/generate", json={"subject_id": sub.id})
+        assert response.status_code == 400
+        assert "Invalid spec" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_generate_exams_async_success(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.topic import Topic
+    from src.models.exam_config import ExamConfig
+    from src.models.topic_config import TopicConfig
+    
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    topic = Topic(name="T", subject_id=sub.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+    
+    exam_config = ExamConfig(id=1, subject_id=sub.id, fraction=0)
+    topic_config = TopicConfig(id=1, exam_config_id=1, topic_id=topic.id, num_questions=1, relative_weight=1.0)
+    
+    with patch("src.routers.exam.create_configs", return_value=(exam_config, [topic_config])), \
+         patch("src.routers.exam.create_waiting_room_service", new_callable=AsyncMock), \
+         patch("src.routers.exam.generate_exams_task"):
+        
+        payload = {"subject_id": sub.id, "num_variations": 1}
+        response = await client.post("/api/exams/generate_async", json=payload)
+        assert response.status_code == 200
+        assert response.json()["id"] == 1
+
+@pytest.mark.asyncio
+async def test_get_config_status(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig, GenerationStatus
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id, status=GenerationStatus.COMPLETED)
+    session.add(ec)
+    await session.commit()
+    await session.refresh(ec)
+    
+    response = await client.get(f"/api/exams/config/{ec.id}/status")
+    assert response.status_code == 200
+    assert response.json()["status"] == "COMPLETED"
+
+@pytest.mark.asyncio
+async def test_download_exam_zip_not_ready(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig, GenerationStatus
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id, status=GenerationStatus.PENDING)
+    session.add(ec)
+    await session.commit()
+    await session.refresh(ec)
+    
+    response = await client.get(f"/api/exams/config/{ec.id}/download")
+    assert response.status_code == 400
+    assert "Generation is not completed" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_validate_exam_success(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+    
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    e = Exam(exam_config_id=ec.id, grade=10, results="{}", capture_path="p")
+    session.add(e)
+    await session.commit()
+    await session.refresh(e)
+    
+    response = await client.post(f"/api/exams/{e.id}/validate")
+    assert response.status_code == 200
+    await session.refresh(e)
+    assert e.validated is True
+
+@pytest.mark.asyncio
+async def test_correct_by_hand_job(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+    
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    e = Exam(exam_config_id=ec.id)
+    session.add(e)
+    await session.commit()
+    await session.refresh(e)
+    
+    with patch("src.routers.exam.correct_by_hand", new_callable=AsyncMock) as mock_cbh:
+        mock_cbh.return_value = e
+        response = await client.post(f"/api/exams/{e.id}/correct_by_hand_job", json={"grid": {}})
+        assert response.status_code == 200
+
+@pytest.mark.asyncio
+async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.topic_config import TopicConfig
+    
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    
+    # Mock return value to simulate missing topic in relationship
+    mock_tc = MagicMock()
+    mock_tc.id = 1
+    mock_tc.topic_id = 999
+    mock_tc.topic = None
+    mock_tc.num_questions = 1
+    mock_tc.relative_weight = 1.0
+    
+    mock_config = MagicMock()
+    mock_config.id = 1
+    mock_config.subject_id = sub.id
+    mock_config.fraction = 0
+    mock_config.topic_configs = [mock_tc]
+    mock_config.nmec_name_list = None
+    mock_config.exams = []
+    mock_config.status = "COMPLETED"
+
+    with patch("src.routers.exam.get_exam_configs_by_subject", new_callable=AsyncMock) as mock_get:
+        mock_get.return_value = [mock_config]
+        response = await client.get(f"/api/exams/subject/{sub.id}/configs")
+        assert response.status_code == 200
+        assert response.json()[0]["topic_configs"][0]["topic_name"] == "Unknown Topic"
+
+@pytest.mark.asyncio
+async def test_generate_exams_validation_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    
+    with patch("src.routers.exam.create_configs_and_exams", side_effect=ValueError("Invalid config")):
+        response = await client.post("/api/exams/generate", json={"subject_id": sub.id})
+        assert response.status_code == 400
+        assert "Invalid config" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_generate_exams_internal_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    
+    with patch("src.routers.exam.create_configs_and_exams", side_effect=Exception("Internal Boom")):
+        response = await client.post("/api/exams/generate", json={"subject_id": sub.id})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_generate_exams_async_no_subject_id(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.post("/api/exams/generate_async", json={})
+    assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_generate_exams_async_internal_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    
+    with patch("src.routers.exam.create_configs", side_effect=Exception("Async fail")):
+        response = await client.post("/api/exams/generate_async", json={"subject_id": sub.id})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_get_config_status_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/exams/config/99999/status")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_download_exam_zip_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/exams/config/99999/download")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_download_exam_zip_file_missing_on_disk(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig, GenerationStatus
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id, status=GenerationStatus.COMPLETED, zip_path="/tmp/nonexistent.zip")
+    session.add(ec)
+    await session.commit()
+    
+    response = await client.get(f"/api/exams/config/{ec.id}/download")
+    assert response.status_code == 404
+    assert "Generated ZIP file not found" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_store_student_list_config_not_found(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    
+    with patch("src.routers.exam.get_exam_config_by_id", return_value=None):
+        csv_file = io.BytesIO(b"n,m,e\n1,J,j")
+        files = {"file": ("s.csv", csv_file, "text/csv")}
+        response = await client.post(f"/api/exams/exam/{ec.id}/student_list", files=files)
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_retrieve_student_list_value_error(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.exam.get_subject_id_by_exam_config_id", side_effect=ValueError("Not found")):
+        response = await client.get("/api/exams/exam/999/student_list")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_delete_exam_config_wrong_state(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.RUNNING)
+    session.add(wr)
+    await session.commit()
+    
+    response = await client.delete(f"/api/exams/config/{ec.id}")
+    assert response.status_code == 400
+    assert "It must be in preparation state" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_delete_exam_config_value_error(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.exam.get_subject_id_by_exam_config_id", side_effect=ValueError("Bad ID")):
+        response = await client.delete("/api/exams/config/999")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_validate_exam_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.post("/api/exams/99999/validate")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_validate_exam_not_corrected_yet(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    e = Exam(exam_config_id=ec.id, grade=None) # Not corrected
+    session.add(e)
+    await session.commit()
+    
+    response = await client.post(f"/api/exams/{e.id}/validate")
+    assert response.status_code == 400
+    assert "Exam has not been corrected yet" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_get_all_exams_info_success(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+    from src.models.waiting_room import WaitingRoom
+    
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id, fraction=0.5)
+    session.add(ec)
+    await session.commit()
+    wr = WaitingRoom(exam_config_id=ec.id)
+    session.add(wr)
+    await session.commit()
+    
+    e = Exam(
+        exam_config_id=ec.id, 
+        grade=15.0, 
+        results="{}", 
+        capture_path="cap", 
+        correction_path="corr"
+    )
+    session.add(e)
+    await session.commit()
+    
+    # Mock base64 read
+    with patch("os.path.exists", return_value=True), \
+         patch("builtins.open", return_value=io.BytesIO(b"fake_image")), \
+         patch("src.routers.exam.base64.b64encode", return_value=b"YmFzZTY0"):
+        
+        response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
+        assert response.status_code == 200
+        assert response.json()[0]["capture"] == "YmFzZTY0"
+
+@pytest.mark.asyncio
+async def test_get_all_exams_info_wr_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/exams/99999/all_exams_info")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_get_exam_info_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/exams/99999/exam_info")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_correct_by_hand_job_value_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.exam import Exam
+    sub = Subject(name="S")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    e = Exam(exam_config_id=ec.id)
+    session.add(e)
+    await session.commit()
+    
+    with patch("src.routers.exam.correct_by_hand", side_effect=ValueError("Invalid grid")):
+        response = await client.post(f"/api/exams/{e.id}/correct_by_hand_job", json={"grid": {}})
+        assert response.status_code == 404
+        assert "Invalid grid" in response.json()["detail"]
+

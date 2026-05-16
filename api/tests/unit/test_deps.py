@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import patch, AsyncMock, MagicMock
 from fastapi import HTTPException
 from fastapi.security import HTTPAuthorizationCredentials
 from src.core.deps import (
@@ -73,6 +73,67 @@ async def test_get_current_user_info_fallback_groups(mock_keycloak_client):
     assert user.groups == ["/token/group"]
 
 @pytest.mark.asyncio
+async def test_get_current_user_info_auto_assign_professor_success(mock_keycloak_client):
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_token")
+    mock_keycloak_client.verify_token = AsyncMock(return_value={
+        "sub": "user-123",
+        "preferred_username": "testuser",
+        "email": "test@example.com",
+        "realm_access": {"roles": []} # No roles
+    })
+    mock_keycloak_client.get_user_group_paths = AsyncMock(return_value=[])
+    
+    class MockAdmin:
+        def __init__(self):
+            self.get_realm_role = MagicMock(return_value={"id": "prof-role-id", "name": "professor"})
+            self.assign_realm_roles = MagicMock()
+            
+    mock_keycloak_client.admin_client = MockAdmin()
+
+    user = await get_current_user_info(credentials)
+    
+    assert "professor" in user.realm_roles
+    mock_keycloak_client.admin_client.get_realm_role.assert_called_with("professor")
+    mock_keycloak_client.admin_client.assign_realm_roles.assert_called()
+
+@pytest.mark.asyncio
+async def test_get_current_user_info_auto_assign_professor_no_admin(mock_keycloak_client):
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_token")
+    mock_keycloak_client.verify_token = AsyncMock(return_value={
+        "sub": "user-123",
+        "preferred_username": "testuser",
+        "email": "test@example.com",
+        "realm_access": {"roles": []}
+    })
+    mock_keycloak_client.get_user_group_paths = AsyncMock(return_value=[])
+    mock_keycloak_client.admin_client = None # Admin not initialized
+
+    user = await get_current_user_info(credentials)
+    
+    assert "professor" not in user.realm_roles
+
+@pytest.mark.asyncio
+async def test_get_current_user_info_auto_assign_professor_failure(mock_keycloak_client):
+    credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials="valid_token")
+    mock_keycloak_client.verify_token = AsyncMock(return_value={
+        "sub": "user-123",
+        "preferred_username": "testuser",
+        "email": "test@example.com",
+        "realm_access": {"roles": []}
+    })
+    mock_keycloak_client.get_user_group_paths = AsyncMock(return_value=[])
+    
+    class MockAdmin:
+        def get_realm_role(self, name):
+            raise Exception("Keycloak error")
+            
+    mock_keycloak_client.admin_client = MockAdmin()
+
+    user = await get_current_user_info(credentials)
+    
+    assert "professor" not in user.realm_roles
+
+@pytest.mark.asyncio
 async def test_require_role_success():
     user = User(user_id="1", username="test", email="test@example.com", realm_roles=["manager"], groups=[])
     dep = require_role("manager")
@@ -133,6 +194,55 @@ def test_verify_permission_denied():
     with pytest.raises(HTTPException) as exc:
         verify_permission(user, ["/s1/regent", "/s1/add_students"])
     assert exc.value.status_code == 403
+
+@pytest.mark.asyncio
+async def test_specific_dependency_factories():
+    user = User(
+        user_id="1", 
+        username="test", 
+        email="test@example.com", 
+        realm_roles=["professor"], 
+        groups=["/s1/regent", "/s1/edit_question_bank", "/s2/student"]
+    )
+    
+    from src.core.deps import (
+        require_manager, require_professor, require_student,
+        require_subject_regent, require_subject_student, require_edit_question_bank
+    )
+    
+    # Test role dependencies
+    assert await require_professor(user) == user
+    with pytest.raises(HTTPException):
+        await require_manager(user)
+    with pytest.raises(HTTPException):
+        await require_student(user)
+        
+    # Test group dependencies
+    assert await require_subject_regent("1")(user) == user
+    assert await require_subject_student("2")(user) == user
+    assert await require_edit_question_bank("1")(user) == user
+    
+    with pytest.raises(HTTPException):
+        await require_subject_regent("2")(user)
+
+def test_verify_permission_complex_matches():
+    user = User(
+        user_id="1", 
+        username="test", 
+        email="test@example.com", 
+        realm_roles=["professor"], 
+        groups=["/s1/regent"]
+    )
+    
+    # Role match in list
+    assert verify_permission(user, ["student", "professor"]) is True
+    
+    # Prefix match /s1 (any group in subject 1)
+    assert verify_permission(user, ["/s1"]) is True
+    
+    # No match
+    with pytest.raises(HTTPException):
+        verify_permission(user, ["student", "/s2"])
 
 @pytest.mark.asyncio
 async def test_verify_regent_exists_success(mock_keycloak_client):

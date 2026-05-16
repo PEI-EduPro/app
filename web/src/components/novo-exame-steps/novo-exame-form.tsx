@@ -14,8 +14,18 @@ import { Step2Cotacoes } from "./step2-cotacoes";
 import { Step3Configuracoes } from "./step3-configuracoes";
 import { Step4VigilantesAlunos } from "./step4-vigilantes-alunos";
 import { Step5Resumo } from "./step5-resumo";
+import HelperHoverCard from "@/components/helper-hover-card";
 
 const TOTAL_STEPS = 6;
+
+const STEP_LABELS = [
+  "Tópicos",
+  "Questões",
+  "Cotações",
+  "Configurações",
+  "Participantes",
+  "Resumo",
+];
 
 export const NovoExameForm = ({
   ucID,
@@ -58,6 +68,15 @@ export const NovoExameForm = ({
     });
   };
 
+  const STEP_DESCRIPTIONS = [
+    "Selecione os tópicos que farão parte do exame.",
+    "Defina o número de questões a integrar de cada tópico.",
+    "Configure o peso de cada tópico na nota final e o desconto por resposta errada.",
+    "Defina o título, data, semestre e ano letivo do exame.",
+    "Adicione os vigilantes, importe a lista de alunos e explicite o número de exames e versões.",
+    "Reveja toda a configuração antes de gerar o exame.",
+  ];
+
   const stepProps = { form, onNext, onPrev, onClose };
 
   return (
@@ -83,11 +102,22 @@ export const NovoExameForm = ({
           <div className="flex items-center justify-center">
             {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
               <div key={index} className="flex items-center">
-                <div
-                  className={cn(
-                    "w-4 h-4 rounded-full transition-all duration-300 ease-in-out",
-                    index <= formStep ? "bg-primary" : "bg-primary/30",
-                  )}
+                <HelperHoverCard
+                  side="top"
+                  content={
+                    <div className="text-xs">
+                      <p className="font-semibold mb-1">{STEP_LABELS[index]}</p>
+                      {STEP_DESCRIPTIONS[index]}
+                    </div>
+                  }
+                  trigger={
+                    <div
+                      className={cn(
+                        "w-4 h-4 rounded-full transition-all duration-300 ease-in-out cursor-default",
+                        index <= formStep ? "bg-primary" : "bg-primary/30",
+                      )}
+                    />
+                  }
                 />
                 {index < TOTAL_STEPS - 1 && (
                   <div

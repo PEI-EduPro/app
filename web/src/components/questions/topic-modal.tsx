@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Card } from "@/components/ui/card";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import { Input } from "../ui/input";
 
 interface TopicModalProps {
   isOpen: boolean;
