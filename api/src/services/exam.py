@@ -641,12 +641,11 @@ async def _compile_latex(workdir: str, main_file: str, var_num: int, subject_nam
             await f.write(h_content)
 
     try:
-        # anyio.run_process doesn't have a timeout parameter directly like subprocess.run
-        # but we can use anyio.fail_after
         with anyio.fail_after(30):
             await anyio.run_process(
                 ["pdflatex", "-interaction=nonstopmode", main_file],
-                cwd=workdir
+                cwd=workdir,
+                check=False,
             )
         pdf_path = os.path.join(workdir, main_file.replace(".tex", ".pdf"))
         if os.path.exists(pdf_path):
