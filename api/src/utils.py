@@ -1,10 +1,13 @@
 import base64
 import os
+import secrets
 import cv2
 from fastapi import File, HTTPException, UploadFile
 from bs4 import BeautifulSoup
 
-IMAGES_DIR = os.getenv("IMAGES_DIR", "/tmp")
+# Use a safer default directory than /tmp to avoid security risks 
+# (e.g., symlink attacks in publicly writable directories).
+IMAGES_DIR = os.getenv("IMAGES_DIR", "storage/captures")
 
 def _detect_qr(img) -> str:
     """Try multiple strategies to decode a QR code from an image."""
@@ -64,7 +67,8 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
         raise HTTPException(status_code=400, detail=f"Invalid base64 encoding: {e}")
 
     os.makedirs(IMAGES_DIR, exist_ok=True)
-    temp_file_path = os.path.join(IMAGES_DIR, f"exam_{os.urandom(8).hex()}{ext}")
+    # Use secrets for cryptographically strong random filenames
+    temp_file_path = os.path.join(IMAGES_DIR, f"exam_{secrets.token_hex(8)}{ext}")
     with open(temp_file_path, "wb") as buffer:
         buffer.write(image_bytes)
 
@@ -132,7 +136,10 @@ async def read_QR(file: UploadFile = File(...)):
 
     # Save the uploaded file to the captures directory
     os.makedirs(IMAGES_DIR, exist_ok=True)
-    temp_file_path = os.path.join(IMAGES_DIR, file.filename)
+    # Sanitize filename to prevent path traversal
+    filename = os.path.basename(file.filename) if file.filename else f"upload_{secrets.token_hex(8)}"
+    temp_file_path = os.path.join(IMAGES_DIR, filename)
+    
     with open(temp_file_path, "wb") as buffer:
         buffer.write(await file.read())
 
