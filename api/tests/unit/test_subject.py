@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, AsyncMock
 from src.core.deps import get_current_user_info, verify_regent_exists
 from src.main import app
 
@@ -320,3 +321,287 @@ async def test_delete_subject_not_found(client, mock_auth):
     
     response = await client.delete("/api/subjects/99999")
     assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_get_subject_students(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Students Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    # Mock get_students_service
+    with patch("src.routers.subject.get_students_service", new_callable=AsyncMock) as mock_service:
+        mock_service.return_value = [
+            {"id": "s1", "username": "user1", "email": "u1@e.com", "firstName": "F1", "lastName": "L1"}
+        ]
+        response = await client.get(f"/api/subjects/{sub.id}/students")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["username"] == "user1"
+
+@pytest.mark.asyncio
+async def test_get_subject_professors(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Profs Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.get_professors_service", new_callable=AsyncMock) as mock_service:
+        mock_service.return_value = [
+            {"id": "p1", "username": "prof1", "email": "p1@e.com", "firstName": "P1", "lastName": "L1"}
+        ]
+        response = await client.get(f"/api/subjects/{sub.id}/professors")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["username"] == "prof1"
+
+@pytest.mark.asyncio
+async def test_get_subject_regent(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Regent Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.get_regent_service", new_callable=AsyncMock) as mock_service:
+        mock_service.return_value = {"id": "r1", "username": "reg1", "email": "r1@e.com", "firstName": "R1", "lastName": "L1"}
+        response = await client.get(f"/api/subjects/{sub.id}/regent")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["username"] == "reg1"
+
+@pytest.mark.asyncio
+async def test_add_students_to_subject(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Add Students Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.add_students_service", new_callable=AsyncMock) as mock_service:
+        response = await client.post(
+            f"/api/subjects/{sub.id}/students",
+            json={"student_keycloak_ids": ["s1", "s2"]}
+        )
+        assert response.status_code == 201
+        assert response.json()["message"] == "Students added successfully"
+        mock_service.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_add_professor_to_subject(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Add Prof Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.manage_professor_service", new_callable=AsyncMock) as mock_service:
+        response = await client.post(
+            f"/api/subjects/{sub.id}/professors",
+            json={"professor_keycloak_id": "p1", "can_edit": True}
+        )
+        assert response.status_code == 201
+        assert response.json()["message"] == "Professor added successfully."
+
+@pytest.mark.asyncio
+async def test_update_professor_permissions(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Update Prof Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.manage_professor_service", new_callable=AsyncMock) as mock_service:
+        response = await client.put(
+            f"/api/subjects/{sub.id}/professors/p1",
+            json={"can_edit": False}
+        )
+        assert response.status_code == 200
+        assert response.json()["message"] == "Permissions updated successfully."
+
+@pytest.mark.asyncio
+async def test_remove_professor_from_subject(client, mock_auth, mock_keycloak, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Remove Prof Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.remove_professor_service", new_callable=AsyncMock) as mock_service:
+        response = await client.delete(f"/api/subjects/{sub.id}/professors/p1")
+        assert response.status_code == 204
+
+@pytest.mark.asyncio
+async def test_get_all_topics_by_subject(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Topics Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.get_all_subject_topics", new_callable=AsyncMock) as mock_service:
+        from src.models.topic import TopicPublic
+        mock_service.return_value = [(TopicPublic(id=1, name="T1", subject_id=sub.id), 5)]
+        response = await client.get(f"/api/subjects/{sub.id}/topics")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0][0]["name"] == "T1"
+
+@pytest.mark.asyncio
+async def test_get_all_by_subject(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="All Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.get_topics_questions_and_options_by_subject_id", new_callable=AsyncMock) as mock_service:
+        mock_service.return_value = {"topics": []}
+        response = await client.get(f"/api/subjects/{sub.id}/all-questions")
+        assert response.status_code == 200
+        assert "topics" in response.json()
+
+@pytest.mark.asyncio
+async def test_get_subject_topics_list(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Topics List Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+
+    with patch("src.routers.subject.get_topics_from_subject", new_callable=AsyncMock) as mock_service:
+        mock_service.return_value = []
+        response = await client.get(f"/api/subjects/{sub.id}/topics-list")
+        assert response.status_code == 200
+        assert isinstance(response.json(), list)
+
+@pytest.mark.asyncio
+async def test_create_subject_exception(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.subject.create_subject_service", side_effect=Exception("DB Error")):
+        response = await client.post(
+            "/api/subjects/",
+            json={"name": "Fail Sub", "regent_keycloak_id": "r1"}
+        )
+        assert response.status_code == 500
+        assert "Failed to create subject" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_get_subject_not_found(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/subjects/99999")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_update_subject_regent_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Update Error Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    with patch("src.routers.subject.update_subject_service", side_effect=RuntimeError("Runtime Error")):
+        response = await client.put(f"/api/subjects/{sub.id}", json={"name": "New Name"})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_delete_subject_exception(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Delete Error Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    with patch("src.routers.subject.delete_subject_service", side_effect=Exception("Delete Error")):
+        response = await client.delete(f"/api/subjects/{sub.id}")
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_get_subject_students_not_found(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.subject.get_students_service", side_effect=ValueError):
+        response = await client.get("/api/subjects/99999/students")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_add_students_exception(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Add Student Error Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    with patch("src.routers.subject.add_students_service", side_effect=Exception("Add Error")):
+        response = await client.post(f"/api/subjects/{sub.id}/students", json={"student_keycloak_ids": ["s1"]})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_add_professor_bad_request(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Add Prof Bad Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    with patch("src.routers.subject.manage_professor_service", side_effect=ValueError("Bad Prof")):
+        response = await client.post(f"/api/subjects/{sub.id}/professors", json={"professor_keycloak_id": "p1"})
+        assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_update_professor_exception(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Update Prof Error Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    with patch("src.routers.subject.manage_professor_service", side_effect=Exception("Update Error")):
+        response = await client.put(f"/api/subjects/{sub.id}/professors/p1", json={"can_edit": True})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_remove_professor_runtime_error(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.subject import Subject
+    sub = Subject(name="Remove Prof Error Sub")
+    session.add(sub)
+    await session.commit()
+    await session.refresh(sub)
+    
+    with patch("src.routers.subject.remove_professor_service", side_effect=RuntimeError):
+        response = await client.delete(f"/api/subjects/{sub.id}/professors/p1")
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_get_all_topics_not_found(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.subject.get_all_subject_topics", return_value=None):
+        response = await client.get("/api/subjects/99999/topics")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_get_all_by_subject_not_found(client, mock_auth, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.subject.get_topics_questions_and_options_by_subject_id", return_value=None):
+        response = await client.get("/api/subjects/99999/all-questions")
+        assert response.status_code == 404

@@ -317,3 +317,225 @@ async def test_student_to_exam_qr_waiting_room_not_found(client, mock_auth_user,
     
     assert response.status_code == 404
     assert "Waiting room not found" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_waiting_room_exception(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    
+    with patch("src.routers.waiting_room.create_waiting_room_service", side_effect=Exception("Fail")):
+        response = await client.post("/api/waiting-rooms/", json={"exam_config_id": ec.id, "vigilant_keycloak_ids": []})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_start_waiting_room_config_not_found(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec_real = ExamConfig(subject_id=sub.id)
+    session.add(ec_real)
+    await session.commit()
+
+    wr = WaitingRoom(exam_config_id=ec_real.id)
+    session.add(wr)
+    await session.commit()
+    
+    # Now simulate config NOT FOUND by patching session.get
+    with patch("src.routers.waiting_room.AsyncSession.get", return_value=None):
+        response = await client.patch(f"/api/waiting-rooms/{wr.id}/start")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_start_waiting_room_wrong_state(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.RUNNING)
+    session.add(wr)
+    await session.commit()
+    
+    response = await client.patch(f"/api/waiting-rooms/{wr.id}/start")
+    assert response.status_code == 400
+
+@pytest.mark.asyncio
+async def test_get_waiting_room_info_exception(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+
+    wr = WaitingRoom(exam_config_id=ec.id)
+    session.add(wr)
+    await session.commit()
+    
+    with patch("src.routers.waiting_room.get_waiting_room_info_service", side_effect=Exception("Fail")):
+        response = await client.get(f"/api/waiting-rooms/{wr.id}/info")
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_associate_student_to_exam_value_error(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+
+    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.RUNNING)
+    session.add(wr)
+    await session.commit()
+    
+    response = await client.post(f"/api/waiting-rooms/{wr.id}/student_to_exam", json={"qr": "not-int", "nmec": 123})
+    assert response.status_code == 422
+
+@pytest.mark.asyncio
+async def test_get_waiting_room_metrics_not_found(client, session):
+    # Need user with permission for w9999
+    from src.models.user import User
+    u = User(user_id="u1", username="u1", email="u1@e.com", realm_roles=[], groups=["/w9999/regent"])
+    async def mock_u(): return u
+    app.dependency_overrides[get_current_user_info] = mock_u
+
+    with patch("src.routers.waiting_room.get_waiting_room_metrics_service", return_value=None):
+        response = await client.get("/api/waiting-rooms/9999/metrics")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_close_waiting_room_config_not_found(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+
+    wr = WaitingRoom(exam_config_id=ec.id)
+    session.add(wr)
+    await session.commit()
+    
+    with patch("src.routers.waiting_room.AsyncSession.get", return_value=None):
+        response = await client.patch(f"/api/waiting-rooms/{wr.id}/close")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_get_submitted_exams_count_not_found(client, mock_auth_user):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    response = await client.get("/api/waiting-rooms/9999/submitted_count")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_evaluate_exam_batch_not_found(client, mock_auth_user):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    response = await client.post("/api/waiting-rooms/9999/evaluate", json={"files": []})
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_notify_students_via_email_not_found(client, mock_auth_user):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    response = await client.post("/api/waiting-rooms/9999/notify-students", json={"sender_email": "a@b.com", "sender_password": "p", "subject": "s", "body": "b"})
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_notify_students_via_email_with_warnings(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    from src.models.warning import Warning, WarningType
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.CLOSED)
+    session.add(wr)
+    await session.commit()
+    warn = Warning(exam_config_id=ec.id, description="Warn", type=WarningType.multiple_exams_to_student)
+    session.add(warn)
+    await session.commit()
+    
+    response = await client.post(f"/api/waiting-rooms/{wr.id}/notify-students", json={"sender_email": "a@b.com", "sender_password": "p", "subject": "s", "body": "b"})
+    assert response.status_code == 400
+    assert "pending warning" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_notify_students_not_corrected(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    from src.models.exam import Exam
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.CLOSED)
+    session.add(wr)
+    await session.commit()
+    e = Exam(exam_config_id=ec.id, nmec=123, student_email="s@e.com", student_name="S")
+    session.add(e)
+    await session.commit()
+    
+    response = await client.post(f"/api/waiting-rooms/{wr.id}/notify-students", json={"sender_email": "a@b.com", "sender_password": "p", "subject": "s", "body": "b"})
+    assert response.status_code == 400
+    assert "not yet been corrected" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_notify_students_not_validated(client, mock_auth_user, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth_user
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+    from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    from src.models.exam import Exam
+    sub = Subject(name="Sub")
+    session.add(sub)
+    await session.commit()
+    ec = ExamConfig(subject_id=sub.id)
+    session.add(ec)
+    await session.commit()
+    wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.CLOSED)
+    session.add(wr)
+    await session.commit()
+    e = Exam(exam_config_id=ec.id, nmec=123, student_email="s@e.com", student_name="S", 
+             capture_path="c", correction_path="cr", grade=10, results="{}", validated=False)
+    session.add(e)
+    await session.commit()
+    
+    response = await client.post(f"/api/waiting-rooms/{wr.id}/notify-students", json={"sender_email": "a@b.com", "sender_password": "p", "subject": "s", "body": "b"})
+    assert response.status_code == 400
+    assert "has not been validated" in response.json()["detail"]
