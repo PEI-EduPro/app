@@ -1,38 +1,596 @@
 ================================================================= FAILURES =================================================================
-________________________________________________________ test_put_question_success _________________________________________________________
+_______________________________________________ test_get_subject_exam_configs_missing_topic ________________________________________________
 
-client = <httpx.AsyncClient object at 0x7c2d9cbe9850>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7c2d9c8260c0>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7c2d9d45de20>, setup_topic = Topic()
+self = <sqlalchemy.engine.base.Connection object at 0x7608f9f4b3b0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x7608f9d0a420>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x7608f9f4b5f0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7608f9f4b890>, parameters = [(999, 1, 1, 1.0)]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x7608fa844cc0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+client = <httpx.AsyncClient object at 0x7608f9d09cd0>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9d13b00>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9d0b8f0>
 
     @pytest.mark.asyncio
-    async def test_put_question_success(client, mock_auth, session, setup_topic):
+    async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
         app.dependency_overrides[get_current_user_info] = mock_auth
-        topic = setup_topic
-        from src.models.question import Question
-        q = Question(topic_id=topic.id, question_text="Old")
-        session.add(q)
-        await session.commit()
-        await session.refresh(q)
+        from src.models.subject import Subject
+        from src.models.exam_config import ExamConfig
+        from src.models.topic_config import TopicConfig
     
-        response = await client.put(f"/api/questions/{q.id}", json={"id": q.id, "question_text": "New"})
->       assert response.status_code == 200
-E       assert 500 == 200
-E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+        sub = Subject(name="S")
+        session.add(sub)
+        await session.commit()
+        ec = ExamConfig(subject_id=sub.id)
+        session.add(ec)
+        await session.commit()
+        # TC with topic_id that doesn't exist (or just don't create the topic)
+        tc = TopicConfig(exam_config_id=ec.id, topic_id=999, num_questions=1, relative_weight=1.0)
+        session.add(tc)
+>       await session.commit()
 
-tests/unit/test_question.py:134: AssertionError
------------------------------------------------------------ Captured stdout call -----------------------------------------------------------
-2026-05-16 14:01:05,695 - src.routers.question - ERROR - Failed to update question: (sqlite3.IntegrityError) NOT NULL constraint failed: question.topic_id
-[SQL: UPDATE question SET topic_id=?, question_text=? WHERE question.id = ?]
-[parameters: (None, 'New', 1)]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-2026-05-16 14:01:05,696 - httpx - INFO - HTTP Request: PUT http://test/api/questions/1 "HTTP/1.1 500 Internal Server Error"
------------------------------------------------------------- Captured log call -------------------------------------------------------------
-ERROR    src.routers.question:question.py:140 Failed to update question: (sqlite3.IntegrityError) NOT NULL constraint failed: question.topic_id
-[SQL: UPDATE question SET topic_id=?, question_text=? WHERE question.id = ?]
-[parameters: (None, 'New', 1)]
-(Background on this error at: https://sqlalche.me/e/20/gkpj)
-INFO     httpx:_client.py:1740 HTTP Request: PUT http://test/api/questions/1 "HTTP/1.1 500 Internal Server Error"
+tests/unit/test_exam.py:597: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
+    await greenlet_spawn(self.sync_session.commit)
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:203: in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1286: in _prepare_impl
+    self.session.flush()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x7608fa844cc0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+E               [SQL: INSERT INTO topic_config (topic_id, exam_config_id, num_questions, relative_weight) VALUES (?, ?, ?, ?)]
+E               [parameters: (999, 1, 1, 1.0)]
+E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+___________________________________________________ test_delete_exam_config_wrong_state ____________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608fa9d8110>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9e8b240>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9e81bb0>
+
+    @pytest.mark.asyncio
+    async def test_delete_exam_config_wrong_state(client, mock_auth, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        from src.models.subject import Subject
+        from src.models.exam_config import ExamConfig
+        from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    
+        sub = Subject(name="S")
+        session.add(sub)
+        await session.commit()
+        ec = ExamConfig(subject_id=sub.id)
+        session.add(ec)
+        await session.commit()
+>       wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.ONGOING)
+                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: type object 'WaitingRoomState' has no attribute 'ONGOING'
+
+tests/unit/test_exam.py:712: AttributeError
+_____________________________________________________ test_get_all_exams_info_success ______________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608f9f64dd0>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608fa9bce00>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9f646e0>
+
+    @pytest.mark.asyncio
+    async def test_get_all_exams_info_success(client, mock_auth, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        from src.models.subject import Subject
+        from src.models.exam_config import ExamConfig
+        from src.models.exam import Exam
+        from src.models.waiting_room import WaitingRoom
+    
+        sub = Subject(name="S")
+        session.add(sub)
+        await session.commit()
+        ec = ExamConfig(subject_id=sub.id, fraction=0.5)
+        session.add(ec)
+        await session.commit()
+        wr = WaitingRoom(exam_config_id=ec.id)
+        session.add(wr)
+        await session.commit()
+    
+        e = Exam(
+            exam_config_id=ec.id,
+            grade=15.0,
+            results="{}",
+            capture_path="cap",
+            correction_path="corr"
+        )
+        session.add(e)
+        await session.commit()
+    
+        # Mock base64 read
+        with patch("os.path.exists", return_value=True), \
+             patch("builtins.open", patch("builtins.open", return_value=io.BytesIO(b"fake_image"))), \
+             patch("src.routers.exam.base64.b64encode", return_value=b"YmFzZTY0"):
+    
+>           response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_exam.py:786: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/httpx/_client.py:1768: in get
+    return await self.request(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+/usr/lib/python3.12/contextlib.py:158: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.12/site-packages/starlette/_utils.py:87: in collapse_excgroups
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/main.py:62: in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+.venv/lib/python3.12/site-packages/starlette/middleware/cors.py:88: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.12/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+waiting_room_id = 1
+user_info = User(user_id='manager-id-123', username='manager', email='manager@example.com', first_name=None, last_name=None, realm_roles=['manager'], groups=['/s1/regent', '/s99999/regent'], nmec=None)
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9f646e0>
+
+    @router.get("/{waiting_room_id}/all_exams_info")
+    async def get_all_exams_info(
+        waiting_room_id: int,
+        user_info: User = Depends(get_current_user_info),
+        session: AsyncSession = Depends(get_session)
+    ):
+        """
+        Get info for all exams in an exam configuration, identified by waiting room ID.
+        Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
+        Only accessible by the regent of the subject.
+        """
+        waiting_room = await get_waiting_room(session, waiting_room_id)
+        if not waiting_room:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
+        exam_config_id = waiting_room.exam_config_id
+    
+        subject_id = await get_subject_id_by_exam_config_id(exam_config_id, session)
+        verify_permission(user_info, [f"/s{subject_id}/regent"])
+    
+        try:
+            exams = await get_exams_by_config_id(session, exam_config_id)
+        except ValueError:
+            return []
+    
+        exam_config = await get_exam_config_by_id(session, exam_config_id)
+        fraction = exam_config.fraction if exam_config else 0
+    
+        result = []
+        for e in exams:
+            corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
+    
+            capture_b64 = None
+            if corrected and os.path.exists(e.correction_path):
+>               with open(e.correction_path, "rb") as f:
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E               TypeError: _patch.__call__() takes 2 positional arguments but 3 were given
+
+src/routers/exam.py:449: TypeError
+_______________________________________________ test_create_question_options_topic_not_found _______________________________________________
+
+client = <httpx.AsyncClient object at 0x7608f9171400>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9035120>
+setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f91f45c0>
+
+    @pytest.mark.asyncio
+    async def test_create_question_options_topic_not_found(client, mock_auth, setup_question, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        # Mock topic_service to return None
+>       with patch("src.routers.question_option.topic_service.get_topic_by_id", return_value=None):
+             ^^^^^
+E       NameError: name 'patch' is not defined
+
+tests/unit/test_question_option.py:159: NameError
+_______________________________________________ test_create_question_options_internal_error ________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608f9160c20>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9000220>
+setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
+
+    @pytest.mark.asyncio
+    async def test_create_question_options_internal_error(client, mock_auth, setup_question):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+>       with patch("src.routers.question_option.question_option.create_question_options", side_effect=Exception("Boom")):
+             ^^^^^
+E       NameError: name 'patch' is not defined
+
+tests/unit/test_question_option.py:168: NameError
+________________________________________________ test_update_question_option_service_fails _________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608f91a6420>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f8d36de0>
+setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9160da0>
+
+    @pytest.mark.asyncio
+    async def test_update_question_option_service_fails(client, mock_auth, setup_question, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+        session.add(option)
+        await session.commit()
+    
+>       with patch("src.routers.question_option.question_option.update_question_option", return_value=None):
+             ^^^^^
+E       NameError: name 'patch' is not defined
+
+tests/unit/test_question_option.py:180: NameError
+________________________________________________ test_update_question_option_internal_error ________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608fa864380>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f8d37600>
+setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9161790>
+
+    @pytest.mark.asyncio
+    async def test_update_question_option_internal_error(client, mock_auth, setup_question, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+        session.add(option)
+        await session.commit()
+    
+>       with patch("src.routers.question_option.question_option.update_question_option", side_effect=Exception("Boom")):
+             ^^^^^
+E       NameError: name 'patch' is not defined
+
+tests/unit/test_question_option.py:191: NameError
+________________________________________________ test_delete_question_option_service_fails _________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608f91a6180>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9ec4680>
+setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9e81670>
+
+    @pytest.mark.asyncio
+    async def test_delete_question_option_service_fails(client, mock_auth, setup_question, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+        session.add(option)
+        await session.commit()
+    
+>       with patch("src.routers.question_option.question_option.delete_question_option", return_value=False):
+             ^^^^^
+E       NameError: name 'patch' is not defined
+
+tests/unit/test_question_option.py:202: NameError
+________________________________________________ test_delete_question_option_internal_error ________________________________________________
+
+client = <httpx.AsyncClient object at 0x7608f9ed9460>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f900ce00>
+setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f91a6e40>
+
+    @pytest.mark.asyncio
+    async def test_delete_question_option_internal_error(client, mock_auth, setup_question, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+        session.add(option)
+        await session.commit()
+    
+>       with patch("src.routers.question_option.question_option.delete_question_option", side_effect=Exception("Boom")):
+             ^^^^^
+E       NameError: name 'patch' is not defined
+
+tests/unit/test_question_option.py:213: NameError
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -53,5 +611,13 @@ tests/unit/test_waiting_room.py::test_student_to_exam_qr_invalid_exam_id
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_question.py::test_put_question_success - assert 500 == 200
-================================================ 1 failed, 194 passed, 4 warnings in 14.30s ================================================
+FAILED tests/unit/test_exam.py::test_get_subject_exam_configs_missing_topic - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+FAILED tests/unit/test_exam.py::test_delete_exam_config_wrong_state - AttributeError: type object 'WaitingRoomState' has no attribute 'ONGOING'
+FAILED tests/unit/test_exam.py::test_get_all_exams_info_success - TypeError: _patch.__call__() takes 2 positional arguments but 3 were given
+FAILED tests/unit/test_question_option.py::test_create_question_options_topic_not_found - NameError: name 'patch' is not defined
+FAILED tests/unit/test_question_option.py::test_create_question_options_internal_error - NameError: name 'patch' is not defined
+FAILED tests/unit/test_question_option.py::test_update_question_option_service_fails - NameError: name 'patch' is not defined
+FAILED tests/unit/test_question_option.py::test_update_question_option_internal_error - NameError: name 'patch' is not defined
+FAILED tests/unit/test_question_option.py::test_delete_question_option_service_fails - NameError: name 'patch' is not defined
+FAILED tests/unit/test_question_option.py::test_delete_question_option_internal_error - NameError: name 'patch' is not defined
+================================================ 9 failed, 220 passed, 4 warnings in 21.97s ================================================
