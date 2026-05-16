@@ -1,10 +1,170 @@
 ================================================================= FAILURES =================================================================
-_______________________________________________ test_get_subject_exam_configs_missing_topic ________________________________________________
+_____________________________________________________ test_create_subject_service_full _____________________________________________________
 
-self = <sqlalchemy.engine.base.Connection object at 0x7608f9f4b3b0>
-dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x7608f9d0a420>
-context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x7608f9f4b5f0>
-statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7608f9f4b890>, parameters = [(999, 1, 1, 1.0)]
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>, name = 'Fail KC Group', regent_keycloak_id = 'regent-123'
+student_keycloak_ids = [], professor_keycloak_ids = []
+
+    async def create_subject_service(
+        session: AsyncSession,
+        name: str,
+        regent_keycloak_id: str,
+        student_keycloak_ids: List[str] = [],
+        professor_keycloak_ids: List[str] = []
+    ) -> dict:
+        """
+        Orchestrates the creation of a subject:
+        1. Verifies regent exists in Keycloak.
+        2. Creates Subject in Postgres.
+        3. Creates Groups in Keycloak.
+        4. Adds students and professors to groups.
+        """
+        # 1. Verify regent
+        regent_info = await verify_regent_exists(regent_keycloak_id)
+    
+        # 2. DB Creation
+        db_subject = Subject(name=name)
+        session.add(db_subject)
+        await session.commit()
+        await session.refresh(db_subject)
+        logger.info(f"Subject '{db_subject.name}' created in DB with ID: {db_subject.id}")
+    
+        # 3. Keycloak Group Creation
+        try:
+            success = await keycloak_client.create_subject_groups_and_assign_regent(
+                subject_id=str(db_subject.id),
+                regent_keycloak_id=regent_keycloak_id
+            )
+            if not success:
+>               raise RuntimeError("Keycloak group creation returned false.")
+E               RuntimeError: Keycloak group creation returned false.
+
+src/services/subject.py:51: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>
+mock_keycloak = <MagicMock name='keycloak_client' id='137534810353072'>
+mock_verify_regent = <AsyncMock name='verify_regent_exists' id='137534810884864'>
+
+    @pytest.mark.asyncio
+    async def test_create_subject_service_full(session, mock_keycloak, mock_verify_regent):
+        # Test success with students and professors (Hits lines 55, 61)
+        result = await create_subject_service(
+            session, "Full Subject", "regent-123",
+            student_keycloak_ids=["s1"],
+            professor_keycloak_ids=["p1"]
+        )
+        assert result["subject"].name == "Full Subject"
+        assert mock_keycloak.add_students_to_subject.called
+        assert mock_keycloak.add_professors_to_subject.called
+    
+        # Test failure in Keycloak group creation (Hits line 51)
+        mock_keycloak.create_subject_groups_and_assign_regent.return_value = False
+        with pytest.raises(RuntimeError, match="Keycloak group creation returned false."):
+>           await create_subject_service(session, "Fail KC Group", "regent-123")
+
+tests/unit/test_subject_service_direct.py:40: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>, name = 'Fail KC Group', regent_keycloak_id = 'regent-123'
+student_keycloak_ids = [], professor_keycloak_ids = []
+
+    async def create_subject_service(
+        session: AsyncSession,
+        name: str,
+        regent_keycloak_id: str,
+        student_keycloak_ids: List[str] = [],
+        professor_keycloak_ids: List[str] = []
+    ) -> dict:
+        """
+        Orchestrates the creation of a subject:
+        1. Verifies regent exists in Keycloak.
+        2. Creates Subject in Postgres.
+        3. Creates Groups in Keycloak.
+        4. Adds students and professors to groups.
+        """
+        # 1. Verify regent
+        regent_info = await verify_regent_exists(regent_keycloak_id)
+    
+        # 2. DB Creation
+        db_subject = Subject(name=name)
+        session.add(db_subject)
+        await session.commit()
+        await session.refresh(db_subject)
+        logger.info(f"Subject '{db_subject.name}' created in DB with ID: {db_subject.id}")
+    
+        # 3. Keycloak Group Creation
+        try:
+            success = await keycloak_client.create_subject_groups_and_assign_regent(
+                subject_id=str(db_subject.id),
+                regent_keycloak_id=regent_keycloak_id
+            )
+            if not success:
+                raise RuntimeError("Keycloak group creation returned false.")
+    
+            # 4. Add students and professors
+            if student_keycloak_ids:
+                await keycloak_client.add_students_to_subject(
+                    subject_id=str(db_subject.id),
+                    student_ids=student_keycloak_ids
+                )
+    
+            if professor_keycloak_ids:
+                await keycloak_client.add_professors_to_subject(
+                    subject_id=str(db_subject.id),
+                    professor_ids=professor_keycloak_ids
+                )
+    
+        except Exception as e:
+            logger.error(f"Failed to create Keycloak groups for subject {db_subject.id}: {e}")
+            # Rollback DB creation if Keycloak fails to ensure consistency
+            await session.delete(db_subject)
+            await session.commit()
+>           raise RuntimeError("Subject creation failed due to a Keycloak error.")
+E           RuntimeError: Subject creation failed due to a Keycloak error.
+
+src/services/subject.py:71: RuntimeError
+
+During handling of the above exception, another exception occurred:
+
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>
+mock_keycloak = <MagicMock name='keycloak_client' id='137534810353072'>
+mock_verify_regent = <AsyncMock name='verify_regent_exists' id='137534810884864'>
+
+    @pytest.mark.asyncio
+    async def test_create_subject_service_full(session, mock_keycloak, mock_verify_regent):
+        # Test success with students and professors (Hits lines 55, 61)
+        result = await create_subject_service(
+            session, "Full Subject", "regent-123",
+            student_keycloak_ids=["s1"],
+            professor_keycloak_ids=["p1"]
+        )
+        assert result["subject"].name == "Full Subject"
+        assert mock_keycloak.add_students_to_subject.called
+        assert mock_keycloak.add_professors_to_subject.called
+    
+        # Test failure in Keycloak group creation (Hits line 51)
+        mock_keycloak.create_subject_groups_and_assign_regent.return_value = False
+>       with pytest.raises(RuntimeError, match="Keycloak group creation returned false."):
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'Keycloak group creation returned false.'
+E         Actual message: 'Subject creation failed due to a Keycloak error.'
+
+tests/unit/test_subject_service_direct.py:39: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-16 14:42:46,827 - src.services.subject - INFO - Subject 'Full Subject' created in DB with ID: 1
+2026-05-16 14:42:46,834 - src.services.subject - INFO - Subject 'Fail KC Group' created in DB with ID: 2
+2026-05-16 14:42:46,835 - src.services.subject - ERROR - Failed to create Keycloak groups for subject 2: Keycloak group creation returned false.
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+INFO     src.services.subject:subject.py:42 Subject 'Full Subject' created in DB with ID: 1
+INFO     src.services.subject:subject.py:42 Subject 'Fail KC Group' created in DB with ID: 2
+ERROR    src.services.subject:subject.py:67 Failed to create Keycloak groups for subject 2: Keycloak group creation returned false.
+___________________________________________________ test_get_subjects_for_user_all_paths ___________________________________________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x7d165183f3b0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x7d165186d910>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x7d165183ea20>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7d165183ec30>, parameters = [(1, 'S1'), (2, 'S2'), (3, 'S3')]
 
     def _exec_single_context(
         self,
@@ -92,59 +252,30 @@ statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7608f9f4
                             evt_handled = True
                             break
                 if not evt_handled:
-                    self.dialect.do_executemany(
+>                   self.dialect.do_executemany(
                         cursor,
                         str_statement,
                         effective_parameters,
                         context,
-                    )
-            elif not effective_parameters and context.no_parameters:
-                if self.dialect._has_events:
-                    for fn in self.dialect.dispatch.do_execute_no_params:
-                        if fn(cursor, str_statement, context):
-                            evt_handled = True
-                            break
-                if not evt_handled:
-                    self.dialect.do_execute_no_params(
-                        cursor, str_statement, context
-                    )
-            else:
-                effective_parameters = cast(
-                    "_CoreSingleExecuteParams", effective_parameters
-                )
-                if self.dialect._has_events:
-                    for fn in self.dialect.dispatch.do_execute:
-                        if fn(
-                            cursor,
-                            str_statement,
-                            effective_parameters,
-                            context,
-                        ):
-                            evt_handled = True
-                            break
-                if not evt_handled:
->                   self.dialect.do_execute(
-                        cursor, str_statement, effective_parameters, context
-                    )
 
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1936: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
-    cursor.execute(statement, parameters)
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:949: in do_executemany
+    cursor.executemany(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:197: in executemany
     self._adapt_connection._handle_exception(error)
 .venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
     raise error
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
-    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:191: in executemany
+    self.await_(_cursor.executemany(operation, seq_of_parameters))
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
     value = await result
             ^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
-    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:47: in executemany
+    await self._execute(self._cursor.executemany, sql, parameters)
 .venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
     return await self._conn._execute(fn, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -153,7 +284,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
            ^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-tx = <_queue.SimpleQueue object at 0x7608fa844cc0>
+tx = <_queue.SimpleQueue object at 0x7d1651d16f20>
 
     def _connection_worker_thread(tx: _TxQueue):
         """
@@ -172,35 +303,34 @@ tx = <_queue.SimpleQueue object at 0x7608fa844cc0>
                 LOG.debug("executing %s", function)
 >               result = function()
                          ^^^^^^^^^^
-E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
+E               sqlite3.IntegrityError: UNIQUE constraint failed: subject.id
 
 .venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
 
 The above exception was the direct cause of the following exception:
 
-client = <httpx.AsyncClient object at 0x7608f9d09cd0>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9d13b00>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9d0b8f0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7d1652822ed0>
 
     @pytest.mark.asyncio
-    async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        from src.models.subject import Subject
-        from src.models.exam_config import ExamConfig
-        from src.models.topic_config import TopicConfig
+    async def test_get_subjects_for_user_all_paths(session):
+        # Manager (Hits line 96)
+        user_info = MagicMock()
+        user_info.realm_roles = ["manager"]
+        user_info.groups = []
+        session.add(Subject(name="S1"))
+        await session.commit()
+        res = await get_subjects_for_user(session, user_info)
+        assert len(res) >= 1
     
-        sub = Subject(name="S")
-        session.add(sub)
-        await session.commit()
-        ec = ExamConfig(subject_id=sub.id)
-        session.add(ec)
-        await session.commit()
-        # TC with topic_id that doesn't exist (or just don't create the topic)
-        tc = TopicConfig(exam_config_id=ec.id, topic_id=999, num_questions=1, relative_weight=1.0)
-        session.add(tc)
+        # Student/Professor with groups (Hits lines 102-119)
+        user_info.realm_roles = ["student"]
+        user_info.groups = ["/s1/students", "/s2/professors", "/s3/regent", "/invalid", "/sx/students"]
+        session.add(Subject(id=1, name="S1"))
+        session.add(Subject(id=2, name="S2"))
+        session.add(Subject(id=3, name="S3"))
 >       await session.commit()
 
-tests/unit/test_exam.py:597: 
+tests/unit/test_subject_service_direct.py:70: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 .venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
     await greenlet_spawn(self.sync_session.commit)
@@ -237,7 +367,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     util.preloaded.orm_persistence.save_obj(
 .venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
     _emit_insert_statements(
-.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1048: in _emit_insert_statements
     result = connection.execute(
 .venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
     return meth(
@@ -251,24 +381,24 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     self._handle_dbapi_exception(
 .venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
-    self.dialect.do_execute(
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
-    cursor.execute(statement, parameters)
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1936: in _exec_single_context
+    self.dialect.do_executemany(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:949: in do_executemany
+    cursor.executemany(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:197: in executemany
     self._adapt_connection._handle_exception(error)
 .venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
     raise error
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
-    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:191: in executemany
+    self.await_(_cursor.executemany(operation, seq_of_parameters))
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
     value = await result
             ^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
-    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:47: in executemany
+    await self._execute(self._cursor.executemany, sql, parameters)
 .venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
     return await self._conn._execute(fn, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -277,7 +407,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
            ^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-tx = <_queue.SimpleQueue object at 0x7608fa844cc0>
+tx = <_queue.SimpleQueue object at 0x7d1651d16f20>
 
     def _connection_worker_thread(tx: _TxQueue):
         """
@@ -296,301 +426,66 @@ tx = <_queue.SimpleQueue object at 0x7608fa844cc0>
                 LOG.debug("executing %s", function)
 >               result = function()
                          ^^^^^^^^^^
-E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
-E               [SQL: INSERT INTO topic_config (topic_id, exam_config_id, num_questions, relative_weight) VALUES (?, ?, ?, ?)]
-E               [parameters: (999, 1, 1, 1.0)]
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: subject.id
+E               [SQL: INSERT INTO subject (id, name) VALUES (?, ?)]
+E               [parameters: [(1, 'S1'), (2, 'S2'), (3, 'S3')]]
 E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
 
 .venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
-___________________________________________________ test_delete_exam_config_wrong_state ____________________________________________________
+_____________________________________________________ test_topic_service_full_coverage _____________________________________________________
 
-client = <httpx.AsyncClient object at 0x7608fa9d8110>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9e8b240>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9e81bb0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7d165291e810>
 
     @pytest.mark.asyncio
-    async def test_delete_exam_config_wrong_state(client, mock_auth, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        from src.models.subject import Subject
-        from src.models.exam_config import ExamConfig
-        from src.models.waiting_room import WaitingRoom, WaitingRoomState
+    async def test_topic_service_full_coverage(session):
+        # 1. Setup Subject
+        subject = Subject(name="Math")
+        session.add(subject)
+        await session.commit()
+        await session.refresh(subject)
     
-        sub = Subject(name="S")
-        session.add(sub)
-        await session.commit()
-        ec = ExamConfig(subject_id=sub.id)
-        session.add(ec)
-        await session.commit()
->       wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.ONGOING)
-                                                     ^^^^^^^^^^^^^^^^^^^^^^^^
-E       AttributeError: type object 'WaitingRoomState' has no attribute 'ONGOING'
+        # 2. Test create_topic
+        topic_data = TopicCreate(name="Algebra", subject_id=subject.id)
+        created_topic = await create_topic(session, topic_data)
+        assert created_topic.name == "Algebra"
+        assert created_topic.id is not None
+    
+        # 3. Test get_all_topics (Hits lines 23-25)
+        all_topics = await get_all_topics(session)
+        assert len(all_topics) >= 1
+        assert any(t.name == "Algebra" for t in all_topics)
+    
+        # 4. Test get_topic_by_id
+        topic = await get_topic_by_id(session, created_topic.id)
+        assert topic.name == "Algebra"
+    
+        # 5. Test get_topic_by_id (not found)
+        not_found_topic = await get_topic_by_id(session, 99999)
+        assert not_found_topic is None
+    
+        # 6. Test update_topic (Hits lines 43-56)
+>       update_data = TopicUpdate(name="Linear Algebra")
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_exam.py:712: AttributeError
-_____________________________________________________ test_get_all_exams_info_success ______________________________________________________
-
-client = <httpx.AsyncClient object at 0x7608f9f64dd0>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608fa9bce00>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9f646e0>
-
-    @pytest.mark.asyncio
-    async def test_get_all_exams_info_success(client, mock_auth, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        from src.models.subject import Subject
-        from src.models.exam_config import ExamConfig
-        from src.models.exam import Exam
-        from src.models.waiting_room import WaitingRoom
-    
-        sub = Subject(name="S")
-        session.add(sub)
-        await session.commit()
-        ec = ExamConfig(subject_id=sub.id, fraction=0.5)
-        session.add(ec)
-        await session.commit()
-        wr = WaitingRoom(exam_config_id=ec.id)
-        session.add(wr)
-        await session.commit()
-    
-        e = Exam(
-            exam_config_id=ec.id,
-            grade=15.0,
-            results="{}",
-            capture_path="cap",
-            correction_path="corr"
-        )
-        session.add(e)
-        await session.commit()
-    
-        # Mock base64 read
-        with patch("os.path.exists", return_value=True), \
-             patch("builtins.open", patch("builtins.open", return_value=io.BytesIO(b"fake_image"))), \
-             patch("src.routers.exam.base64.b64encode", return_value=b"YmFzZTY0"):
-    
->           response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
-                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-tests/unit/test_exam.py:786: 
+tests/unit/test_topic_service_direct.py:35: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-.venv/lib/python3.12/site-packages/httpx/_client.py:1768: in get
-    return await self.request(
-.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request
-    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send
-    response = await self._send_handling_auth(
-.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth
-    response = await self._send_handling_redirects(
-.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects
-    response = await self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request
-    response = await transport.handle_async_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
-    await super().__call__(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/applications.py:90: in __call__
-    await self.middleware_stack(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:186: in __call__
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:164: in __call__
-    await self.app(scope, receive, _send)
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:191: in __call__
-    with recv_stream, send_stream, collapse_excgroups():
-/usr/lib/python3.12/contextlib.py:158: in __exit__
-    self.gen.throw(value)
-.venv/lib/python3.12/site-packages/starlette/_utils.py:87: in collapse_excgroups
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:193: in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-src/main.py:62: in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:168: in call_next
-    raise app_exc from app_exc.__cause__ or app_exc.__context__
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:144: in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-.venv/lib/python3.12/site-packages/starlette/middleware/cors.py:88: in __call__
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py:63: in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
-    await app(scope, receive, sender)
-.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/routing.py:660: in __call__
-    await self.middleware_stack(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/routing.py:680: in app
-    await route.handle(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/routing.py:276: in handle
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/fastapi/routing.py:134: in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
-    await app(scope, receive, sender)
-.venv/lib/python3.12/site-packages/fastapi/routing.py:120: in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/fastapi/routing.py:674: in app
-    raw_response = await run_endpoint_function(
-.venv/lib/python3.12/site-packages/fastapi/routing.py:328: in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlmodel/main.py:847: in __init__
+    sqlmodel_init(self=__pydantic_self__, data=data)
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-waiting_room_id = 1
-user_info = User(user_id='manager-id-123', username='manager', email='manager@example.com', first_name=None, last_name=None, realm_roles=['manager'], groups=['/s1/regent', '/s99999/regent'], nmec=None)
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9f646e0>
+    def sqlmodel_init(*, self: "SQLModel", data: dict[str, Any]) -> None:
+        old_dict = self.__dict__.copy()
+        if not is_table_model_class(self.__class__):
+>           self.__pydantic_validator__.validate_python(
+                data,
+                self_instance=self,
+            )
+E           pydantic_core._pydantic_core.ValidationError: 1 validation error for TopicUpdate
+E           subject_id
+E             Field required [type=missing, input_value={'name': 'Linear Algebra'}, input_type=dict]
+E               For further information visit https://errors.pydantic.dev/2.13/v/missing
 
-    @router.get("/{waiting_room_id}/all_exams_info")
-    async def get_all_exams_info(
-        waiting_room_id: int,
-        user_info: User = Depends(get_current_user_info),
-        session: AsyncSession = Depends(get_session)
-    ):
-        """
-        Get info for all exams in an exam configuration, identified by waiting room ID.
-        Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
-        Only accessible by the regent of the subject.
-        """
-        waiting_room = await get_waiting_room(session, waiting_room_id)
-        if not waiting_room:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
-        exam_config_id = waiting_room.exam_config_id
-    
-        subject_id = await get_subject_id_by_exam_config_id(exam_config_id, session)
-        verify_permission(user_info, [f"/s{subject_id}/regent"])
-    
-        try:
-            exams = await get_exams_by_config_id(session, exam_config_id)
-        except ValueError:
-            return []
-    
-        exam_config = await get_exam_config_by_id(session, exam_config_id)
-        fraction = exam_config.fraction if exam_config else 0
-    
-        result = []
-        for e in exams:
-            corrected = e.grade is not None and e.results is not None and e.capture_path is not None and e.correction_path is not None
-    
-            capture_b64 = None
-            if corrected and os.path.exists(e.correction_path):
->               with open(e.correction_path, "rb") as f:
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E               TypeError: _patch.__call__() takes 2 positional arguments but 3 were given
-
-src/routers/exam.py:449: TypeError
-_______________________________________________ test_create_question_options_topic_not_found _______________________________________________
-
-client = <httpx.AsyncClient object at 0x7608f9171400>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9035120>
-setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f91f45c0>
-
-    @pytest.mark.asyncio
-    async def test_create_question_options_topic_not_found(client, mock_auth, setup_question, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        # Mock topic_service to return None
->       with patch("src.routers.question_option.topic_service.get_topic_by_id", return_value=None):
-             ^^^^^
-E       NameError: name 'patch' is not defined
-
-tests/unit/test_question_option.py:159: NameError
-_______________________________________________ test_create_question_options_internal_error ________________________________________________
-
-client = <httpx.AsyncClient object at 0x7608f9160c20>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9000220>
-setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
-
-    @pytest.mark.asyncio
-    async def test_create_question_options_internal_error(client, mock_auth, setup_question):
-        app.dependency_overrides[get_current_user_info] = mock_auth
->       with patch("src.routers.question_option.question_option.create_question_options", side_effect=Exception("Boom")):
-             ^^^^^
-E       NameError: name 'patch' is not defined
-
-tests/unit/test_question_option.py:168: NameError
-________________________________________________ test_update_question_option_service_fails _________________________________________________
-
-client = <httpx.AsyncClient object at 0x7608f91a6420>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f8d36de0>
-setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9160da0>
-
-    @pytest.mark.asyncio
-    async def test_update_question_option_service_fails(client, mock_auth, setup_question, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
-        session.add(option)
-        await session.commit()
-    
->       with patch("src.routers.question_option.question_option.update_question_option", return_value=None):
-             ^^^^^
-E       NameError: name 'patch' is not defined
-
-tests/unit/test_question_option.py:180: NameError
-________________________________________________ test_update_question_option_internal_error ________________________________________________
-
-client = <httpx.AsyncClient object at 0x7608fa864380>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f8d37600>
-setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9161790>
-
-    @pytest.mark.asyncio
-    async def test_update_question_option_internal_error(client, mock_auth, setup_question, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
-        session.add(option)
-        await session.commit()
-    
->       with patch("src.routers.question_option.question_option.update_question_option", side_effect=Exception("Boom")):
-             ^^^^^
-E       NameError: name 'patch' is not defined
-
-tests/unit/test_question_option.py:191: NameError
-________________________________________________ test_delete_question_option_service_fails _________________________________________________
-
-client = <httpx.AsyncClient object at 0x7608f91a6180>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f9ec4680>
-setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f9e81670>
-
-    @pytest.mark.asyncio
-    async def test_delete_question_option_service_fails(client, mock_auth, setup_question, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
-        session.add(option)
-        await session.commit()
-    
->       with patch("src.routers.question_option.question_option.delete_question_option", return_value=False):
-             ^^^^^
-E       NameError: name 'patch' is not defined
-
-tests/unit/test_question_option.py:202: NameError
-________________________________________________ test_delete_question_option_internal_error ________________________________________________
-
-client = <httpx.AsyncClient object at 0x7608f9ed9460>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7608f900ce00>
-setup_question = QuestionPublic(id=1, topic_id=1, question_text='Option Test Question')
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7608f91a6e40>
-
-    @pytest.mark.asyncio
-    async def test_delete_question_option_internal_error(client, mock_auth, setup_question, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
-        session.add(option)
-        await session.commit()
-    
->       with patch("src.routers.question_option.question_option.delete_question_option", side_effect=Exception("Boom")):
-             ^^^^^
-E       NameError: name 'patch' is not defined
-
-tests/unit/test_question_option.py:213: NameError
+.venv/lib/python3.12/site-packages/sqlmodel/_compat.py:332: ValidationError
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -605,19 +500,16 @@ src/models/subject.py:34
   
     self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
 
+tests/unit/test_subject_service_direct.py::test_get_subjects_for_user_all_paths
+  sys:1: SAWarning: New instance <Subject at 0x7d165194fc00> with identity key (<class 'src.models.subject.Subject'>, (1,), None) conflicts with persistent instance <Subject at 0x7d1651844280>
+
 tests/unit/test_waiting_room.py::test_student_to_exam_qr_invalid_exam_id
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/fastapi/routing.py:328: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
     return await dependant.call(**values)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_exam.py::test_get_subject_exam_configs_missing_topic - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
-FAILED tests/unit/test_exam.py::test_delete_exam_config_wrong_state - AttributeError: type object 'WaitingRoomState' has no attribute 'ONGOING'
-FAILED tests/unit/test_exam.py::test_get_all_exams_info_success - TypeError: _patch.__call__() takes 2 positional arguments but 3 were given
-FAILED tests/unit/test_question_option.py::test_create_question_options_topic_not_found - NameError: name 'patch' is not defined
-FAILED tests/unit/test_question_option.py::test_create_question_options_internal_error - NameError: name 'patch' is not defined
-FAILED tests/unit/test_question_option.py::test_update_question_option_service_fails - NameError: name 'patch' is not defined
-FAILED tests/unit/test_question_option.py::test_update_question_option_internal_error - NameError: name 'patch' is not defined
-FAILED tests/unit/test_question_option.py::test_delete_question_option_service_fails - NameError: name 'patch' is not defined
-FAILED tests/unit/test_question_option.py::test_delete_question_option_internal_error - NameError: name 'patch' is not defined
-================================================ 9 failed, 220 passed, 4 warnings in 21.97s ================================================
+FAILED tests/unit/test_subject_service_direct.py::test_create_subject_service_full - AssertionError: Regex pattern did not match.
+FAILED tests/unit/test_subject_service_direct.py::test_get_subjects_for_user_all_paths - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: subject.id
+FAILED tests/unit/test_topic_service_direct.py::test_topic_service_full_coverage - pydantic_core._pydantic_core.ValidationError: 1 validation error for TopicUpdate
+================================================ 3 failed, 234 passed, 5 warnings in 22.33s ================================================

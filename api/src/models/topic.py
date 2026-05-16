@@ -31,7 +31,7 @@ class TopicCreate(SQLModel):
 class TopicUpdate(SQLModel):
     """Schema for updating workbook data"""
     name: Optional[str] = Field(default = None,max_length=100)
-    subject_id : Optional[int]
+    subject_id : Optional[int] = Field(default = None)
 
 
 class TopicPublic(SQLModel):
