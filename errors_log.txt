@@ -1,170 +1,159 @@
+i@i:~/Desktop/Pedro/Universidade/PEI/project/app$ ./run_tests.sh 
+Starting Test Suite Setup...
+1. Starting ISOLATED Docker Services (DB:5433 & Keycloak:8081)...
+Starting test infrastructure...
+[+] up 6/6
+ ✔ Network edupro-test_default         Created                                                                                          0.0s
+ ✔ Volume edupro-test_db_data          Created                                                                                          0.0s
+ ✔ Volume edupro-test_keycloak_db_data Created                                                                                          0.0s
+ ✔ Container edupro-test-keycloak-db-1 Healthy                                                                                          5.8s
+ ✔ Container edupro-test-db-1          Started                                                                                          0.3s
+ ✔ Container edupro-test-keycloak-1    Started                                                                                          6.0s
+Waiting for Test Database (port 5433)...
+
+Test Database is ready!
+Waiting for Test Keycloak (port 8081)...
+.................
+Infrastructure is Ready!
+2. Running Unit Tests...
+=========================================================== test session starts ============================================================
+platform linux -- Python 3.12.3, pytest-9.0.3, pluggy-1.6.0
+rootdir: /home/i/Desktop/Pedro/Universidade/PEI/project/app/api
+configfile: pyproject.toml
+plugins: anyio-4.13.0, asyncio-1.3.0, cov-7.1.0
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=function, asyncio_default_test_loop_scope=function
+collected 302 items                                                                                                                        
+
+tests/unit/test_correct_by_hand.py ..........                                                                                        [  3%]
+tests/unit/test_deps.py ...................                                                                                          [  9%]
+tests/unit/test_email_notification.py .........                                                                                      [ 12%]
+tests/unit/test_exam.py ..................................                                                                           [ 23%]
+tests/unit/test_exam_async.py .....                                                                                                  [ 25%]
+tests/unit/test_exam_correction.py ............                                                                                      [ 29%]
+tests/unit/test_exam_deletion.py .                                                                                                   [ 29%]
+tests/unit/test_exam_services.py ............                                                                                        [ 33%]
+tests/unit/test_keycloak.py .............................                                                                            [ 43%]
+tests/unit/test_omr_service.py .....                                                                                                 [ 45%]
+tests/unit/test_pdf_generator.py ....                                                                                                [ 46%]
+tests/unit/test_professor_waiting_rooms.py ........                                                                                  [ 49%]
+tests/unit/test_question.py .................                                                                                        [ 54%]
+tests/unit/test_question_option.py ..............                                                                                    [ 59%]
+tests/unit/test_question_option_services.py ......                                                                                   [ 61%]
+tests/unit/test_resolve_warnings.py .......                                                                                          [ 63%]
+tests/unit/test_subject.py ..................................                                                                        [ 74%]
+tests/unit/test_subject_deletion.py .                                                                                                [ 75%]
+tests/unit/test_subject_service_direct.py .......                                                                                    [ 77%]
+tests/unit/test_topic.py .........                                                                                                   [ 80%]
+tests/unit/test_topic_service_direct.py .                                                                                            [ 80%]
+tests/unit/test_user.py ....                                                                                                         [ 82%]
+tests/unit/test_user_router.py .F.FF.....                                                                                            [ 85%]
+tests/unit/test_utils.py .......                                                                                                     [ 87%]
+tests/unit/test_utils_extra.py F........FF                                                                                           [ 91%]
+tests/unit/test_waiting_room.py ............F.FFFF...F..                                                                             [ 99%]
+tests/unit/test_warning.py ..                                                                                                        [100%]
+
 ================================================================= FAILURES =================================================================
-_____________________________________________________ test_create_subject_service_full _____________________________________________________
+_______________________________________________________ test_create_user_not_manager _______________________________________________________
 
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>, name = 'Fail KC Group', regent_keycloak_id = 'regent-123'
-student_keycloak_ids = [], professor_keycloak_ids = []
-
-    async def create_subject_service(
-        session: AsyncSession,
-        name: str,
-        regent_keycloak_id: str,
-        student_keycloak_ids: List[str] = [],
-        professor_keycloak_ids: List[str] = []
-    ) -> dict:
-        """
-        Orchestrates the creation of a subject:
-        1. Verifies regent exists in Keycloak.
-        2. Creates Subject in Postgres.
-        3. Creates Groups in Keycloak.
-        4. Adds students and professors to groups.
-        """
-        # 1. Verify regent
-        regent_info = await verify_regent_exists(regent_keycloak_id)
-    
-        # 2. DB Creation
-        db_subject = Subject(name=name)
-        session.add(db_subject)
-        await session.commit()
-        await session.refresh(db_subject)
-        logger.info(f"Subject '{db_subject.name}' created in DB with ID: {db_subject.id}")
-    
-        # 3. Keycloak Group Creation
-        try:
-            success = await keycloak_client.create_subject_groups_and_assign_regent(
-                subject_id=str(db_subject.id),
-                regent_keycloak_id=regent_keycloak_id
-            )
-            if not success:
->               raise RuntimeError("Keycloak group creation returned false.")
-E               RuntimeError: Keycloak group creation returned false.
-
-src/services/subject.py:51: RuntimeError
-
-During handling of the above exception, another exception occurred:
-
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>
-mock_keycloak = <MagicMock name='keycloak_client' id='137534810353072'>
-mock_verify_regent = <AsyncMock name='verify_regent_exists' id='137534810884864'>
+client = <httpx.AsyncClient object at 0x753b9f6fa9c0>
 
     @pytest.mark.asyncio
-    async def test_create_subject_service_full(session, mock_keycloak, mock_verify_regent):
-        # Test success with students and professors (Hits lines 55, 61)
-        result = await create_subject_service(
-            session, "Full Subject", "regent-123",
-            student_keycloak_ids=["s1"],
-            professor_keycloak_ids=["p1"]
-        )
-        assert result["subject"].name == "Full Subject"
-        assert mock_keycloak.add_students_to_subject.called
-        assert mock_keycloak.add_professors_to_subject.called
+    async def test_create_user_not_manager(client):
+        from src.models.user import User
+        student_user = User(user_id="s1", username="stu", email="s@t.com", realm_roles=["student"], groups=[])
+        async def mock_student():
+            return student_user
+        app.dependency_overrides[get_current_user_info] = mock_student
     
-        # Test failure in Keycloak group creation (Hits line 51)
-        mock_keycloak.create_subject_groups_and_assign_regent.return_value = False
-        with pytest.raises(RuntimeError, match="Keycloak group creation returned false."):
->           await create_subject_service(session, "Fail KC Group", "regent-123")
+        response = await client.post("/api/users/create", json={"username": "newuser", "email": "n@e.com", "password": "pwd"})
+>       assert response.status_code == 403
+E       assert 422 == 403
+E        +  where 422 = <Response [422 Unprocessable Entity]>.status_code
 
-tests/unit/test_subject_service_direct.py:40: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>, name = 'Fail KC Group', regent_keycloak_id = 'regent-123'
-student_keycloak_ids = [], professor_keycloak_ids = []
-
-    async def create_subject_service(
-        session: AsyncSession,
-        name: str,
-        regent_keycloak_id: str,
-        student_keycloak_ids: List[str] = [],
-        professor_keycloak_ids: List[str] = []
-    ) -> dict:
-        """
-        Orchestrates the creation of a subject:
-        1. Verifies regent exists in Keycloak.
-        2. Creates Subject in Postgres.
-        3. Creates Groups in Keycloak.
-        4. Adds students and professors to groups.
-        """
-        # 1. Verify regent
-        regent_info = await verify_regent_exists(regent_keycloak_id)
-    
-        # 2. DB Creation
-        db_subject = Subject(name=name)
-        session.add(db_subject)
-        await session.commit()
-        await session.refresh(db_subject)
-        logger.info(f"Subject '{db_subject.name}' created in DB with ID: {db_subject.id}")
-    
-        # 3. Keycloak Group Creation
-        try:
-            success = await keycloak_client.create_subject_groups_and_assign_regent(
-                subject_id=str(db_subject.id),
-                regent_keycloak_id=regent_keycloak_id
-            )
-            if not success:
-                raise RuntimeError("Keycloak group creation returned false.")
-    
-            # 4. Add students and professors
-            if student_keycloak_ids:
-                await keycloak_client.add_students_to_subject(
-                    subject_id=str(db_subject.id),
-                    student_ids=student_keycloak_ids
-                )
-    
-            if professor_keycloak_ids:
-                await keycloak_client.add_professors_to_subject(
-                    subject_id=str(db_subject.id),
-                    professor_ids=professor_keycloak_ids
-                )
-    
-        except Exception as e:
-            logger.error(f"Failed to create Keycloak groups for subject {db_subject.id}: {e}")
-            # Rollback DB creation if Keycloak fails to ensure consistency
-            await session.delete(db_subject)
-            await session.commit()
->           raise RuntimeError("Subject creation failed due to a Keycloak error.")
-E           RuntimeError: Subject creation failed due to a Keycloak error.
-
-src/services/subject.py:71: RuntimeError
-
-During handling of the above exception, another exception occurred:
-
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7d16518877d0>
-mock_keycloak = <MagicMock name='keycloak_client' id='137534810353072'>
-mock_verify_regent = <AsyncMock name='verify_regent_exists' id='137534810884864'>
-
-    @pytest.mark.asyncio
-    async def test_create_subject_service_full(session, mock_keycloak, mock_verify_regent):
-        # Test success with students and professors (Hits lines 55, 61)
-        result = await create_subject_service(
-            session, "Full Subject", "regent-123",
-            student_keycloak_ids=["s1"],
-            professor_keycloak_ids=["p1"]
-        )
-        assert result["subject"].name == "Full Subject"
-        assert mock_keycloak.add_students_to_subject.called
-        assert mock_keycloak.add_professors_to_subject.called
-    
-        # Test failure in Keycloak group creation (Hits line 51)
-        mock_keycloak.create_subject_groups_and_assign_regent.return_value = False
->       with pytest.raises(RuntimeError, match="Keycloak group creation returned false."):
-E       AssertionError: Regex pattern did not match.
-E         Expected regex: 'Keycloak group creation returned false.'
-E         Actual message: 'Subject creation failed due to a Keycloak error.'
-
-tests/unit/test_subject_service_direct.py:39: AssertionError
+tests/unit/test_user_router.py:23: AssertionError
 ----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
-2026-05-16 14:42:46,827 - src.services.subject - INFO - Subject 'Full Subject' created in DB with ID: 1
-2026-05-16 14:42:46,834 - src.services.subject - INFO - Subject 'Fail KC Group' created in DB with ID: 2
-2026-05-16 14:42:46,835 - src.services.subject - ERROR - Failed to create Keycloak groups for subject 2: Keycloak group creation returned false.
+2026-05-16 15:09:56,088 - httpx - INFO - HTTP Request: POST http://test/api/users/create "HTTP/1.1 422 Unprocessable Entity"
 ------------------------------------------------------------ Captured log call -------------------------------------------------------------
-INFO     src.services.subject:subject.py:42 Subject 'Full Subject' created in DB with ID: 1
-INFO     src.services.subject:subject.py:42 Subject 'Fail KC Group' created in DB with ID: 2
-ERROR    src.services.subject:subject.py:67 Failed to create Keycloak groups for subject 2: Keycloak group creation returned false.
-___________________________________________________ test_get_subjects_for_user_all_paths ___________________________________________________
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/users/create "HTTP/1.1 422 Unprocessable Entity"
+_______________________________________________________ test_create_user_value_error _______________________________________________________
 
-self = <sqlalchemy.engine.base.Connection object at 0x7d165183f3b0>
-dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x7d165186d910>
-context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x7d165183ea20>
-statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7d165183ec30>, parameters = [(1, 'S1'), (2, 'S2'), (3, 'S3')]
+client = <httpx.AsyncClient object at 0x753b9f5325a0>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x753ba42a3380>
+
+    @pytest.mark.asyncio
+    async def test_create_user_value_error(client, mock_auth):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        with patch("src.routers.user.keycloak_client.create_user_in_keycloak", side_effect=ValueError("User exists")):
+            response = await client.post("/api/users/create", json={"username": "newuser", "email": "n@e.com", "password": "pwd"})
+>           assert response.status_code == 400
+E           assert 422 == 400
+E            +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/unit/test_user_router.py:42: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-16 15:09:56,484 - httpx - INFO - HTTP Request: POST http://test/api/users/create "HTTP/1.1 422 Unprocessable Entity"
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/users/create "HTTP/1.1 422 Unprocessable Entity"
+________________________________________________________ test_create_user_exception ________________________________________________________
+
+client = <httpx.AsyncClient object at 0x753b9f6f8140>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x753ba42c6700>
+
+    @pytest.mark.asyncio
+    async def test_create_user_exception(client, mock_auth):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        with patch("src.routers.user.keycloak_client.create_user_in_keycloak", side_effect=Exception("Internal")):
+            response = await client.post("/api/users/create", json={"username": "newuser", "email": "n@e.com", "password": "pwd"})
+>           assert response.status_code == 500
+E           assert 422 == 500
+E            +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+
+tests/unit/test_user_router.py:50: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-16 15:09:56,567 - httpx - INFO - HTTP Request: POST http://test/api/users/create "HTTP/1.1 422 Unprocessable Entity"
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/users/create "HTTP/1.1 422 Unprocessable Entity"
+_____________________________________________________________ test_clean_text ______________________________________________________________
+
+    def test_clean_text():
+        assert clean_text("<p>Hello</p>") == "Hello"
+        assert clean_text(None) == ""
+>       assert clean_text("Just text") == "Just text"
+E       AssertionError: assert '' == 'Just text'
+E         
+E         - Just text
+
+tests/unit/test_utils_extra.py:14: AssertionError
+__________________________________________________________ test_read_QR_fail_load __________________________________________________________
+
+    @pytest.mark.asyncio
+    async def test_read_QR_fail_load():
+        mock_file = MagicMock(spec=UploadFile)
+        mock_file.content_type = "image/jpeg"
+        mock_file.filename = "test.jpg"
+>       mock_file.read = AsyncMock(return_value=b"fake")
+                         ^^^^^^^^^
+E       NameError: name 'AsyncMock' is not defined
+
+tests/unit/test_utils_extra.py:89: NameError
+____________________________________________________________ test_read_QR_no_id ____________________________________________________________
+
+    @pytest.mark.asyncio
+    async def test_read_QR_no_id():
+        mock_file = MagicMock(spec=UploadFile)
+        mock_file.content_type = "image/jpeg"
+        mock_file.filename = "test.jpg"
+>       mock_file.read = AsyncMock(return_value=b"fake")
+                         ^^^^^^^^^
+E       NameError: name 'AsyncMock' is not defined
+
+tests/unit/test_utils_extra.py:103: NameError
+_________________________________________________ test_start_waiting_room_config_not_found _________________________________________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x753ba43a8290>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x753ba410e180>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x753ba44f0500>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x753ba4138590>, parameters = [(9999, 'PREPARATION', '[]')]
 
     def _exec_single_context(
         self,
@@ -252,30 +241,59 @@ statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x7d165183
                             evt_handled = True
                             break
                 if not evt_handled:
->                   self.dialect.do_executemany(
+                    self.dialect.do_executemany(
                         cursor,
                         str_statement,
                         effective_parameters,
                         context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
 
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1936: 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:949: in do_executemany
-    cursor.executemany(statement, parameters)
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:197: in executemany
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
     self._adapt_connection._handle_exception(error)
 .venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
     raise error
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:191: in executemany
-    self.await_(_cursor.executemany(operation, seq_of_parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
     value = await result
             ^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:47: in executemany
-    await self._execute(self._cursor.executemany, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
 .venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
     return await self._conn._execute(fn, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -284,7 +302,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
            ^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-tx = <_queue.SimpleQueue object at 0x7d1651d16f20>
+tx = <_queue.SimpleQueue object at 0x753b9c1bba60>
 
     def _connection_worker_thread(tx: _TxQueue):
         """
@@ -303,34 +321,25 @@ tx = <_queue.SimpleQueue object at 0x7d1651d16f20>
                 LOG.debug("executing %s", function)
 >               result = function()
                          ^^^^^^^^^^
-E               sqlite3.IntegrityError: UNIQUE constraint failed: subject.id
+E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
 
 .venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
 
 The above exception was the direct cause of the following exception:
 
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7d1652822ed0>
+client = <httpx.AsyncClient object at 0x753ba44f2180>
+mock_auth_user = <function mock_auth_user.<locals>.override_get_current_user_info at 0x753b9c1cfe20>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x753ba47e6ed0>
 
     @pytest.mark.asyncio
-    async def test_get_subjects_for_user_all_paths(session):
-        # Manager (Hits line 96)
-        user_info = MagicMock()
-        user_info.realm_roles = ["manager"]
-        user_info.groups = []
-        session.add(Subject(name="S1"))
-        await session.commit()
-        res = await get_subjects_for_user(session, user_info)
-        assert len(res) >= 1
-    
-        # Student/Professor with groups (Hits lines 102-119)
-        user_info.realm_roles = ["student"]
-        user_info.groups = ["/s1/students", "/s2/professors", "/s3/regent", "/invalid", "/sx/students"]
-        session.add(Subject(id=1, name="S1"))
-        session.add(Subject(id=2, name="S2"))
-        session.add(Subject(id=3, name="S3"))
+    async def test_start_waiting_room_config_not_found(client, mock_auth_user, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth_user
+        from src.models.waiting_room import WaitingRoom
+        wr = WaitingRoom(exam_config_id=9999) # config doesn't exist
+        session.add(wr)
 >       await session.commit()
 
-tests/unit/test_subject_service_direct.py:70: 
+tests/unit/test_waiting_room.py:343: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 .venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
     await greenlet_spawn(self.sync_session.commit)
@@ -367,7 +376,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     util.preloaded.orm_persistence.save_obj(
 .venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
     _emit_insert_statements(
-.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1048: in _emit_insert_statements
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
     result = connection.execute(
 .venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
     return meth(
@@ -381,24 +390,24 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     self._handle_dbapi_exception(
 .venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
     raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1936: in _exec_single_context
-    self.dialect.do_executemany(
-.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:949: in do_executemany
-    cursor.executemany(statement, parameters)
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:197: in executemany
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
     self._adapt_connection._handle_exception(error)
 .venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
     raise error
-.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:191: in executemany
-    self.await_(_cursor.executemany(operation, seq_of_parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
     return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 .venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
     value = await result
             ^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:47: in executemany
-    await self._execute(self._cursor.executemany, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
 .venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
     return await self._conn._execute(fn, *args, **kwargs)
            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -407,7 +416,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
            ^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-tx = <_queue.SimpleQueue object at 0x7d1651d16f20>
+tx = <_queue.SimpleQueue object at 0x753b9c1bba60>
 
     def _connection_worker_thread(tx: _TxQueue):
         """
@@ -426,66 +435,1217 @@ tx = <_queue.SimpleQueue object at 0x7d1651d16f20>
                 LOG.debug("executing %s", function)
 >               result = function()
                          ^^^^^^^^^^
-E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: subject.id
-E               [SQL: INSERT INTO subject (id, name) VALUES (?, ?)]
-E               [parameters: [(1, 'S1'), (2, 'S2'), (3, 'S3')]]
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+E               [SQL: INSERT INTO waiting_room (exam_config_id, state, associations) VALUES (?, ?, ?)]
+E               [parameters: (9999, 'PREPARATION', '[]')]
 E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
 
 .venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
-_____________________________________________________ test_topic_service_full_coverage _____________________________________________________
+___________________________________________________ test_get_waiting_room_info_exception ___________________________________________________
 
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7d165291e810>
+self = <sqlalchemy.engine.base.Connection object at 0x753ba46703b0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x753ba43545c0>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x753ba4672360>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x753ba4671f40>, parameters = [(1, 'PREPARATION', '[]')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c1dfba0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+client = <httpx.AsyncClient object at 0x753ba52cc500>
+mock_auth_user = <function mock_auth_user.<locals>.override_get_current_user_info at 0x753b9c19c860>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x753b9f50c350>
 
     @pytest.mark.asyncio
-    async def test_topic_service_full_coverage(session):
-        # 1. Setup Subject
-        subject = Subject(name="Math")
-        session.add(subject)
+    async def test_get_waiting_room_info_exception(client, mock_auth_user, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth_user
+        from src.models.waiting_room import WaitingRoom
+        wr = WaitingRoom(exam_config_id=1)
+        session.add(wr)
+>       await session.commit()
+
+tests/unit/test_waiting_room.py:373: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
+    await greenlet_spawn(self.sync_session.commit)
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:203: in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1286: in _prepare_impl
+    self.session.flush()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c1dfba0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+E               [SQL: INSERT INTO waiting_room (exam_config_id, state, associations) VALUES (?, ?, ?)]
+E               [parameters: (1, 'PREPARATION', '[]')]
+E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+________________________________________________ test_associate_student_to_exam_value_error ________________________________________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x753ba465b9e0>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x753ba47d4bf0>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x753ba4659bb0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x753ba46585c0>, parameters = [(1, 'RUNNING', '[]')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c1f4040>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+client = <httpx.AsyncClient object at 0x753ba465ae70>
+mock_auth_user = <function mock_auth_user.<locals>.override_get_current_user_info at 0x753b9c17dd00>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x753ba478d070>
+
+    @pytest.mark.asyncio
+    async def test_associate_student_to_exam_value_error(client, mock_auth_user, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth_user
+        from src.models.waiting_room import WaitingRoom, WaitingRoomState
+        wr = WaitingRoom(exam_config_id=1, state=WaitingRoomState.RUNNING)
+        session.add(wr)
+>       await session.commit()
+
+tests/unit/test_waiting_room.py:385: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
+    await greenlet_spawn(self.sync_session.commit)
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:203: in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1286: in _prepare_impl
+    self.session.flush()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c1f4040>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+E               [SQL: INSERT INTO waiting_room (exam_config_id, state, associations) VALUES (?, ?, ?)]
+E               [parameters: (1, 'RUNNING', '[]')]
+E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+_________________________________________________ test_get_waiting_room_metrics_not_found __________________________________________________
+
+client = <httpx.AsyncClient object at 0x753b9f54e2d0>
+mock_auth_user = <function mock_auth_user.<locals>.override_get_current_user_info at 0x753b9c1e7ba0>
+
+    @pytest.mark.asyncio
+    async def test_get_waiting_room_metrics_not_found(client, mock_auth_user):
+        app.dependency_overrides[get_current_user_info] = mock_auth_user
+        with patch("src.routers.waiting_room.get_waiting_room_metrics_service", return_value=None):
+            response = await client.get("/api/waiting-rooms/9999/metrics")
+>           assert response.status_code == 404
+E           assert 403 == 404
+E            +  where 403 = <Response [403 Forbidden]>.status_code
+
+tests/unit/test_waiting_room.py:395: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-16 15:10:06,257 - src.core.deps - WARNING - User test_regent denied access. Missing one of permissions: ['/w9999/vigilant', '/w9999/regent']
+2026-05-16 15:10:06,259 - httpx - INFO - HTTP Request: GET http://test/api/waiting-rooms/9999/metrics "HTTP/1.1 403 Forbidden"
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+WARNING  src.core.deps:deps.py:142 User test_regent denied access. Missing one of permissions: ['/w9999/vigilant', '/w9999/regent']
+INFO     httpx:_client.py:1740 HTTP Request: GET http://test/api/waiting-rooms/9999/metrics "HTTP/1.1 403 Forbidden"
+_________________________________________________ test_close_waiting_room_config_not_found _________________________________________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x753b9f54fa10>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x753b9f54d430>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x753b9f54d820>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x753b9f54f830>, parameters = [(9999, 'PREPARATION', '[]')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c211df0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.IntegrityError: FOREIGN KEY constraint failed
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+client = <httpx.AsyncClient object at 0x753b9f54ed50>
+mock_auth_user = <function mock_auth_user.<locals>.override_get_current_user_info at 0x753b977c60c0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x753ba4240410>
+
+    @pytest.mark.asyncio
+    async def test_close_waiting_room_config_not_found(client, mock_auth_user, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth_user
+        from src.models.waiting_room import WaitingRoom
+        wr = WaitingRoom(exam_config_id=9999)
+        session.add(wr)
+>       await session.commit()
+
+tests/unit/test_waiting_room.py:403: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
+    await greenlet_spawn(self.sync_session.commit)
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:203: in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1286: in _prepare_impl
+    self.session.flush()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c211df0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+E               [SQL: INSERT INTO waiting_room (exam_config_id, state, associations) VALUES (?, ?, ?)]
+E               [parameters: (9999, 'PREPARATION', '[]')]
+E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+_______________________________________________ test_notify_students_via_email_with_warnings _______________________________________________
+
+self = <sqlalchemy.engine.base.Connection object at 0x753ba47bf320>
+dialect = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteDialect_aiosqlite object at 0x753b9f54c770>
+context = <sqlalchemy.dialects.sqlite.aiosqlite.SQLiteExecutionContext_aiosqlite object at 0x753ba447f9e0>
+statement = <sqlalchemy.dialects.sqlite.base.SQLiteCompiler object at 0x753ba447e390>, parameters = [(1, None, None, '[]')]
+
+    def _exec_single_context(
+        self,
+        dialect: Dialect,
+        context: ExecutionContext,
+        statement: Union[str, Compiled],
+        parameters: Optional[_AnyMultiExecuteParams],
+    ) -> CursorResult[Any]:
+        """continue the _execute_context() method for a single DBAPI
+        cursor.execute() or cursor.executemany() call.
+    
+        """
+        if dialect.bind_typing is BindTyping.SETINPUTSIZES:
+            generic_setinputsizes = context._prepare_set_input_sizes()
+    
+            if generic_setinputsizes:
+                try:
+                    dialect.do_set_input_sizes(
+                        context.cursor, generic_setinputsizes, context
+                    )
+                except BaseException as e:
+                    self._handle_dbapi_exception(
+                        e, str(statement), parameters, None, context
+                    )
+    
+        cursor, str_statement, parameters = (
+            context.cursor,
+            context.statement,
+            context.parameters,
+        )
+    
+        effective_parameters: Optional[_AnyExecuteParams]
+    
+        if not context.executemany:
+            effective_parameters = parameters[0]
+        else:
+            effective_parameters = parameters
+    
+        if self._has_events or self.engine._has_events:
+            for fn in self.dispatch.before_cursor_execute:
+                str_statement, effective_parameters = fn(
+                    self,
+                    cursor,
+                    str_statement,
+                    effective_parameters,
+                    context,
+                    context.executemany,
+                )
+    
+        if self._echo:
+            self._log_info(str_statement)
+    
+            stats = context._get_cache_stats()
+    
+            if not self.engine.hide_parameters:
+                self._log_info(
+                    "[%s] %r",
+                    stats,
+                    sql_util._repr_params(
+                        effective_parameters,
+                        batches=10,
+                        ismulti=context.executemany,
+                    ),
+                )
+            else:
+                self._log_info(
+                    "[%s] [SQL parameters hidden due to hide_parameters=True]",
+                    stats,
+                )
+    
+        evt_handled: bool = False
+        try:
+            if context.execute_style is ExecuteStyle.EXECUTEMANY:
+                effective_parameters = cast(
+                    "_CoreMultiExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_executemany:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_executemany(
+                        cursor,
+                        str_statement,
+                        effective_parameters,
+                        context,
+                    )
+            elif not effective_parameters and context.no_parameters:
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute_no_params:
+                        if fn(cursor, str_statement, context):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+                    self.dialect.do_execute_no_params(
+                        cursor, str_statement, context
+                    )
+            else:
+                effective_parameters = cast(
+                    "_CoreSingleExecuteParams", effective_parameters
+                )
+                if self.dialect._has_events:
+                    for fn in self.dialect.dispatch.do_execute:
+                        if fn(
+                            cursor,
+                            str_statement,
+                            effective_parameters,
+                            context,
+                        ):
+                            evt_handled = True
+                            break
+                if not evt_handled:
+>                   self.dialect.do_execute(
+                        cursor, str_statement, effective_parameters, context
+                    )
+
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+tx = <_queue.SimpleQueue object at 0x753b9c2222f0>
+
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlite3.IntegrityError: NOT NULL constraint failed: warning.type
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
+
+The above exception was the direct cause of the following exception:
+
+client = <httpx.AsyncClient object at 0x753ba4465550>
+mock_auth_user = <function mock_auth_user.<locals>.override_get_current_user_info at 0x753b9c206ac0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x753ba447f770>
+
+    @pytest.mark.asyncio
+    async def test_notify_students_via_email_with_warnings(client, mock_auth_user, session):
+        app.dependency_overrides[get_current_user_info] = mock_auth_user
+        from src.models.subject import Subject
+        from src.models.exam_config import ExamConfig
+        from src.models.waiting_room import WaitingRoom, WaitingRoomState
+        from src.models.warning import Warning
+        sub = Subject(name="Sub")
+        session.add(sub)
         await session.commit()
-        await session.refresh(subject)
-    
-        # 2. Test create_topic
-        topic_data = TopicCreate(name="Algebra", subject_id=subject.id)
-        created_topic = await create_topic(session, topic_data)
-        assert created_topic.name == "Algebra"
-        assert created_topic.id is not None
-    
-        # 3. Test get_all_topics (Hits lines 23-25)
-        all_topics = await get_all_topics(session)
-        assert len(all_topics) >= 1
-        assert any(t.name == "Algebra" for t in all_topics)
-    
-        # 4. Test get_topic_by_id
-        topic = await get_topic_by_id(session, created_topic.id)
-        assert topic.name == "Algebra"
-    
-        # 5. Test get_topic_by_id (not found)
-        not_found_topic = await get_topic_by_id(session, 99999)
-        assert not_found_topic is None
-    
-        # 6. Test update_topic (Hits lines 43-56)
->       update_data = TopicUpdate(name="Linear Algebra")
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        ec = ExamConfig(subject_id=sub.id)
+        session.add(ec)
+        await session.commit()
+        wr = WaitingRoom(exam_config_id=ec.id, state=WaitingRoomState.CLOSED)
+        session.add(wr)
+        await session.commit()
+        warn = Warning(exam_config_id=ec.id, description="Warn")
+        session.add(warn)
+>       await session.commit()
 
-tests/unit/test_topic_service_direct.py:35: 
+tests/unit/test_waiting_room.py:444: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-.venv/lib/python3.12/site-packages/sqlmodel/main.py:847: in __init__
-    sqlmodel_init(self=__pydantic_self__, data=data)
+.venv/lib/python3.12/site-packages/sqlalchemy/ext/asyncio/session.py:1000: in commit
+    await greenlet_spawn(self.sync_session.commit)
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:203: in greenlet_spawn
+    result = context.switch(value)
+             ^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:2030: in commit
+    trans.commit(_to_root=True)
+<string>:2: in commit
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1311: in commit
+    self._prepare_impl()
+<string>:2: in _prepare_impl
+    ???
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/state_changes.py:137: in _go
+    ret_value = fn(self, *arg, **kw)
+                ^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:1286: in _prepare_impl
+    self.session.flush()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4331: in flush
+    self._flush(objects)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4466: in _flush
+    with util.safe_reraise():
+.venv/lib/python3.12/site-packages/sqlalchemy/util/langhelpers.py:121: in __exit__
+    raise exc_value.with_traceback(exc_tb)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/session.py:4427: in _flush
+    flush_context.execute()
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:466: in execute
+    rec.execute(self)
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/unitofwork.py:642: in execute
+    util.preloaded.orm_persistence.save_obj(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:93: in save_obj
+    _emit_insert_statements(
+.venv/lib/python3.12/site-packages/sqlalchemy/orm/persistence.py:1233: in _emit_insert_statements
+    result = connection.execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1419: in execute
+    return meth(
+.venv/lib/python3.12/site-packages/sqlalchemy/sql/elements.py:527: in _execute_on_connection
+    return connection._execute_clauseelement(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1641: in _execute_clauseelement
+    ret = self._execute_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1846: in _execute_context
+    return self._exec_single_context(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1986: in _exec_single_context
+    self._handle_dbapi_exception(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:2363: in _handle_dbapi_exception
+    raise sqlalchemy_exception.with_traceback(exc_info[2]) from e
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/base.py:1967: in _exec_single_context
+    self.dialect.do_execute(
+.venv/lib/python3.12/site-packages/sqlalchemy/engine/default.py:952: in do_execute
+    cursor.execute(statement, parameters)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:182: in execute
+    self._adapt_connection._handle_exception(error)
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:342: in _handle_exception
+    raise error
+.venv/lib/python3.12/site-packages/sqlalchemy/dialects/sqlite/aiosqlite.py:164: in execute
+    self.await_(_cursor.execute(operation, parameters))
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:132: in await_only
+    return current.parent.switch(awaitable)  # type: ignore[no-any-return,attr-defined] # noqa: E501
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/sqlalchemy/util/_concurrency_py3k.py:196: in greenlet_spawn
+    value = await result
+            ^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:40: in execute
+    await self._execute(self._cursor.execute, sql, parameters)
+.venv/lib/python3.12/site-packages/aiosqlite/cursor.py:32: in _execute
+    return await self._conn._execute(fn, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:160: in _execute
+    return await future
+           ^^^^^^^^^^^^
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-    def sqlmodel_init(*, self: "SQLModel", data: dict[str, Any]) -> None:
-        old_dict = self.__dict__.copy()
-        if not is_table_model_class(self.__class__):
->           self.__pydantic_validator__.validate_python(
-                data,
-                self_instance=self,
-            )
-E           pydantic_core._pydantic_core.ValidationError: 1 validation error for TopicUpdate
-E           subject_id
-E             Field required [type=missing, input_value={'name': 'Linear Algebra'}, input_type=dict]
-E               For further information visit https://errors.pydantic.dev/2.13/v/missing
+tx = <_queue.SimpleQueue object at 0x753b9c2222f0>
 
-.venv/lib/python3.12/site-packages/sqlmodel/_compat.py:332: ValidationError
+    def _connection_worker_thread(tx: _TxQueue):
+        """
+        Execute function calls on a separate thread.
+    
+        :meta private:
+        """
+        while True:
+            # Continues running until all queue items are processed,
+            # even after connection is closed (so we can finalize all
+            # futures)
+    
+            future, function = tx.get()
+    
+            try:
+                LOG.debug("executing %s", function)
+>               result = function()
+                         ^^^^^^^^^^
+E               sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: warning.type
+E               [SQL: INSERT INTO warning (exam_config_id, type, student_list, exam_list) VALUES (?, ?, ?, ?)]
+E               [parameters: (1, None, None, '[]')]
+E               (Background on this error at: https://sqlalche.me/e/20/gkpj)
+
+.venv/lib/python3.12/site-packages/aiosqlite/core.py:63: IntegrityError
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -500,16 +1660,31 @@ src/models/subject.py:34
   
     self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
 
-tests/unit/test_subject_service_direct.py::test_get_subjects_for_user_all_paths
-  sys:1: SAWarning: New instance <Subject at 0x7d165194fc00> with identity key (<class 'src.models.subject.Subject'>, (1,), None) conflicts with persistent instance <Subject at 0x7d1651844280>
-
 tests/unit/test_waiting_room.py::test_student_to_exam_qr_invalid_exam_id
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/fastapi/routing.py:328: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
     return await dependant.call(**values)
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_subject_service_direct.py::test_create_subject_service_full - AssertionError: Regex pattern did not match.
-FAILED tests/unit/test_subject_service_direct.py::test_get_subjects_for_user_all_paths - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) UNIQUE constraint failed: subject.id
-FAILED tests/unit/test_topic_service_direct.py::test_topic_service_full_coverage - pydantic_core._pydantic_core.ValidationError: 1 validation error for TopicUpdate
-================================================ 3 failed, 234 passed, 5 warnings in 22.33s ================================================
+FAILED tests/unit/test_user_router.py::test_create_user_not_manager - assert 422 == 403
+FAILED tests/unit/test_user_router.py::test_create_user_value_error - assert 422 == 400
+FAILED tests/unit/test_user_router.py::test_create_user_exception - assert 422 == 500
+FAILED tests/unit/test_utils_extra.py::test_clean_text - AssertionError: assert '' == 'Just text'
+FAILED tests/unit/test_utils_extra.py::test_read_QR_fail_load - NameError: name 'AsyncMock' is not defined
+FAILED tests/unit/test_utils_extra.py::test_read_QR_no_id - NameError: name 'AsyncMock' is not defined
+FAILED tests/unit/test_waiting_room.py::test_start_waiting_room_config_not_found - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+FAILED tests/unit/test_waiting_room.py::test_get_waiting_room_info_exception - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+FAILED tests/unit/test_waiting_room.py::test_associate_student_to_exam_value_error - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+FAILED tests/unit/test_waiting_room.py::test_get_waiting_room_metrics_not_found - assert 403 == 404
+FAILED tests/unit/test_waiting_room.py::test_close_waiting_room_config_not_found - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) FOREIGN KEY constraint failed
+FAILED tests/unit/test_waiting_room.py::test_notify_students_via_email_with_warnings - sqlalchemy.exc.IntegrityError: (sqlite3.IntegrityError) NOT NULL constraint failed: warning.type
+=============================================== 12 failed, 290 passed, 4 warnings in 36.98s ================================================
+Cleaning up test infrastructure...
+[+] down 6/6
+ ✔ Container edupro-test-keycloak-1    Removed                                                                                          0.3s
+ ✔ Container edupro-test-db-1          Removed                                                                                          0.2s
+ ✔ Container edupro-test-keycloak-db-1 Removed                                                                                          0.2s
+ ✔ Network edupro-test_default         Removed                                                                                          0.1s
+ ✔ Volume edupro-test_keycloak_db_data Removed                                                                                          0.1s
+ ✔ Volume edupro-test_db_data          Removed                                                                                          0.1s
+i@i:~/Desktop/Pedro/Universidade/PEI/project/app$ 
