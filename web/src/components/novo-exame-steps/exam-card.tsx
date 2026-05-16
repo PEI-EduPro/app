@@ -14,16 +14,22 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DownloadIcon, Trash2Icon } from "lucide-react";
 import { useCallback, useState } from "react";
 import type { ExamConfigI, GenerationStatus } from "@/lib/types";
-import { ExamConfigCard } from "@/components/exam-config-card";
+import { ExamConfigCard } from "./exam-config-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-const statusConfig: Record<GenerationStatus, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  PENDING:    { label: "Pendente",    variant: "secondary" },
+const statusConfig: Record<
+  GenerationStatus,
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+  }
+> = {
+  PENDING: { label: "Pendente", variant: "secondary" },
   PROCESSING: { label: "A processar", variant: "default" },
-  COMPLETED:  { label: "Concluído",   variant: "outline" },
-  FAILED:     { label: "Falhado",     variant: "destructive" },
+  COMPLETED: { label: "Concluído", variant: "outline" },
+  FAILED: { label: "Falhado", variant: "destructive" },
 };
 import { useDeleteExamConfig, useDownloadExamConfig } from "@/hooks/use-exams";
 import { decodeId } from "@/lib/id-encoder";

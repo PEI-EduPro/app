@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, AsyncMock
 from src.core.deps import get_current_user_info
 from src.main import app
 from src.models.subject import Subject
@@ -136,3 +137,81 @@ async def test_delete_question_option_not_found(client, mock_auth):
     
     response = await client.delete("/api/question-options/99999")
     assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_create_question_options_empty(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.post("/api/question-options/", json=[])
+    assert response.status_code == 400
+    assert "No question options provided" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_question_options_question_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    payload = [{"question_id": 99999, "option_text": "O", "value": True}]
+    response = await client.post("/api/question-options/", json=payload)
+    assert response.status_code == 400
+    assert "Question 99999 not found" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_question_options_topic_not_found(client, mock_auth, setup_question, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    # Mock topic_service to return None
+    with patch("src.routers.question_option.topic_service.get_topic_by_id", return_value=None):
+        payload = [{"question_id": setup_question.id, "option_text": "O", "value": True}]
+        response = await client.post("/api/question-options/", json=payload)
+        assert response.status_code == 400
+        assert f"Topic {setup_question.topic_id} not found" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_question_options_internal_error(client, mock_auth, setup_question):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.question_option.question_option.create_question_options", side_effect=Exception("Boom")):
+        payload = [{"question_id": setup_question.id, "option_text": "O", "value": True}]
+        response = await client.post("/api/question-options/", json=payload)
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_update_question_option_service_fails(client, mock_auth, setup_question, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+    session.add(option)
+    await session.commit()
+    
+    with patch("src.routers.question_option.question_option.update_question_option", return_value=None):
+        response = await client.put(f"/api/question-options/{option.id}", json={"option_text": "New"})
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_update_question_option_internal_error(client, mock_auth, setup_question, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+    session.add(option)
+    await session.commit()
+    
+    with patch("src.routers.question_option.question_option.update_question_option", side_effect=Exception("Boom")):
+        response = await client.put(f"/api/question-options/{option.id}", json={"option_text": "New"})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_delete_question_option_service_fails(client, mock_auth, setup_question, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+    session.add(option)
+    await session.commit()
+    
+    with patch("src.routers.question_option.question_option.delete_question_option", return_value=False):
+        response = await client.delete(f"/api/question-options/{option.id}")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_delete_question_option_internal_error(client, mock_auth, setup_question, session):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    option = QuestionOption(question_id=setup_question.id, option_text="Old", value=False)
+    session.add(option)
+    await session.commit()
+    
+    with patch("src.routers.question_option.question_option.delete_question_option", side_effect=Exception("Boom")):
+        response = await client.delete(f"/api/question-options/{option.id}")
+        assert response.status_code == 500
+
