@@ -155,7 +155,7 @@ async def verify_regent_exists(regent_keycloak_id: str):
             None, # Uses default executor (ThreadPoolExecutor)
             lambda: keycloak_client.admin_client.get_user(regent_keycloak_id) # Wrap the sync call
         )
-        logger.info(f"Verified regent user exists: {regent_info.get('username')} (ID: {regent_keycloak_id})")
+        logger.info(f"Verified regent user exists: {regent_info.get('username')})") # (ID: {regent_keycloak_id})") # removed because string could be malicious and no check had been made
         return regent_info # Return user info if needed later
     except Exception as e:
         logger.error(f"Failed to verify regent user {regent_keycloak_id}: {e}")
