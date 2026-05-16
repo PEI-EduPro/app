@@ -13,7 +13,7 @@ import traceback
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
@@ -985,7 +985,7 @@ def build_exam_questions(exam: Exam, fraction: float) -> list:
 
     return questions
 
-async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[str, bool]):
+async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[str, Any]):
     """Notify student associated with the corresponding exam"""
 
     if not exam:
@@ -1088,6 +1088,7 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         question_stats=question_stats,
         score_details=score_details,
         fraction=exam_config.fraction,
+        custom_description=email_options.get("custom_description", ""),
     )
 
     # 3. CONSTRUCT AND SEND EMAIL
