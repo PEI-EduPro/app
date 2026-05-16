@@ -1,3 +1,4 @@
+import anyio
 import base64
 import os
 import secrets
@@ -41,7 +42,7 @@ def _detect_qr(img) -> str:
 
 
 
-def decode_base64_image(base64_str: str) -> tuple[int, str]:
+async def decode_base64_image(base64_str: str) -> tuple[int, str]:
     """Decode a base64 image, save it temporarily, and read its QR code.
 
     Returns:
@@ -69,8 +70,8 @@ def decode_base64_image(base64_str: str) -> tuple[int, str]:
     os.makedirs(IMAGES_DIR, exist_ok=True)
     # Use secrets for cryptographically strong random filenames
     temp_file_path = os.path.join(IMAGES_DIR, f"exam_{secrets.token_hex(8)}{ext}")
-    with open(temp_file_path, "wb") as buffer:
-        buffer.write(image_bytes)
+    async with await anyio.open_file(temp_file_path, "wb") as buffer:
+        await buffer.write(image_bytes)
 
     img = cv2.imread(temp_file_path)
     if img is None:
@@ -140,8 +141,8 @@ async def read_QR(file: UploadFile = File(...)):
     filename = os.path.basename(file.filename) if file.filename else f"upload_{secrets.token_hex(8)}"
     temp_file_path = os.path.join(IMAGES_DIR, filename)
     
-    with open(temp_file_path, "wb") as buffer:
-        buffer.write(await file.read())
+    async with await anyio.open_file(temp_file_path, "wb") as buffer:
+        await buffer.write(await file.read())
 
     # Always release the file buffer when done
     await file.close()

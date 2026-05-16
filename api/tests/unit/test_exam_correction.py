@@ -56,7 +56,7 @@ async def _setup_waiting_room(session, exam_config_id, state):
 async def test_evaluate_batch_waiting_room_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
     body = {"files": ["fakebase64string"]}
-    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode:
+    with patch("src.routers.waiting_room.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
         mock_decode.return_value = (1, "/tmp/exam.jpg")
         response = await client.post("/api/waiting-rooms/9999/evaluate", json=body)
     assert response.status_code == 404
@@ -100,7 +100,7 @@ async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
     wr = await _setup_waiting_room(session, ec1.id, WaitingRoomState.CLOSED)
     exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
 
-    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode:
+    with patch("src.routers.waiting_room.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
         mock_decode.return_value = (exam_wrong.id, "/tmp/exam.jpg")
         body = {"files": ["fakebase64string"]}
         response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
@@ -125,7 +125,7 @@ async def test_evaluate_batch_success(client, mock_auth, session):
     wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.CLOSED)
     exam_instance = await _setup_exam(session, ec.id)
 
-    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode, \
+    with patch("src.routers.waiting_room.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode, \
          patch("src.routers.waiting_room.evaluate_exam", new_callable=AsyncMock) as mock_eval:
         mock_decode.return_value = (exam_instance.id, "/tmp/exam.jpg")
         mock_eval.return_value = None
