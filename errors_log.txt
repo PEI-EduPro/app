@@ -1,0 +1,57 @@
+================================================================= FAILURES =================================================================
+________________________________________________________ test_put_question_success _________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7c2d9cbe9850>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7c2d9c8260c0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7c2d9d45de20>, setup_topic = Topic()
+
+    @pytest.mark.asyncio
+    async def test_put_question_success(client, mock_auth, session, setup_topic):
+        app.dependency_overrides[get_current_user_info] = mock_auth
+        topic = setup_topic
+        from src.models.question import Question
+        q = Question(topic_id=topic.id, question_text="Old")
+        session.add(q)
+        await session.commit()
+        await session.refresh(q)
+    
+        response = await client.put(f"/api/questions/{q.id}", json={"id": q.id, "question_text": "New"})
+>       assert response.status_code == 200
+E       assert 500 == 200
+E        +  where 500 = <Response [500 Internal Server Error]>.status_code
+
+tests/unit/test_question.py:134: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-16 14:01:05,695 - src.routers.question - ERROR - Failed to update question: (sqlite3.IntegrityError) NOT NULL constraint failed: question.topic_id
+[SQL: UPDATE question SET topic_id=?, question_text=? WHERE question.id = ?]
+[parameters: (None, 'New', 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+2026-05-16 14:01:05,696 - httpx - INFO - HTTP Request: PUT http://test/api/questions/1 "HTTP/1.1 500 Internal Server Error"
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+ERROR    src.routers.question:question.py:140 Failed to update question: (sqlite3.IntegrityError) NOT NULL constraint failed: question.topic_id
+[SQL: UPDATE question SET topic_id=?, question_text=? WHERE question.id = ?]
+[parameters: (None, 'New', 1)]
+(Background on this error at: https://sqlalche.me/e/20/gkpj)
+INFO     httpx:_client.py:1740 HTTP Request: PUT http://test/api/questions/1 "HTTP/1.1 500 Internal Server Error"
+============================================================= warnings summary =============================================================
+src/core/settings.py:5
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class Settings(BaseSettings):
+
+src/models/subject.py:34
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/models/subject.py:34: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class SubjectRead(BaseModel):
+
+.venv/lib/python3.12/site-packages/_pytest/config/__init__.py:1434
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/_pytest/config/__init__.py:1434: PytestConfigWarning: Unknown config option: timeout
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+tests/unit/test_waiting_room.py::test_student_to_exam_qr_invalid_exam_id
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/fastapi/routing.py:328: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    return await dependant.call(**values)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================= short test summary info ==========================================================
+FAILED tests/unit/test_question.py::test_put_question_success - assert 500 == 200
+================================================ 1 failed, 194 passed, 4 warnings in 14.30s ================================================

@@ -118,7 +118,7 @@ async def update_question(
     if not question:
             raise HTTPException(status_code=404, detail="Question not found")
     
-    question.sqlmodel_update(question_data)
+    question.sqlmodel_update(question_data.model_dump(exclude_unset=True))
     
     session.add(question)
     await session.commit()

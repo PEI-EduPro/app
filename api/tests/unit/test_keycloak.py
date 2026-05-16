@@ -288,3 +288,107 @@ async def test_verify_token_audience_mismatch(keycloak_client):
         
         result = await keycloak_client.verify_token("valid_token")
         assert result is None
+
+@pytest.mark.asyncio
+async def test_keycloak_init_admin_failure():
+    with patch("src.core.keycloak.KeycloakAdmin", side_effect=Exception("Admin init error")), \
+         patch("src.core.keycloak.KeycloakOpenID"):
+        client = KeycloakClient()
+        assert client.admin_client is None
+        assert isinstance(client.admin_init_error, Exception)
+
+@pytest.mark.asyncio
+async def test_keycloak_init_public_key_failure():
+    with patch("src.core.keycloak.KeycloakAdmin"), \
+         patch("src.core.keycloak.KeycloakOpenID") as mock_openid:
+        mock_openid.return_value.public_key.side_effect = Exception("Public key error")
+        client = KeycloakClient()
+        # Should log error but initialize
+        assert client.client is not None
+
+@pytest.mark.asyncio
+async def test_verify_token_exception(keycloak_client):
+    keycloak_client.client.decode_token.side_effect = Exception("Decode error")
+    result = await keycloak_client.verify_token("token")
+    assert result is None
+
+@pytest.mark.asyncio
+async def test_verify_token_audience_string(keycloak_client):
+    token_payload = {
+        "iss": "http://testserver:8081/realms/master",
+        "aud": "api-backend",
+        "sub": "user-123"
+    }
+    with patch("src.core.keycloak.settings") as mock_settings:
+        mock_settings.KEYCLOAK_ISSUER_URL = "http://testserver:8081"
+        mock_settings.KEYCLOAK_REALM = "master"
+        mock_settings.KEYCLOAK_CLIENT_ID = "api-backend"
+        keycloak_client.client.decode_token.return_value = token_payload
+        result = await keycloak_client.verify_token("token")
+        assert result is not None
+
+@pytest.mark.asyncio
+async def test_create_user_in_keycloak_general_exception(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.create_user.side_effect = Exception("Random error")
+    with pytest.raises(Exception, match="Random error"):
+        await keycloak_client.create_user_in_keycloak("u", "e", "p")
+
+@pytest.mark.asyncio
+async def test_get_user_group_paths_exception(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_user_groups.side_effect = Exception("Groups error")
+    paths = await keycloak_client.get_user_group_paths("u")
+    assert paths == []
+
+@pytest.mark.asyncio
+async def test_update_subject_regent_no_group(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = []
+    result = await keycloak_client.update_subject_regent("1", "u")
+    assert result is False
+
+@pytest.mark.asyncio
+async def test_delete_subject_groups_exception(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.side_effect = Exception("Delete error")
+    result = await keycloak_client.delete_subject_groups("1")
+    assert result is False
+
+@pytest.mark.asyncio
+async def test_manage_professor_permissions_no_groups(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = []
+    result = await keycloak_client.manage_professor_permissions("1", "u", {"p": True})
+    # If no groups are found, it actually returns True (completes the loop without error)
+    assert result is True
+
+@pytest.mark.asyncio
+async def test_create_waiting_room_groups_exception(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.create_group.side_effect = Exception("WR error")
+    # This one raises the exception after logging
+    with pytest.raises(Exception, match="WR error"):
+        await keycloak_client.create_waiting_room_groups(1, "r", [])
+
+@pytest.mark.asyncio
+async def test_get_subject_students_no_group(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = []
+    students = await keycloak_client.get_subject_students("1")
+    assert students == []
+
+@pytest.mark.asyncio
+async def test_replace_subject_students_no_group(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = []
+    with pytest.raises(ValueError, match="does not exist"):
+        await keycloak_client.replace_subject_students("1", [])
+    admin_mock.group_user_remove.assert_not_called()
+
+@pytest.mark.asyncio
+async def test_remove_professor_from_subject_no_groups(keycloak_client):
+    admin_mock = keycloak_client.admin_client
+    admin_mock.get_groups.return_value = []
+    result = await keycloak_client.remove_professor_from_subject("1", "u")
+    assert result is True
