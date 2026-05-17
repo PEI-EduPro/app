@@ -7,10 +7,10 @@ import { RefreshCw, Camera } from "lucide-react";
 import { useRef, useState } from "react";
 import Webcam from "react-webcam";
 import {
-  useGetSubmitedExams,
-  useGetWaitingRoomById,
+  useGetSubmittedExams,
+  useGetExamSessionInfo,
   useSendExamsPhotos,
-} from "@/hooks/use-waiting-rooms";
+} from "@/hooks/use-exams";
 
 const detalheUCSearchSchema = z.object({ ucId: z.string() });
 
@@ -84,9 +84,9 @@ function RouteComponent() {
   const realId = decodeId(ucId);
   const [photo, setPhoto] = useState<string | null>(null);
 
-  const { data: roomDetails } = useGetWaitingRoomById(realId);
+  const { data: roomDetails } = useGetExamSessionInfo(realId);
   const { mutate } = useSendExamsPhotos(realId);
-  const { data: submitedExams } = useGetSubmitedExams(realId);
+  const { data: submitedExams } = useGetSubmittedExams(realId);
 
   return (
     <div className="py-3.5 px-4 w-full flex flex-col min-h-screen">

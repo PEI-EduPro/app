@@ -78,30 +78,29 @@ export interface TopicI {
 
 export type GetTopicI = [TopicI, number];
 
-export interface GetWaitingRoomI {
+export interface GetExamSessionI {
   subject_id: number;
   subject_name: string;
-  waiting_room_id: number;
-  state: WaitingRoomStatusT;
+  exam_config_id: number;
+  state: ExamWorkflowStatus;
   role: "regent" | "vigilant";
-  exam_name: string;
+  exam_name: string | null;
 }
 
-export type WaitingRoomStatusT = "preparation" | "running" | "closed";
-
-export interface GetWaintingRoomByIdI {
+export interface GetExamSessionInfoI {
   id: number;
-  exam_config_id: number;
-  state: WaitingRoomStatusT;
-  student_list: { name: string; nmec: number }[];
+  subject_id: number;
+  subject_name: string;
+  state: ExamWorkflowStatus;
+  associations: string[];
+  student_list: { name: string; nmec: string }[];
   exam_ids: number[];
   total_students: number;
   total_exams: number;
-  subject_name: string;
   role: "regent" | "vigilant";
 }
 
-export interface GetWaitingRoomMetricsI {
+export interface GetExamSessionMetricsI {
   associated_exams_count: number;
   associated_students_count: number;
 }
