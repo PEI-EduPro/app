@@ -93,7 +93,7 @@ async def get_subject_exam_configs(
             fraction=config.fraction,
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
-            num_variations=len(config.exams) if config.exams is not None else 0,
+            num_versions=config.num_versions,
             status=config.status,
             state=config.state,
             associations=config.associations,
@@ -120,8 +120,8 @@ async def generate_exams(
 
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     try:
-        num_variations = exam_specs.get("num_variations", 1) # Total exams
-        num_versions = exam_specs.get("number_versions", num_variations) # Unique shuffles
+        total_exams = exam_specs.get("total_exams", 1) # Total exams
+        num_versions = exam_specs.get("number_versions", total_exams) # Unique shuffles
         student_tuples = exam_specs.get("student_tuples", [])  # List of (nmec, name, email)
         vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
 
@@ -130,7 +130,7 @@ async def generate_exams(
             exam_specs,
             num_versions,
             student_tuples,
-            num_variations
+            total_exams
         )
 
         # Create waiting room if vigilant_keycloak_ids provided
@@ -146,7 +146,7 @@ async def generate_exams(
             vigilant_keycloak_ids=vigilant_keycloak_ids
         )
 
-        logger.info(f"Successfully generated {num_variations} exam variations.")
+        logger.info(f"Successfully generated {total_exams} exam variations.")
 
         return Response(
             content=zip_bytes,
@@ -189,8 +189,8 @@ async def generate_exams_async(
     verify_permission(user_info, [f"/s{subject_id}/generate_exams", f"/s{subject_id}/regent"])
     
     try:
-        num_variations = exam_specs.get("num_variations", 1) # Total exams
-        num_versions = exam_specs.get("number_versions", num_variations) # Unique shuffles
+        total_exams = exam_specs.get("total_exams", 1) # Total exams
+        num_versions = exam_specs.get("number_versions", total_exams) # Unique shuffles
         student_tuples = exam_specs.get("student_tuples", [])
         vigilant_keycloak_ids = exam_specs.get("vigilant_keycloak_ids", [])
 
@@ -217,12 +217,12 @@ async def generate_exams_async(
             generate_exams_task,
             async_session,
             exam_config.id,
-            num_variations,
+            total_exams,
             exam_specs,
             num_versions
         )
 
-        logger.info(f"Started async generation for {num_variations} variations. Config ID: {exam_config.id}")
+        logger.info(f"Started async generation for {total_exams} variations. Config ID: {exam_config.id}")
 
         tc_result = await session.exec(
             select(TopicConfig)
@@ -247,11 +247,11 @@ async def generate_exams_async(
             fraction=exam_config.fraction,
             topic_configs=topic_configs_dto,
             nmec_name_list=exam_config.nmec_name_list,
-            num_variations=num_variations,
+            num_versions=num_versions,
             status=exam_config.status,
             state=exam_config.state,
             associations=exam_config.associations,
-            total_exams=num_variations
+            total_exams=total_exams
         )
 
     except ValueError as ve:
@@ -364,7 +364,7 @@ async def retrieve_student_list(
         fraction=exam_config.fraction,
         topic_configs=exam_config.topic_configs or [],
         nmec_name_list=exam_config.nmec_name_list,
-        num_variations=len(exam_config.exams) if exam_config.exams is not None else 0,
+        num_versions=exam_config.num_versions,
         status=exam_config.status,
         state=exam_config.state,
         associations=exam_config.associations,

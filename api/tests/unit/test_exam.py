@@ -57,7 +57,7 @@ async def test_generate_exam(client, mock_auth, session):
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 2},
             "relative_quotations": {str(topic.id): 1.0},
-            "num_variations": 1
+            "total_exams": 1
         }
 
         response = await client.post("/api/exams/generate", json=payload)
@@ -203,7 +203,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
             "fraction": 50,
             "topic_configs": [],
             "nmec_name_list": student_data,
-            "num_variations": 0,
+            "total_exams": 0,
             "status": "PENDING",
             "state": "preparing",
             "associations": []
@@ -321,7 +321,7 @@ async def test_generate_exam_with_student_tuples(client, mock_auth, session):
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 2},
             "relative_quotations": {str(topic.id): 1.0},
-            "num_variations": 1,
+            "total_exams": 1,
             "professors": ["Prof A", "Prof B"],
             "student_tuples": [
                 [12345, "John Doe", "john@example.com"],
@@ -422,7 +422,7 @@ async def test_generate_exam_with_session(client, mock_auth, session):
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 2},
             "relative_quotations": {str(topic.id): 1.0},
-            "num_variations": 1,
+            "total_exams": 1,
             "vigilant_keycloak_ids": ["vigilant1", "vigilant2"]
         }
 
@@ -487,7 +487,7 @@ async def test_generate_exams_async_success(client, mock_auth, session):
          patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock), \
          patch("src.routers.exam.generate_exams_task"):
         
-        payload = {"subject_id": sub.id, "num_variations": 1}
+        payload = {"subject_id": sub.id, "total_exams": 1}
         response = await client.post("/api/exams/generate_async", json=payload)
         assert response.status_code == 200
         assert response.json()["id"] == 1

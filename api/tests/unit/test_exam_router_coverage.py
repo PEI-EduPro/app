@@ -236,7 +236,7 @@ async def test_delete_config_not_in_preparation(client, mock_auth, session):
 
     response = await client.delete(f"/api/exams/config/{ec.id}")
     assert response.status_code == 400
-    assert "preparation" in response.json()["detail"].lower()
+    assert "preparing" in response.json()["detail"].lower()
 
 
 # ── session/start error paths (lines ~608, 611-613) ──────────────────────────
@@ -552,7 +552,7 @@ async def test_notify_students_session_not_closed(client, mock_auth, session):
               "red_green_cross_table": True, "cumulative_score_table": True}
     )
     assert response.status_code == 400
-    assert "closed" in response.json()["detail"].lower()
+    assert "completed" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio

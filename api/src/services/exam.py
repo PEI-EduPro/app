@@ -126,7 +126,7 @@ async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1,
+    total_exams: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
@@ -135,7 +135,7 @@ async def generate_exams_from_configs(
 ) -> bytes:
     """Generate LaTeX exams and answer keys, return ZIP with PDFs. Saves a copy to disk."""
     zip_bytes, zip_path = await generate_exams_to_disk(
-        session, exam_config, topic_configs, num_variations,
+        session, exam_config, topic_configs, total_exams,
         exam_title, exam_date, semester, academic_year, num_versions
     )
     
@@ -151,7 +151,7 @@ async def generate_exams_to_disk(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1,
+    total_exams: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
@@ -163,7 +163,7 @@ async def generate_exams_to_disk(
     import io
 
     if num_versions is None:
-        num_versions = num_variations
+        num_versions = total_exams
 
     if shutil.which("pdflatex") is None:
         raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
@@ -214,10 +214,10 @@ async def generate_exams_to_disk(
             with open(os.path.join(tmpdir, "date.tex"), "w") as f:
                 f.write(formatted_date)
 
-        for var_num in range(1, num_variations + 1):
+        for var_num in range(1, total_exams + 1):
             # Calculate version_idx with remainder distributed to earlier versions
-            base_size = num_variations // num_versions
-            remainder = num_variations % num_versions
+            base_size = total_exams // num_versions
+            remainder = total_exams % num_versions
             threshold = remainder * (base_size + 1)
             
             if var_num <= threshold:
@@ -302,7 +302,7 @@ async def generate_exams_to_disk(
 
         # Generate single solutions PDF with all UNIQUE variations and their corresponding batch IDs
         unique_answers = []
-        all_single = (num_versions == num_variations)
+        all_single = (num_versions == total_exams)
         
         for i in range(len(versions_cache)):
             v_num = i + 1
@@ -351,13 +351,13 @@ async def generate_exams_to_disk(
 async def generate_exams_task(
     session_factory,
     exam_config_id: int,
-    num_variations: int,
+    total_exams: int,
     exam_specs: dict,
     num_versions: Optional[int] = None
 ):
     """Background task for generating exams."""
     if num_versions is None:
-        num_versions = num_variations
+        num_versions = total_exams
 
     async with session_factory() as session:
         try:
@@ -378,7 +378,7 @@ async def generate_exams_task(
             academic_year = exam_specs.get("academic_year", "2025/26")
 
             _, zip_path = await generate_exams_to_disk(
-                session, exam_config, topic_configs, num_variations,
+                session, exam_config, topic_configs, total_exams,
                 exam_title, exam_date, semester, academic_year, num_versions
             )
 
@@ -666,18 +666,18 @@ async def create_configs_and_exams(
     exam_specs: dict,
     num_versions: int = 1,
     student_tuples: List[tuple] = None,
-    num_variations: int = None
+    total_exams: int = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    if num_variations is None:
-        num_variations = num_versions
+    if total_exams is None:
+        total_exams = num_versions
         
     exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_versions)
     exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year, num_versions)
+    return await generate_exams_from_configs(session, exam_config, topic_configs, total_exams, exam_title, exam_date, semester, academic_year, num_versions)
 
 
 async def get_exam_configs_by_subject(

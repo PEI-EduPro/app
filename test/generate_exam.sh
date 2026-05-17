@@ -290,7 +290,7 @@ HTTP_CODE=$(curl -w "%{http_code}" -X POST "$API_BASE/exams/generate" \
   -d "{
     \"subject_id\": $SUBJECT_ID,
     \"fraction\": 25,
-    \"num_variations\": 3,
+    \"total_exams\": 3,
     \"topics\": [\"Calculus\", \"Algebra\", \"Geometry\", \"Statistics\", \"Trigonometry\"],
     \"number_questions\": { 
         \"Calculus\": 5,

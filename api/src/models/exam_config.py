@@ -105,7 +105,7 @@ class ExamConfigResponse(SQLModel):
     fraction: int
     topic_configs: List[TopicConfigDTO] = []
     nmec_name_list: Optional[str] = None
-    num_variations: int = 0
+    num_versions: int = 1
     status: GenerationStatus = GenerationStatus.PENDING
     state: ExamState = ExamState.PREPARING
     associations: List[str] = []
@@ -157,7 +157,7 @@ class ExamGenerateRequest(SQLModel):
     topics: List[str]
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
-    num_variations: int = 1
+    total_exams: int = 1
     number_versions: Optional[int] = None
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []
