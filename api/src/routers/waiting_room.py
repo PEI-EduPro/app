@@ -12,6 +12,7 @@ from src.core.deps import get_current_user_info, verify_permission
 from src.models.common import MessageResponse
 from src.models.email_options import EmailOptionsPayload
 from src.models.exam_config import ExamConfig
+from src.models.subject import Subject
 from src.models.user import User
 from src.models.waiting_room import WaitingRoomCreateRequest, WaitingRoomResponse, WaitingRoomState, WaitingRoomInfoResponse, WaitingRoomMetricsResponse, ProfessorWaitingRoomItem, EvaluateBatchRequest, QRCodeToNMEC
 from src.models.warning import Warning
@@ -428,6 +429,9 @@ async def notify_students_via_email(
     
     exams = await get_exams_by_config_id(session, exam_config.id)
     
+    # Pre-fetch subject once for all notifications in this batch
+    subject = await session.get(Subject, exam_config.subject_id)
+    
     # Pre-Notification Checks
     for exam in exams:
         # Only alert for exams that actually have an association
@@ -454,7 +458,7 @@ async def notify_students_via_email(
             continue
 
         try:
-            await notify_student(session, exam, email_options.model_dump())
+            await notify_student(session, exam, email_options.model_dump(), exam_config=exam_config, subject=subject)
         except Exception as e:
             logger.error(f"Failed to send email for exam {exam.id}: {e}")
 

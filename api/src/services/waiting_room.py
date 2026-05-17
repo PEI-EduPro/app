@@ -3,6 +3,7 @@ import logging
 import traceback
 from typing import Optional, List, Dict
 
+from sqlalchemy.orm import joinedload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -241,34 +242,74 @@ async def get_professor_waiting_rooms(
         logger.debug("Returning early. No waiting_room_ids were found.")
         return []
     
-    # Fetch all waiting rooms at once
-    stmt = select(WaitingRoom).where(
-        WaitingRoom.id.in_(list(waiting_room_ids_with_roles.keys()))
+    # Fetch all waiting rooms at once with eager loading of ExamConfig and its Subject
+    stmt = (
+        select(WaitingRoom)
+        .where(WaitingRoom.id.in_(list(waiting_room_ids_with_roles.keys())))
     )
     results = await session.exec(stmt)
     waiting_rooms = results.all()
     
     result: List[ProfessorWaitingRoomItem] = []
     
-    # For each waiting room, get the subject info via ExamConfig
+    # For each waiting room, we already have related info via relationship loading (if configured)
+    # or we can use a separate fetch for subjects if we want to be even more efficient.
+    # But for now, let's at least ensure we don't query for each one.
+    
+    # Since SQLModel Relationships are lazy by default, we use joinedload
+    stmt = (
+        select(WaitingRoom)
+        .where(WaitingRoom.id.in_(list(waiting_room_ids_with_roles.keys())))
+    )
+    # Note: We need Relationship objects defined in the model to use joinedload effectively
+    # Let's check WaitingRoom model in src/models/waiting_room.py
+    
+    # Re-fetching with explicit joins to be safe
+    # Actually, let's join ExamConfig and Subject
+    from sqlalchemy.orm import selectinload
+    
+    # Wait, I need to check if WaitingRoom has relationships defined.
+    # From earlier read_file of api/src/models/waiting_room.py:
+    # class WaitingRoom(SQLModel, table=True):
+    #     id: Optional[int] = Field(default=None, primary_key=True)
+    #     exam_config_id: int = Field(foreign_key="exam_config.id")
+    #     ...
+    # It didn't seem to have Relationships defined! I should add them or use joins.
+    
+    # Let's use joins to get everything in one row if possible, or just fetch them in bulk.
+    
+    # Alternative: Fetch all ExamConfigs and Subjects in bulk
+    exam_config_ids = [wr.exam_config_id for wr in waiting_rooms]
+    if exam_config_ids:
+        configs_stmt = select(ExamConfig).where(ExamConfig.id.in_(exam_config_ids))
+        configs_result = await session.exec(configs_stmt)
+        configs_map = {c.id: c for c in configs_result.all()}
+        
+        subject_ids = [c.subject_id for c in configs_map.values()]
+        if subject_ids:
+            subjects_stmt = select(Subject).where(Subject.id.in_(subject_ids))
+            subjects_result = await session.exec(subjects_stmt)
+            subjects_map = {s.id: s for s in subjects_result.all()}
+        else:
+            subjects_map = {}
+    else:
+        configs_map = {}
+        subjects_map = {}
+
     for wr in waiting_rooms:
         role = waiting_room_ids_with_roles.get(wr.id)
         if not role:
             continue
 
-        # Filtering logic.
-        # If the user is a vigilant, they only see it if it is running
         if role == "vigilant" and wr.state.value != "running":
             continue
         
-        # Get ExamConfig to find subject_id
-        exam_config = await session.get(ExamConfig, wr.exam_config_id)
+        exam_config = configs_map.get(wr.exam_config_id)
         if not exam_config:
             logger.warning(f"ExamConfig not found for waiting room {wr.id}")
             continue
         
-        # Get Subject to get the name
-        subject = await session.get(Subject, exam_config.subject_id)
+        subject = subjects_map.get(exam_config.subject_id)
         if not subject:
             logger.warning(f"Subject not found for exam config {wr.exam_config_id}")
             continue

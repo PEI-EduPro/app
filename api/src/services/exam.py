@@ -987,7 +987,13 @@ def build_exam_questions(exam: Exam, fraction: float) -> list:
 
     return questions
 
-async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[str, Any]):
+async def notify_student(
+    session: AsyncSession, 
+    exam: Exam, 
+    email_options: Dict[str, Any],
+    exam_config: Optional[ExamConfig] = None,
+    subject: Optional[Subject] = None
+):
     """Notify student associated with the corresponding exam"""
 
     if not exam:
@@ -996,9 +1002,11 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
     if not exam.student_email:
         raise HTTPException(status_code=422, detail=f"Exam {exam.id} has no student email")
 
+    if not exam_config:
+        exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
     
-    exam_config = await get_exam_config_by_id(session, exam.exam_config_id)
-    subject = await session.get(Subject, exam_config.subject_id)
+    if not subject:
+        subject = await session.get(Subject, exam_config.subject_id)
 
     # 1. PREPARE DATA FOR TEMPLATE
     has_capture = bool(exam.capture_path and os.path.exists(exam.capture_path))

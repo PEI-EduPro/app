@@ -306,16 +306,22 @@ async def get_topics_questions_and_options_by_subject_id(
     return result_subject
 
 async def get_all_subject_topics(session: AsyncSession, subject_id: int) -> List[Tuple[TopicPublic, int]]:
-    topics_result = await session.exec(select(Topic).where(Topic.subject_id == subject_id))
-    topics = topics_result.all()
+    from sqlalchemy import func
     
-    result = []
-    for topic in topics:
-        questions_result = await session.exec(select(Question).where(Question.topic_id == topic.id))
-        count = len(questions_result.all())
-        result.append((TopicPublic.model_validate(topic), count))
+    # Single query to get topics and their question counts
+    stmt = (
+        select(Topic, func.count(Question.id))
+        .outerjoin(Question, Topic.id == Question.topic_id)
+        .where(Topic.subject_id == subject_id)
+        .group_by(Topic.id)
+    )
     
-    return result
+    results = await session.exec(stmt)
+    
+    return [
+        (TopicPublic.model_validate(topic), count)
+        for topic, count in results.all()
+    ]
 
 async def get_topics_from_subject(session: AsyncSession, subject_id: int) -> List[Topic]:
     """Get all topics from a subject."""
