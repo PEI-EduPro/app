@@ -14,10 +14,13 @@ class GenerationStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
-class SessionState(str, Enum):
-    PREPARATION = "preparation"
+class ExamState(str, Enum):
+    PREPARING = "preparing"
     RUNNING = "running"
-    CLOSED = "closed"
+    CLOSED_AND_CAPTURE = "closed_and_capture"
+    WARNING_HANDLING = "warning_handling"
+    VALIDATION = "validation"
+    COMPLETED = "completed"
 
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
@@ -33,7 +36,7 @@ class ExamConfig(SQLModel, table=True):
     zip_path: Optional[str] = Field(default=None)
     
     # Merged from WaitingRoom
-    session_state: SessionState = Field(default=SessionState.PREPARATION)
+    state: ExamState = Field(default=ExamState.PREPARING)
     associations: List[str] = Field(default=[], sa_column=Column(JSON))
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
@@ -60,7 +63,13 @@ class ExamConfigRead(SQLModel):
     fraction: int
     subject_id: int
     status: GenerationStatus
+    state: ExamState
     zip_path: Optional[str] = None
+    
+    # Computed metrics
+    total_exams: int = 0
+    associated_exams_count: Optional[int] = None
+    pictured_exams_count: Optional[int] = None
 
 class ExamConfigResponse(SQLModel):
     id: int
@@ -70,12 +79,17 @@ class ExamConfigResponse(SQLModel):
     nmec_name_list: Optional[str] = None
     num_variations: int = 0
     status: GenerationStatus = GenerationStatus.PENDING
-    session_state: SessionState = SessionState.PREPARATION
+    state: ExamState = ExamState.PREPARING
     associations: List[str] = []
+    
+    # Computed metrics
+    total_exams: int = 0
+    associated_exams_count: Optional[int] = None
+    pictured_exams_count: Optional[int] = None
 
 class ExamSessionResponse(BaseModel):
     id: int
-    session_state: SessionState
+    state: ExamState
     associations: List[str]
     message: str
 
@@ -87,7 +101,7 @@ class ExamSessionInfoResponse(BaseModel):
     id: int
     subject_id: int
     subject_name: str
-    session_state: SessionState
+    state: ExamState
     associations: List[str]
     student_list: List[StudentInfo]
     exam_ids: List[int]
