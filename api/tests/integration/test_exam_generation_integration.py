@@ -55,7 +55,7 @@ async def test_exam_generation_with_students_and_session_integration(client, moc
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 5},
             "relative_quotations": {str(topic.id): 2.0},
-            "num_variations": 2,
+            "total_exams": 2,
             "professors": ["Prof. Smith", "Prof. Johnson"],
             "student_tuples": [
                 [12345, "Alice Johnson", "alice@university.edu"],
@@ -94,8 +94,8 @@ async def test_exam_generation_with_students_and_session_integration(client, moc
         assert student_data["67890"]["email"] == "bob@university.edu"
 
         # Verify session was initialized
-        from src.models.exam_config import SessionState
-        assert exam_config.session_state == SessionState.PREPARATION
+        from src.models.exam_config import ExamState
+        assert exam_config.state == ExamState.PREPARING
 
 
 @pytest.mark.asyncio
@@ -146,7 +146,7 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 3},
             "relative_quotations": {str(topic.id): 1.0},
-            "num_variations": 1
+            "total_exams": 1
         }
 
         response = await client.post("/api/exams/generate", json=payload)
@@ -164,5 +164,5 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
         assert exam_config.nmec_name_list is None
 
         # Verify session was initialized
-        from src.models.exam_config import SessionState
-        assert exam_config.session_state == SessionState.PREPARATION
+        from src.models.exam_config import ExamState
+        assert exam_config.state == ExamState.PREPARING

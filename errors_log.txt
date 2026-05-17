@@ -1,62 +1,77 @@
 ================================================================= FAILURES =================================================================
-___________________________________________________________ test_complex_queries ___________________________________________________________
+__________________________________________________ test_delete_config_not_in_preparation ___________________________________________________
 
-session = <sqlalchemy.orm.session.AsyncSession object at 0x73b73e199340>
+client = <httpx.AsyncClient object at 0x7a3e7d551190>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7a3e7d433ce0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7a3e7d78da60>
 
     @pytest.mark.asyncio
-    async def test_complex_queries(session):
-        # get_topics_questions_and_options_by_subject_id (Hits 259-306)
-        sub = Subject(name="Math")
+    async def test_delete_config_not_in_preparation(client, mock_auth, session):
+        """400 when session is not in PREPARING state."""
+        app.dependency_overrides[get_current_user_info] = mock_auth
+    
+        sub = Subject(name="Del Sub")
         session.add(sub)
         await session.commit()
         await session.refresh(sub)
     
-        topic = Topic(name="Algebra", subject_id=sub.id)
-        session.add(topic)
-        await session.commit()
-        await session.refresh(topic)
-    
-        q = Question(question_text="1+1?", topic_id=topic.id)
-        session.add(q)
-        await session.commit()
-        await session.refresh(q)
-    
-        opt1 = QuestionOption(option_text="2", value=True, question_id=q.id)
-        opt2 = QuestionOption(option_text="3", value=False, question_id=q.id)
-        session.add(opt1)
-        session.add(opt2)
-        await session.commit()
-    
-        res = await get_topics_questions_and_options_by_subject_id(session, sub.id)
-        assert res["subject_name"] == "Math"
-        assert topic.id in res["subject_topics"]
-        assert q.id in res["subject_topics"][topic.id]["topic_questions"]
-        assert res["subject_topics"][topic.id]["topic_questions"][q.id]["answer"] == opt1.id
-    
-        # Not found
-        res_nf = await get_topics_questions_and_options_by_subject_id(session, 99999)
-        assert res_nf == {}
-    
-        # get_all_subject_topics (Hits 309-318)
->       res_topics = await get_all_subject_topics(session, sub.id)
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-tests/unit/test_subject_service_direct.py:222: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-session = <sqlalchemy.orm.session.AsyncSession object at 0x73b73e199340>, subject_id = 1
-
-    async def get_all_subject_topics(session: AsyncSession, subject_id: int) -> List[Tuple[TopicPublic, int]]:
-        statement = (
->           select(Topic, func.count(Question.id))
-                          ^^^^
-            .outerjoin(Question, Question.topic_id == Topic.id)
-            .where(Topic.subject_id == subject_id)
-            .group_by(Topic.id)
+        ec = ExamConfig(
+            subject_id=sub.id, fraction=0,
+            state=ExamState.RUNNING
         )
-E       NameError: name 'func' is not defined
+        session.add(ec)
+        await session.commit()
+        await session.refresh(ec)
+    
+        response = await client.delete(f"/api/exams/config/{ec.id}")
+        assert response.status_code == 400
+>       assert "preparation" in response.json()["detail"].lower()
+E       assert 'preparation' in "cannot delete exam configuration because its state is examstate.running. it must be in 'preparing' or 'completed' state."
+E        +  where "cannot delete exam configuration because its state is examstate.running. it must be in 'preparing' or 'completed' state." = <built-in method lower of str object at 0x7a3e7d4b12c0>()
+E        +    where <built-in method lower of str object at 0x7a3e7d4b12c0> = "Cannot delete exam configuration because its state is ExamState.RUNNING. It must be in 'preparing' or 'completed' state.".lower
 
-src/services/subject.py:310: NameError
+tests/unit/test_exam_router_coverage.py:239: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-17 18:29:17,124 - httpx - INFO - HTTP Request: DELETE http://test/api/exams/config/1 "HTTP/1.1 400 Bad Request"
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+INFO     httpx:_client.py:1740 HTTP Request: DELETE http://test/api/exams/config/1 "HTTP/1.1 400 Bad Request"
+_________________________________________________ test_notify_students_session_not_closed __________________________________________________
+
+client = <httpx.AsyncClient object at 0x7a3e7d5b7aa0>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7a3e7d2f0c20>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7a3e7d7266c0>
+
+    @pytest.mark.asyncio
+    async def test_notify_students_session_not_closed(client, mock_auth, session):
+        """400 when session is not COMPLETED."""
+        app.dependency_overrides[get_current_user_info] = mock_auth
+    
+        sub = Subject(name="Notify Sub")
+        session.add(sub)
+        await session.commit()
+        await session.refresh(sub)
+    
+        ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
+        session.add(ec)
+        await session.commit()
+        await session.refresh(ec)
+    
+        response = await client.post(
+            f"/api/exams/{ec.id}/session/notify-students",
+            json={"exam_capture": True, "question_weights": True,
+                  "red_green_cross_table": True, "cumulative_score_table": True}
+        )
+        assert response.status_code == 400
+>       assert "closed" in response.json()["detail"].lower()
+E       assert 'closed' in "exam must be in 'completed' state to notify students."
+E        +  where "exam must be in 'completed' state to notify students." = <built-in method lower of str object at 0x7a3e7d66c8d0>()
+E        +    where <built-in method lower of str object at 0x7a3e7d66c8d0> = "Exam must be in 'completed' state to notify students.".lower
+
+tests/unit/test_exam_router_coverage.py:555: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-17 18:29:21,460 - httpx - INFO - HTTP Request: POST http://test/api/exams/1/session/notify-students "HTTP/1.1 400 Bad Request"
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/exams/1/session/notify-students "HTTP/1.1 400 Bad Request"
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -78,5 +93,16 @@ tests/unit/test_exam_router_coverage.py::test_associate_student_invalid_qr
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_subject_service_direct.py::test_complex_queries - NameError: name 'func' is not defined
-=========================================== 1 failed, 348 passed, 5 warnings in 63.44s (0:01:03) ===========================================
+FAILED tests/unit/test_exam_router_coverage.py::test_delete_config_not_in_preparation - assert 'preparation' in "cannot delete exam configuration because its state is examstate.running. it must be in 'preparing' or 'complet...
+FAILED tests/unit/test_exam_router_coverage.py::test_notify_students_session_not_closed - assert 'closed' in "exam must be in 'completed' state to notify students."
+================================================ 2 failed, 347 passed, 5 warnings in 59.36s ================================================
+Cleaning up test infrastructure...
+[+] down 6/6
+ ✔ Container edupro-test-db-1          Removed                                                                                          0.3s
+ ✔ Container edupro-test-keycloak-1    Removed                                                                                          0.6s
+ ✔ Container edupro-test-keycloak-db-1 Removed                                                                                          0.3s
+ ✔ Volume edupro-test_db_data          Removed                                                                                          0.1s
+ ✔ Volume edupro-test_keycloak_db_data Removed                                                                                          0.2s
+ ✔ Network edupro-test_default         Removed                                                                                          0.1s
+i@i:~/Desktop/Pedro/Universidade/PEI/project/app$ 
+

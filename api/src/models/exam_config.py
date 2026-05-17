@@ -14,10 +14,13 @@ class GenerationStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
-class SessionState(str, Enum):
-    PREPARATION = "preparation"
+class ExamState(str, Enum):
+    PREPARING = "preparing"
     RUNNING = "running"
-    CLOSED = "closed"
+    CLOSED_AND_CAPTURE = "closed_and_capture"
+    WARNING_HANDLING = "warning_handling"
+    VALIDATION = "validation"
+    COMPLETED = "completed"
 
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
@@ -33,12 +36,40 @@ class ExamConfig(SQLModel, table=True):
     zip_path: Optional[str] = Field(default=None)
     
     # Merged from WaitingRoom
-    session_state: SessionState = Field(default=SessionState.PREPARATION)
+    state: ExamState = Field(default=ExamState.PREPARING)
     associations: List[str] = Field(default=[], sa_column=Column(JSON))
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     exams: List["Exam"] = Relationship(back_populates="exam_config")
+
+    @property
+    def total_exams(self) -> int:
+        """Count of generated exams for this configuration."""
+        try:
+            return len(self.exams) if self.exams is not None else 0
+        except Exception:
+            return 0
+
+    @property
+    def associated_exams_count(self) -> Optional[int]:
+        """Count of exams that have been associated with a student."""
+        if self.state not in [ExamState.RUNNING, ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+            return None
+        try:
+            return sum(1 for e in self.exams if e.nmec is not None) if self.exams is not None else 0
+        except Exception:
+            return 0
+
+    @property
+    def pictured_exams_count(self) -> Optional[int]:
+        """Count of exams that have a capture path (OMR processed)."""
+        if self.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+            return None
+        try:
+            return sum(1 for e in self.exams if e.capture_path is not None) if self.exams is not None else 0
+        except Exception:
+            return 0
 
 # ExamConfig schemas
 class ExamConfigCreate(SQLModel):
@@ -60,7 +91,13 @@ class ExamConfigRead(SQLModel):
     fraction: int
     subject_id: int
     status: GenerationStatus
+    state: ExamState
     zip_path: Optional[str] = None
+    
+    # Computed metrics
+    total_exams: int = 0
+    associated_exams_count: Optional[int] = None
+    pictured_exams_count: Optional[int] = None
 
 class ExamConfigResponse(SQLModel):
     id: int
@@ -68,14 +105,19 @@ class ExamConfigResponse(SQLModel):
     fraction: int
     topic_configs: List[TopicConfigDTO] = []
     nmec_name_list: Optional[str] = None
-    num_variations: int = 0
+    num_versions: int = 1
     status: GenerationStatus = GenerationStatus.PENDING
-    session_state: SessionState = SessionState.PREPARATION
+    state: ExamState = ExamState.PREPARING
     associations: List[str] = []
+    
+    # Computed metrics
+    total_exams: int = 0
+    associated_exams_count: Optional[int] = None
+    pictured_exams_count: Optional[int] = None
 
 class ExamSessionResponse(BaseModel):
     id: int
-    session_state: SessionState
+    state: ExamState
     associations: List[str]
     message: str
 
@@ -87,7 +129,7 @@ class ExamSessionInfoResponse(BaseModel):
     id: int
     subject_id: int
     subject_name: str
-    session_state: SessionState
+    state: ExamState
     associations: List[str]
     student_list: List[StudentInfo]
     exam_ids: List[int]
@@ -115,7 +157,7 @@ class ExamGenerateRequest(SQLModel):
     topics: List[str]
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
-    num_variations: int = 1
+    total_exams: int = 1
     number_versions: Optional[int] = None
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []

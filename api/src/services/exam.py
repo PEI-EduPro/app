@@ -27,7 +27,7 @@ from src.models.exam import Exam
 from src.models.exam_config import (
     ExamConfig, 
     GenerationStatus, 
-    SessionState, 
+    ExamState, 
     ExamSessionInfoResponse, 
     ExamSessionMetricsResponse, 
     ProfessorExamSessionItem, 
@@ -126,7 +126,7 @@ async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1,
+    total_exams: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
@@ -135,7 +135,7 @@ async def generate_exams_from_configs(
 ) -> bytes:
     """Generate LaTeX exams and answer keys, return ZIP with PDFs. Saves a copy to disk."""
     zip_bytes, zip_path = await generate_exams_to_disk(
-        session, exam_config, topic_configs, num_variations,
+        session, exam_config, topic_configs, total_exams,
         exam_title, exam_date, semester, academic_year, num_versions
     )
     
@@ -151,7 +151,7 @@ async def generate_exams_to_disk(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1,
+    total_exams: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
@@ -163,7 +163,7 @@ async def generate_exams_to_disk(
     import io
 
     if num_versions is None:
-        num_versions = num_variations
+        num_versions = total_exams
 
     if shutil.which("pdflatex") is None:
         raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
@@ -214,10 +214,10 @@ async def generate_exams_to_disk(
             with open(os.path.join(tmpdir, "date.tex"), "w") as f:
                 f.write(formatted_date)
 
-        for var_num in range(1, num_variations + 1):
+        for var_num in range(1, total_exams + 1):
             # Calculate version_idx with remainder distributed to earlier versions
-            base_size = num_variations // num_versions
-            remainder = num_variations % num_versions
+            base_size = total_exams // num_versions
+            remainder = total_exams % num_versions
             threshold = remainder * (base_size + 1)
             
             if var_num <= threshold:
@@ -302,7 +302,7 @@ async def generate_exams_to_disk(
 
         # Generate single solutions PDF with all UNIQUE variations and their corresponding batch IDs
         unique_answers = []
-        all_single = (num_versions == num_variations)
+        all_single = (num_versions == total_exams)
         
         for i in range(len(versions_cache)):
             v_num = i + 1
@@ -351,13 +351,13 @@ async def generate_exams_to_disk(
 async def generate_exams_task(
     session_factory,
     exam_config_id: int,
-    num_variations: int,
+    total_exams: int,
     exam_specs: dict,
     num_versions: Optional[int] = None
 ):
     """Background task for generating exams."""
     if num_versions is None:
-        num_versions = num_variations
+        num_versions = total_exams
 
     async with session_factory() as session:
         try:
@@ -378,7 +378,7 @@ async def generate_exams_task(
             academic_year = exam_specs.get("academic_year", "2025/26")
 
             _, zip_path = await generate_exams_to_disk(
-                session, exam_config, topic_configs, num_variations,
+                session, exam_config, topic_configs, total_exams,
                 exam_title, exam_date, semester, academic_year, num_versions
             )
 
@@ -666,18 +666,18 @@ async def create_configs_and_exams(
     exam_specs: dict,
     num_versions: int = 1,
     student_tuples: List[tuple] = None,
-    num_variations: int = None
+    total_exams: int = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    if num_variations is None:
-        num_variations = num_versions
+    if total_exams is None:
+        total_exams = num_versions
         
     exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_versions)
     exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year, num_versions)
+    return await generate_exams_from_configs(session, exam_config, topic_configs, total_exams, exam_title, exam_date, semester, academic_year, num_versions)
 
 
 async def get_exam_configs_by_subject(
@@ -720,7 +720,7 @@ async def get_exam_config_by_id(
     exam_config_id: int
 ) -> ExamConfig | None:
     """
-    Get a specific exam configuration by ID.
+    Get a specific exam configuration by ID, with computed metrics.
     """
     statement = (
         select(ExamConfig)
@@ -731,7 +731,12 @@ async def get_exam_config_by_id(
         )
     )
     result = await session.exec(statement)
-    return result.first()
+    exam_config = result.first()
+    
+    if not exam_config:
+        return None
+
+    return exam_config
 
 
 async def process_student_list_csv(
@@ -1134,12 +1139,37 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
 
     return {"message": "Email enviado com sucesso"}
-async def update_exam_session_state(session: AsyncSession, exam_config_id: int, new_state: SessionState) -> Optional[ExamConfig]:
+async def transition_exam_config_state(
+    session: AsyncSession, 
+    exam_config_id: int, 
+    target_state: ExamState
+) -> ExamConfig:
+    """
+    Transition ExamConfig to a new state with business logic validation.
+    """
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
-        return None
-    
-    exam_config.session_state = new_state
+        raise ValueError("Exam configuration not found")
+
+    current_state = exam_config.state
+
+    # 1. Validation Logic for specific transitions
+    if target_state == ExamState.VALIDATION:
+        # Must resolve all warnings before moving to validation
+        from src.models.warning import Warning
+        warning_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config_id)
+        warning_count = (await session.exec(warning_stmt)).one()
+        if warning_count > 0:
+            raise ValueError(f"Cannot transition to {target_state} because there are {warning_count} unresolved warnings.")
+
+    elif target_state == ExamState.COMPLETED:
+        # All exams with pictures must be validated
+        unvalidated_pictured_exams = [e for e in exam_config.exams if e.capture_path is not None and not e.validated]
+        if unvalidated_pictured_exams:
+            raise ValueError(f"Cannot transition to {target_state} because there are {len(unvalidated_pictured_exams)} pictured exams that have not been validated.")
+
+    # 2. Update state
+    exam_config.state = target_state
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -1208,7 +1238,7 @@ async def get_exam_session_info_service(session: AsyncSession, exam_config_id: i
         id=exam_config.id,
         subject_id=subject.id,
         subject_name=subject.name,
-        session_state=exam_config.session_state,
+        state=exam_config.state,
         associations=exam_config.associations,
         student_list=formatted_students,
         exam_ids=exam_ids,
@@ -1265,11 +1295,11 @@ async def close_exam_session_service(session: AsyncSession, exam_config_id: int)
     if not exam_config:
         raise ValueError("Exam configuration not found")
 
-    if exam_config.session_state not in [SessionState.RUNNING, SessionState.CLOSED]:
-        raise ValueError("Exam session must be in running or closed state to be closed.")
+    if exam_config.state != ExamState.RUNNING:
+        raise ValueError(f"Exam session must be in running state to be closed. Current state: {exam_config.state}")
 
-    # 1. Update state to CLOSED
-    exam_config.session_state = SessionState.CLOSED
+    # 1. Update state to CLOSED_AND_CAPTURE
+    exam_config.state = ExamState.CLOSED_AND_CAPTURE
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -1335,7 +1365,7 @@ async def get_professor_exam_sessions(
         if not role:
             continue
 
-        if role == "vigilant" and ec.session_state.value != "running":
+        if role == "vigilant" and ec.state.value != "running":
             continue
         
         subject = await session.get(Subject, ec.subject_id)
@@ -1346,7 +1376,7 @@ async def get_professor_exam_sessions(
             subject_id=subject.id,
             subject_name=subject.name,
             exam_config_id=ec.id,
-            state=ec.session_state.value,
+            state=ec.state.value,
             role=role,
             exam_name=ec.exam_name
         ))
