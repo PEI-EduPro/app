@@ -5,7 +5,7 @@ from src.main import app
 from src.models.user import User
 from src.models.warning import Warning, WarningType
 from src.models.subject import Subject
-from src.models.exam_config import ExamConfig, SessionState
+from src.models.exam_config import ExamConfig, ExamState
 from src.models.exam import Exam
 
 
@@ -39,7 +39,7 @@ async def setup_data(session):
         "222": {"name": "Bob", "email": "bob@example.com"},
         "333": {"name": "Carol", "email": "carol@example.com"},
     }
-    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict), session_state=SessionState.CLOSED)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict), state=ExamState.CLOSED_AND_CAPTURE)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)

@@ -40,8 +40,8 @@ async def _setup_exam(session, exam_config_id, *, corrected=False):
 
 
 async def _setup_exam_config(session, subject_id, state=None):
-    from src.models.exam_config import ExamConfig, SessionState
-    ec = ExamConfig(subject_id=subject_id, fraction=0.0, session_state=state or SessionState.PREPARATION)
+    from src.models.exam_config import ExamConfig, ExamState
+    ec = ExamConfig(subject_id=subject_id, fraction=0.0, state=state or ExamState.PREPARING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -86,14 +86,14 @@ async def test_evaluate_batch_wrong_state(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.exam_config import SessionState
+    from src.models.exam_config import ExamState
 
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
-    ec = await _setup_exam_config(session, sub.id, state=SessionState.RUNNING)
+    ec = await _setup_exam_config(session, sub.id, state=ExamState.RUNNING)
 
     body = {"files": ["fakebase64string"]}
     response = await client.post(f"/api/exams/{ec.id}/session/evaluate", json=body)
@@ -106,14 +106,14 @@ async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.exam_config import SessionState
+    from src.models.exam_config import ExamState
 
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
-    ec1 = await _setup_exam_config(session, sub.id, state=SessionState.CLOSED)
+    ec1 = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
     ec2 = await _setup_exam_config(session, sub.id)
     exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
 
@@ -131,14 +131,14 @@ async def test_evaluate_batch_success(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.exam_config import SessionState
+    from src.models.exam_config import ExamState
 
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
-    ec = await _setup_exam_config(session, sub.id, state=SessionState.CLOSED)
+    ec = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
     exam_instance = await _setup_exam(session, ec.id)
 
     with patch("src.routers.exam.utils.decode_base64_image") as mock_decode, \

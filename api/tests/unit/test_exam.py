@@ -205,7 +205,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
             "nmec_name_list": student_data,
             "num_variations": 0,
             "status": "PENDING",
-            "session_state": "preparation",
+            "state": "preparing",
             "associations": []
         }
         response = await client.get(f"/api/exams/exam/{exam_config.id}/student_list")
@@ -576,7 +576,7 @@ async def test_correct_by_hand_job(client, mock_auth, session):
 async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, SessionState, GenerationStatus
+    from src.models.exam_config import ExamConfig, ExamState, GenerationStatus
     from src.models.topic_config import TopicConfig
     
     sub = Subject(name="S")
@@ -599,7 +599,7 @@ async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session
     mock_config.nmec_name_list = None
     mock_config.exams = []
     mock_config.status = GenerationStatus.COMPLETED
-    mock_config.session_state = SessionState.PREPARATION
+    mock_config.state = ExamState.PREPARING
     mock_config.associations = []
 
     with patch("src.routers.exam.get_exam_configs_by_subject", new_callable=AsyncMock) as mock_get:
@@ -708,18 +708,18 @@ async def test_retrieve_student_list_value_error(client, mock_auth):
 async def test_delete_exam_config_wrong_state(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, SessionState
+    from src.models.exam_config import ExamConfig, ExamState
     
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     
     response = await client.delete(f"/api/exams/config/{ec.id}")
     assert response.status_code == 400
-    assert "It must be in preparation state" in response.json()["detail"]
+    assert "It must be in 'preparing' or 'completed' state" in response.json()["detail"]
 
 @pytest.mark.asyncio
 async def test_delete_exam_config_value_error(client, mock_auth):

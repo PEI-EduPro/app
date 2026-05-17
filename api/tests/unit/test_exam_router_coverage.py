@@ -8,7 +8,7 @@ import os
 from unittest.mock import patch, AsyncMock, MagicMock
 from src.core.deps import get_current_user_info
 from src.main import app
-from src.models.exam_config import ExamConfig, GenerationStatus, SessionState
+from src.models.exam_config import ExamConfig, GenerationStatus, ExamState
 from src.models.subject import Subject
 from src.models.topic import Topic
 from src.models.exam import Exam
@@ -218,7 +218,7 @@ async def test_delete_config_not_found(client, mock_auth, session):
 
 @pytest.mark.asyncio
 async def test_delete_config_not_in_preparation(client, mock_auth, session):
-    """400 when session is not in PREPARATION state."""
+    """400 when session is not in PREPARING state."""
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     sub = Subject(name="Del Sub")
@@ -228,7 +228,7 @@ async def test_delete_config_not_in_preparation(client, mock_auth, session):
 
     ec = ExamConfig(
         subject_id=sub.id, fraction=0,
-        session_state=SessionState.RUNNING
+        state=ExamState.RUNNING
     )
     session.add(ec)
     await session.commit()
@@ -251,7 +251,7 @@ async def test_start_session_not_found(client, mock_auth, session):
 
 @pytest.mark.asyncio
 async def test_start_session_not_in_preparation(client, mock_auth, session):
-    """400 when session is not in PREPARATION state."""
+    """400 when session is not in PREPARING state."""
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     sub = Subject(name="Start Sub")
@@ -259,7 +259,7 @@ async def test_start_session_not_in_preparation(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -270,7 +270,7 @@ async def test_start_session_not_in_preparation(client, mock_auth, session):
 
 @pytest.mark.asyncio
 async def test_start_session_service_exception(client, mock_auth, session):
-    """500 when update_exam_session_state raises."""
+    """500 when transition_exam_config_state raises."""
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     sub = Subject(name="Start Sub2")
@@ -278,12 +278,12 @@ async def test_start_session_service_exception(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.PREPARATION)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.PREPARING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
 
-    with patch("src.routers.exam.update_exam_session_state", new_callable=AsyncMock,
+    with patch("src.routers.exam.transition_exam_config_state", new_callable=AsyncMock,
                side_effect=RuntimeError("db error")):
         response = await client.patch(f"/api/exams/{ec.id}/session/start")
     assert response.status_code == 500
@@ -338,7 +338,7 @@ async def test_associate_student_session_not_running(client, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.PREPARATION)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.PREPARING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -361,7 +361,7 @@ async def test_associate_student_invalid_qr(client, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -384,7 +384,7 @@ async def test_associate_student_service_exception(client, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -484,7 +484,7 @@ async def test_close_session_value_error(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -506,7 +506,7 @@ async def test_close_session_generic_exception(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -533,7 +533,7 @@ async def test_notify_students_config_not_found(client, mock_auth, session):
 
 @pytest.mark.asyncio
 async def test_notify_students_session_not_closed(client, mock_auth, session):
-    """400 when session is not CLOSED."""
+    """400 when session is not COMPLETED."""
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     sub = Subject(name="Notify Sub")
@@ -541,7 +541,7 @@ async def test_notify_students_session_not_closed(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.RUNNING)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -565,7 +565,7 @@ async def test_notify_students_unresolved_warnings(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.CLOSED)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.COMPLETED)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -593,7 +593,7 @@ async def test_notify_students_exam_not_ready(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.CLOSED)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.COMPLETED)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -629,7 +629,7 @@ async def test_notify_students_success(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.CLOSED)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.COMPLETED)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -665,7 +665,7 @@ async def test_notify_students_skips_exam_without_email(client, mock_auth, sessi
     await session.commit()
     await session.refresh(sub)
 
-    ec = ExamConfig(subject_id=sub.id, fraction=0, session_state=SessionState.CLOSED)
+    ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.COMPLETED)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)

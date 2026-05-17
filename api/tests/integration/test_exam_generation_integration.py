@@ -94,8 +94,8 @@ async def test_exam_generation_with_students_and_session_integration(client, moc
         assert student_data["67890"]["email"] == "bob@university.edu"
 
         # Verify session was initialized
-        from src.models.exam_config import SessionState
-        assert exam_config.session_state == SessionState.PREPARATION
+        from src.models.exam_config import ExamState
+        assert exam_config.state == ExamState.PREPARING
 
 
 @pytest.mark.asyncio
@@ -164,5 +164,5 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
         assert exam_config.nmec_name_list is None
 
         # Verify session was initialized
-        from src.models.exam_config import SessionState
-        assert exam_config.session_state == SessionState.PREPARATION
+        from src.models.exam_config import ExamState
+        assert exam_config.state == ExamState.PREPARING
