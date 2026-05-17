@@ -9,8 +9,10 @@ import { useStartExamSession } from "@/hooks/use-exams";
 
 export default function Step2Content({
   examConfigId,
+  disabled,
 }: {
   examConfigId: number;
+  disabled?: boolean;
 }) {
   const [vigilants, setVigilants] = useState<string[]>([]);
   const { data: professors } = useGetProfessors();
@@ -53,7 +55,7 @@ export default function Step2Content({
       </div>
       <Button
         className="self-start cursor-pointer"
-        disabled={startMutation.isPending}
+        disabled={disabled || startMutation.isPending}
         onClick={() => startMutation.mutate()}
       >
         Iniciar Exame

@@ -91,6 +91,7 @@ async def create_configs(
         fraction=exam_specs["fraction"],
         nmec_name_list=nmec_name_list,
         exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None),
+        exam_date=exam_specs.get("exam_date", None),
         num_versions=num_versions
     )
     session.add(exam_config)
@@ -1301,8 +1302,8 @@ async def close_exam_session_service(session: AsyncSession, exam_config_id: int)
     if exam_config.state != ExamState.RUNNING:
         raise ValueError(f"Exam session must be in running state to be closed. Current state: {exam_config.state}")
 
-    # 1. Update state to CLOSED_AND_CAPTURE
-    exam_config.state = ExamState.CLOSED_AND_CAPTURE
+    # 1. Update state to WARNING_HANDLING
+    exam_config.state = ExamState.WARNING_HANDLING
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -1381,7 +1382,8 @@ async def get_professor_exam_sessions(
             exam_config_id=ec.id,
             state=ec.state.value,
             role=role,
-            exam_name=ec.exam_name
+            exam_name=ec.exam_name,
+            exam_date=ec.exam_date
         ))
     
     return result

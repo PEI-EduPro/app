@@ -17,6 +17,16 @@ const tick = <CheckCircle2 className="h-6 w-6 text-green-500" />;
 const cross = <XCircle className="h-6 w-6 text-red-500" />;
 const clock = <Clock className="h-6 w-6 text-yellow-500" />;
 
+const STATE_STEP: Record<ExamWorkflowStatus, number> = {
+  preparing: 0,
+  running: 1,
+  closed_and_capture: 3,
+  warning_handling: 5,
+  validation: 6,
+  completed: 7,
+  sent: 7,
+};
+
 function getStepIcons(status: ExamWorkflowStatus | undefined) {
   switch (status) {
     case "preparing":
@@ -31,11 +41,15 @@ function getStepIcons(status: ExamWorkflowStatus | undefined) {
       return [tick, tick, undefined, tick, undefined, tick, cross, clock];
     case "completed":
       return [tick, tick, undefined, tick, undefined, tick, tick, clock];
-    case "sent":
-      return [tick, tick, undefined, tick, undefined, tick, tick, tick];
     default:
       return [tick, clock, undefined, clock, undefined, clock, clock, clock];
   }
+}
+
+function stepProgress(stepIndex: number, currentStep: number): 0 | 1 | 2 {
+  if (stepIndex < currentStep) return 2;
+  if (stepIndex === currentStep) return 1;
+  return 0;
 }
 
 const searchSchema = z.object({
@@ -57,10 +71,15 @@ function RouteComponent() {
   const { data: examConfig } = useGetExamConfigById(realExamId);
 
   const icons = getStepIcons(examConfig?.state);
+  const currentStep =
+    examConfig?.state != null ? STATE_STEP[examConfig.state] : -1;
 
   const associatedCount = examConfig?.associated_exams_count;
   const totalExams = examConfig?.total_exams ?? 0;
   const picturedCount = examConfig?.pictured_exams_count;
+
+  const step2Done = currentStep >= 1;
+  const step4Done = currentStep > 3;
 
   const steps = [
     {
@@ -71,7 +90,9 @@ function RouteComponent() {
     },
     {
       label: "Início do Exame",
-      description: <Step2Content examConfigId={realExamId} />,
+      description: (
+        <Step2Content examConfigId={realExamId} disabled={step2Done} />
+      ),
       action: icons[1],
       hint: "Inicia o exame e abre a sala de espera para os alunos. Defina os vigilantes antes de iniciar.",
     },
@@ -89,7 +110,9 @@ function RouteComponent() {
     },
     {
       label: "Termino do Exame",
-      description: <Step4Content examConfigId={realExamId} />,
+      description: (
+        <Step4Content examConfigId={realExamId} disabled={step4Done} />
+      ),
       action: icons[3],
       hint: "Termina o exame e fecha a sala de espera. Pode ser feito na aplicação móvel ou aqui.",
     },
@@ -149,6 +172,7 @@ function RouteComponent() {
                 index={i}
                 isLast={i === steps.length - 1}
                 noExpand={i === 2 || i === 4}
+                progress={stepProgress(i, currentStep)}
               />
             ))}
           </div>

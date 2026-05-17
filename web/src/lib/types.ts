@@ -23,7 +23,7 @@ export interface UserI {
 export interface NewExamConfigI {
   subject_id: number;
   fraction: number;
-  num_variations: number;
+  total_exams: number;
   num_versions: number;
   topics: string[];
   number_questions: Record<number, number>;
@@ -48,14 +48,13 @@ export type ExamWorkflowStatus =
   | "closed_and_capture"
   | "warning_handling"
   | "validation"
-  | "completed"
-  | "sent";
+  | "completed";
 
 export interface ExamConfigI {
   id: number;
   subject_id: number;
   fraction: number;
-  num_variations: number;
+  total_exams: number;
   num_versions: number;
   status: GenerationStatus;
   state: ExamWorkflowStatus;

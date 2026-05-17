@@ -19,10 +19,8 @@ export function ExamConfigCard({
   download?: boolean;
 }) {
   const fraction = examConfigData.fraction;
-  const num_variations =
-    "num_variations" in examConfigData
-      ? examConfigData.num_variations
-      : undefined;
+  const total_exams =
+    "total_exams" in examConfigData ? examConfigData.total_exams : undefined;
   const num_versions =
     "num_versions" in examConfigData ? examConfigData.num_versions : undefined;
 
@@ -57,11 +55,13 @@ export function ExamConfigCard({
             Configuração Geral
           </h3>
           <div className="grid grid-cols-3 gap-4 text-center">
-            {num_variations !== undefined && (
+            {total_exams !== undefined && (
               <div className="p-3 bg-white rounded-lg shadow-sm">
-                <p className="text-sm text-muted-foreground">Exames a gerar</p>
+                <p className="text-sm text-muted-foreground">
+                  {download ? "Exames a gerar" : "Total de Exames"}
+                </p>
                 <p className="text-2xl font-bold text-primary">
-                  {num_variations || 1}
+                  {total_exams || 1}
                 </p>
               </div>
             )}
