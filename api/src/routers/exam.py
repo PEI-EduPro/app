@@ -251,7 +251,7 @@ async def generate_exams_async(
             status=exam_config.status,
             state=exam_config.state,
             associations=exam_config.associations,
-            total_exams=len(exam_config.exams) if exam_config.exams else num_variations
+            total_exams=num_variations
         )
 
     except ValueError as ve:

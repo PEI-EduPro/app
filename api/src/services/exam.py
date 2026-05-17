@@ -736,17 +736,6 @@ async def get_exam_config_by_id(
     if not exam_config:
         return None
 
-    # Calculate counters
-    exam_config.total_exams = len(exam_config.exams)
-    
-    # associated_exams_count: Only if state >= running
-    if exam_config.state in [ExamState.RUNNING, ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
-        exam_config.associated_exams_count = sum(1 for e in exam_config.exams if e.nmec is not None)
-    
-    # pictured_exams_count: Only if state >= closed_and_capture
-    if exam_config.state in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
-        exam_config.pictured_exams_count = sum(1 for e in exam_config.exams if e.capture_path is not None)
-
     return exam_config
 
 

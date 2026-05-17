@@ -43,6 +43,34 @@ class ExamConfig(SQLModel, table=True):
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     exams: List["Exam"] = Relationship(back_populates="exam_config")
 
+    @property
+    def total_exams(self) -> int:
+        """Count of generated exams for this configuration."""
+        try:
+            return len(self.exams) if self.exams is not None else 0
+        except Exception:
+            return 0
+
+    @property
+    def associated_exams_count(self) -> Optional[int]:
+        """Count of exams that have been associated with a student."""
+        if self.state not in [ExamState.RUNNING, ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+            return None
+        try:
+            return sum(1 for e in self.exams if e.nmec is not None) if self.exams is not None else 0
+        except Exception:
+            return 0
+
+    @property
+    def pictured_exams_count(self) -> Optional[int]:
+        """Count of exams that have a capture path (OMR processed)."""
+        if self.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+            return None
+        try:
+            return sum(1 for e in self.exams if e.capture_path is not None) if self.exams is not None else 0
+        except Exception:
+            return 0
+
 # ExamConfig schemas
 class ExamConfigCreate(SQLModel):
     """Schema for creating a new exam configuration"""
