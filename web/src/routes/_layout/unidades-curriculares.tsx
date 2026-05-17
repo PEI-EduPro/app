@@ -7,11 +7,11 @@ import { Button } from "@/components/ui/button";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useGetUc, useDeleteUcById } from "@/hooks/use-ucs";
-import type { WaitingRoomStatusT } from "@/lib/types";
+import type { ExamWorkflowStatus } from "@/lib/types";
 import { createFileRoute } from "@tanstack/react-router";
 import { LoaderCircle, Plus, Search, Trash2 } from "lucide-react";
 import { useState } from "react";
-import { useGetWaitingRooms } from "@/hooks/use-waiting-rooms";
+import { useGetExamSessions } from "@/hooks/use-exams";
 
 export const Route = createFileRoute("/_layout/unidades-curriculares")({
   component: UCS,
@@ -21,14 +21,14 @@ function UCS() {
   const isMobile = useIsMobile();
   const { data, isLoading } = useGetUc({ enabled: !isMobile });
   const { data: waitingRooms = [], isLoading: waitingRoomsLoading } =
-    useGetWaitingRooms({ enabled: isMobile });
+    useGetExamSessions({ enabled: isMobile });
   const { keycloak } = useKeycloak();
   const isManager =
     (keycloak.tokenParsed?.realm_access?.roles || []).find(
       (e) => e == "manager",
     ) != undefined;
   const [search, setSearch] = useState("");
-  const [stateFilter, setStateFilter] = useState<WaitingRoomStatusT | "all">(
+  const [stateFilter, setStateFilter] = useState<ExamWorkflowStatus | "all">(
     "all",
   );
   const [selectionMode, setSelectionMode] = useState(false);
@@ -109,7 +109,7 @@ function UCS() {
         </div>
         {isMobile && (
           <div className="flex gap-2 mb-4 animate-fade-in-up">
-            {(["all", "running", "preparation", "closed"] as const).map((s) => (
+            {(["all", "running", "preparing", "closed_and_capture"] as const).map((s) => (
               <button
                 key={s}
                 onClick={() => setStateFilter(s)}
@@ -117,9 +117,9 @@ function UCS() {
                   stateFilter === s
                     ? s === "running"
                       ? "bg-green-600 text-white border-green-600"
-                      : s === "preparation"
+                      : s === "preparing"
                         ? "bg-yellow-500 text-white border-yellow-500"
-                        : s === "closed"
+                        : s === "closed_and_capture"
                           ? "bg-gray-500 text-white border-gray-500"
                           : "bg-primary text-primary-foreground border-primary"
                     : "bg-transparent text-muted-foreground border-border"
@@ -129,7 +129,7 @@ function UCS() {
                   ? "Todos"
                   : s === "running"
                     ? "Decorrer"
-                    : s === "preparation"
+                    : s === "preparing"
                       ? "Preparação"
                       : "Fechado"}
               </button>
@@ -158,7 +158,7 @@ function UCS() {
                     waitingRoomStatus={el.state}
                     label={`${el.subject_name} - ${el.exam_name}`}
                     srcImage={"/card-image.png"}
-                    id={el.waiting_room_id}
+                    id={el.exam_config_id}
                     key={index}
                     index={index}
                   />

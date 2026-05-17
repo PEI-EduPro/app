@@ -6,7 +6,7 @@ import {
   useGetExamsResponses,
   useValidateExam,
   useCorrectExam,
-} from "@/hooks/use-waiting-rooms";
+} from "@/hooks/use-exams";
 
 type Grid = Record<number, Record<OptionKey, boolean>>;
 const OPTIONS: OptionKey[] = ["a", "b", "c", "d"];

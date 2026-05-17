@@ -9,7 +9,7 @@ import Step4Content from "@/components/detalhes-exam/step4-fecho-exame";
 import Step6Content from "@/components/detalhes-exam/step6-correcao-associacao";
 import Step7Content from "@/components/detalhes-exam/step7-validacao-correcao";
 import Step8Content from "@/components/detalhes-exam/step8-lancamento-notas";
-import { useGetExamConfig } from "@/hooks/use-exams";
+import { useGetExamConfigById } from "@/hooks/use-exams";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import type { ExamWorkflowStatus } from "@/lib/types";
 
@@ -51,10 +51,8 @@ export const Route = createFileRoute("/_layout/detalhes-exame")({
 function RouteComponent() {
   const { examId, examName, ucId, ucName } = Route.useSearch();
   const realExamId = decodeId(examId);
-  const realUcId = decodeId(ucId);
 
-  const { data: examConfigs } = useGetExamConfig(realUcId);
-  const examConfig = examConfigs?.find((c) => c.id === realExamId);
+  const { data: examConfig } = useGetExamConfigById(realExamId);
 
   const icons = getStepIcons(examConfig?.state);
 

@@ -400,12 +400,21 @@ async def get_exam_config_endpoint(
         id=exam_config.id,
         subject_id=exam_config.subject_id,
         fraction=exam_config.fraction,
-        topic_configs=exam_config.topic_configs or [],
+        topic_configs=[
+            TopicConfigDTO(
+                id=tc.id,
+                topic_id=tc.topic_id,
+                topic_name=tc.topic.name if tc.topic else "",
+                num_questions=tc.num_questions,
+                relative_weight=tc.relative_weight,
+            )
+            for tc in (exam_config.topic_configs or [])
+        ],
         nmec_name_list=exam_config.nmec_name_list,
         num_versions=exam_config.num_versions,
         status=exam_config.status,
         state=exam_config.state,
-        associations=exam_config.associations,
+        associations=exam_config.associations or [],
         total_exams=exam_config.total_exams,
         associated_exams_count=exam_config.associated_exams_count,
         pictured_exams_count=exam_config.pictured_exams_count

@@ -13,7 +13,7 @@ import { CustomTable } from "@/components/custom-table";
 import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import QRCode from "react-qr-code";
-import { useGetWarnings, useResolveWarnings } from "@/hooks/use-waiting-rooms";
+import { useGetWarnings, useResolveWarnings } from "@/hooks/use-exams";
 
 type StudentRow = { id: string; nome: string; nmec: string; email: string };
 type BlockState = {

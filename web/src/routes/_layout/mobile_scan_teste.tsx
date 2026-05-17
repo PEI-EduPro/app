@@ -8,12 +8,12 @@ import z from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
 import {
-  useCloseWaitingRoom,
-  useGetWaitingRoomById,
-  useGetWaitingRoomMetrics,
+  useCloseExamSession,
+  useGetExamSessionInfo,
+  useGetExamSessionMetrics,
   usePostPairExamStudent,
-  useStartWaitingRoom,
-} from "@/hooks/use-waiting-rooms";
+  useStartExamSession,
+} from "@/hooks/use-exams";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,17 +49,17 @@ function RouteComponent() {
 
   const navigate = useNavigate();
 
-  const { data: roomDetails, isLoading } = useGetWaitingRoomById(realId);
+  const { data: roomDetails, isLoading } = useGetExamSessionInfo(realId);
 
-  const { data: metrics } = useGetWaitingRoomMetrics({
+  const { data: metrics } = useGetExamSessionMetrics({
     enabled: roomDetails?.role === "regent",
-    roomId: realId,
+    examConfigId: realId,
     refetchInterval: 5000,
   });
 
   const { mutate: postExamStudent } = usePostPairExamStudent(realId);
-  const { mutate: closeRoom } = useCloseWaitingRoom(realId);
-  const { mutate: startRoom } = useStartWaitingRoom(realId);
+  const { mutate: closeRoom } = useCloseExamSession(realId);
+  const { mutate: startRoom } = useStartExamSession(realId);
 
   const [canAssociate, setCanAssociate] = useState<boolean>(false);
   const [QRCode, setQRCode] = useState<string>("");
