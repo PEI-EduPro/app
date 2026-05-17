@@ -98,7 +98,7 @@ async def test_evaluate_batch_wrong_state(client, mock_auth, session):
     body = {"files": ["fakebase64string"]}
     response = await client.post(f"/api/exams/{ec.id}/session/evaluate", json=body)
     assert response.status_code == 400
-    assert "closed" in response.json()["detail"].lower()
+    assert "warning_handling" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
@@ -113,7 +113,7 @@ async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec1 = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
+    ec1 = await _setup_exam_config(session, sub.id, state=ExamState.WARNING_HANDLING)
     ec2 = await _setup_exam_config(session, sub.id)
     exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
 
@@ -138,7 +138,7 @@ async def test_evaluate_batch_success(client, mock_auth, session):
     await session.commit()
     await session.refresh(sub)
 
-    ec = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
+    ec = await _setup_exam_config(session, sub.id, state=ExamState.WARNING_HANDLING)
     exam_instance = await _setup_exam(session, ec.id)
 
     with patch("src.routers.exam.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode, \

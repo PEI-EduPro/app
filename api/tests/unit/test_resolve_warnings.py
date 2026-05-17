@@ -39,7 +39,7 @@ async def setup_data(session):
         "222": {"name": "Bob", "email": "bob@example.com"},
         "333": {"name": "Carol", "email": "carol@example.com"},
     }
-    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict), state=ExamState.CLOSED_AND_CAPTURE)
+    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict), state=ExamState.WARNING_HANDLING)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)

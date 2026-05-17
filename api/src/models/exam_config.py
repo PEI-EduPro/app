@@ -17,10 +17,10 @@ class GenerationStatus(str, Enum):
 class ExamState(str, Enum):
     PREPARING = "preparing"
     RUNNING = "running"
-    CLOSED_AND_CAPTURE = "closed_and_capture"
     WARNING_HANDLING = "warning_handling"
     VALIDATION = "validation"
     COMPLETED = "completed"
+    SENT = "sent"
 
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
@@ -31,6 +31,7 @@ class ExamConfig(SQLModel, table=True):
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
     exam_name: Optional[str] = Field(default=None, max_length=255)
+    exam_date: Optional[str] = Field(default=None, max_length=50)
     num_versions: int = Field(default=1)
     status: GenerationStatus = Field(default=GenerationStatus.PENDING)
     zip_path: Optional[str] = Field(default=None)
@@ -57,7 +58,7 @@ class ExamConfig(SQLModel, table=True):
     @property
     def associated_exams_count(self) -> Optional[int]:
         """Count of exams that have been associated with a student."""
-        if self.state not in [ExamState.RUNNING, ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        if self.state not in [ExamState.RUNNING, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED, ExamState.SENT]:
             return None
         try:
             return sum(1 for e in self.exams if e.nmec is not None) if self.exams is not None else 0
@@ -67,7 +68,7 @@ class ExamConfig(SQLModel, table=True):
     @property
     def pictured_exams_count(self) -> Optional[int]:
         """Count of exams that have a capture path (OMR processed)."""
-        if self.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        if self.state not in [ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED, ExamState.SENT]:
             return None
         try:
             return sum(1 for e in self.exams if e.capture_path is not None) if self.exams is not None else 0
@@ -93,6 +94,8 @@ class ExamConfigRead(SQLModel):
     id: int
     fraction: int
     subject_id: int
+    exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     status: GenerationStatus
     state: ExamState
     zip_path: Optional[str] = None
@@ -106,6 +109,8 @@ class ExamConfigResponse(SQLModel):
     id: int
     subject_id: int
     fraction: int
+    exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     topic_configs: List[TopicConfigDTO] = []
     nmec_name_list: Optional[str] = None
     num_versions: int = 1
@@ -152,11 +157,13 @@ class ProfessorExamSessionItem(BaseModel):
     state: str
     role: str
     exam_name: Optional[str]
+    exam_date: Optional[str]
 
 class ExamGenerateRequest(SQLModel):
     subject_id: int
     fraction: int
     exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     topics: List[str]
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]

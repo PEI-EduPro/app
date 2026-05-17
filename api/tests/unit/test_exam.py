@@ -597,6 +597,9 @@ async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session
     mock_config.fraction = 0
     mock_config.topic_configs = [mock_tc]
     mock_config.nmec_name_list = None
+    mock_config.exam_name = "Test Exam"
+    mock_config.exam_date = "2026-05-18"
+    mock_config.num_versions = 1
     mock_config.exams = []
     mock_config.status = GenerationStatus.COMPLETED
     mock_config.state = ExamState.PREPARING
@@ -719,8 +722,7 @@ async def test_delete_exam_config_wrong_state(client, mock_auth, session):
     
     response = await client.delete(f"/api/exams/config/{ec.id}")
     assert response.status_code == 400
-    assert "It must be in 'preparing' or 'completed' state" in response.json()["detail"]
-
+    assert "It must be in 'preparing' or 'sent' state" in response.json()["detail"]
 @pytest.mark.asyncio
 async def test_delete_exam_config_value_error(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth

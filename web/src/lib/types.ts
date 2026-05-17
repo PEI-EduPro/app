@@ -48,8 +48,7 @@ export type ExamWorkflowStatus =
   | "closed_and_capture"
   | "warning_handling"
   | "validation"
-  | "completed"
-  | "sent";
+  | "completed";
 
 export interface ExamConfigI {
   id: number;

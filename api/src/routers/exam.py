@@ -92,6 +92,8 @@ async def get_subject_exam_configs(
             id=config.id,
             subject_id=config.subject_id,
             fraction=config.fraction,
+            exam_name=config.exam_name,
+            exam_date=config.exam_date,
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
             num_versions=config.num_versions,
@@ -246,6 +248,8 @@ async def generate_exams_async(
             id=exam_config.id,
             subject_id=exam_config.subject_id,
             fraction=exam_config.fraction,
+            exam_name=exam_config.exam_name,
+            exam_date=exam_config.exam_date,
             topic_configs=topic_configs_dto,
             nmec_name_list=exam_config.nmec_name_list,
             num_versions=num_versions,
@@ -363,6 +367,8 @@ async def retrieve_student_list(
         id=exam_config.id,
         subject_id=exam_config.subject_id,
         fraction=exam_config.fraction,
+        exam_name=exam_config.exam_name,
+        exam_date=exam_config.exam_date,
         topic_configs=exam_config.topic_configs or [],
         nmec_name_list=exam_config.nmec_name_list,
         num_versions=exam_config.num_versions,
@@ -400,6 +406,8 @@ async def get_exam_config_endpoint(
         id=exam_config.id,
         subject_id=exam_config.subject_id,
         fraction=exam_config.fraction,
+        exam_name=exam_config.exam_name,
+        exam_date=exam_config.exam_date,
         topic_configs=[
             TopicConfigDTO(
                 id=tc.id,
@@ -442,10 +450,10 @@ async def delete_exam_config_endpoint(
     if not exam_config:
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
-    if exam_config.state not in [ExamState.PREPARING, ExamState.COMPLETED]:
+    if exam_config.state not in [ExamState.PREPARING, ExamState.SENT]:
          raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete exam configuration because its state is {exam_config.state}. It must be in 'preparing' or 'completed' state."
+                detail=f"Cannot delete exam configuration because its state is {exam_config.state}. It must be in 'preparing' or 'sent' state."
             )
 
     success = await delete_exam_config(session, exam_config_id)
@@ -807,8 +815,8 @@ async def evaluate_session_batch(
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
-    if exam_config.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'closed_and_capture' state. Current state: {exam_config.state}")
+    if exam_config.state not in [ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'warning_handling' state. Current state: {exam_config.state}")
 
     exam_data = []
     for b64_str in body.files:
@@ -866,5 +874,7 @@ async def notify_session_students(
                 await notify_student(session, exam, email_options.model_dump())
             except Exception as e:
                 logger.error(f"Failed to send email for exam {exam.id}: {e}")
+
+    await transition_exam_config_state(session, exam_config_id, ExamState.SENT)
 
     return {"message": "Notification process completed."}

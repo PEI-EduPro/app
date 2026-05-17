@@ -41,8 +41,6 @@ function getStepIcons(status: ExamWorkflowStatus | undefined) {
       return [tick, tick, undefined, tick, undefined, tick, cross, clock];
     case "completed":
       return [tick, tick, undefined, tick, undefined, tick, tick, clock];
-    case "sent":
-      return [tick, tick, undefined, tick, undefined, tick, tick, tick];
     default:
       return [tick, clock, undefined, clock, undefined, clock, clock, clock];
   }
