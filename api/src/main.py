@@ -67,14 +67,13 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 # Include routers
-from src.routers import user, subject, topic, question, question_option, exam, waiting_room, warning
+from src.routers import user, subject, topic, question, question_option, exam, warning
 app.include_router(user.router, prefix="/users", tags=["users"])
 app.include_router(subject.router, prefix="/subjects", tags=["subjects"])
 app.include_router(topic.router, prefix="/topics", tags=["topics"])
 app.include_router(question.router, prefix="/questions", tags=["questions"])
 app.include_router(question_option.router, prefix="/question-options", tags=["question-options"])
 app.include_router(exam.router, prefix="/exams", tags=["exams"])
-app.include_router(waiting_room.router, prefix="/waiting-rooms", tags=["waiting-rooms"])
 app.include_router(warning.router, prefix="/warnings", tags=["warnings"])
 
 @app.get("/health")

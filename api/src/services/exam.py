@@ -24,13 +24,20 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.keycloak import keycloak_client
 
 from src.models.exam import Exam
-from src.models.exam_config import ExamConfig, GenerationStatus
+from src.models.exam_config import (
+    ExamConfig, 
+    GenerationStatus, 
+    SessionState, 
+    ExamSessionInfoResponse, 
+    ExamSessionMetricsResponse, 
+    ProfessorExamSessionItem, 
+    StudentInfo
+)
 from src.models.question import Question
 from src.models.question_option import QuestionOption
 from src.models.subject import Subject
 from src.models.topic import Topic
 from src.models.topic_config import TopicConfig
-from src.models.waiting_room import WaitingRoom
 from src.models.warning import Warning
 
 
@@ -820,7 +827,7 @@ async def delete_exam_config(
     """
     Comprehensive deletion of an exam configuration and all related data.
     - Associated exams and their capture images.
-    - Associated waiting rooms and their Keycloak groups.
+    - Associated Keycloak groups.
     - Associated warnings.
     - The generated ZIP file.
     - The configuration itself and its topic configurations.
@@ -837,11 +844,7 @@ async def delete_exam_config(
     if not exam_config:
         return False
 
-    # 2. Fetch related WaitingRooms and Warnings
-    wr_stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
-    wr_result = await session.exec(wr_stmt)
-    waiting_rooms = list(wr_result.all())
-
+    # 2. Fetch related Warnings
     warning_stmt = select(Warning).where(Warning.exam_config_id == exam_config_id)
     warning_result = await session.exec(warning_stmt)
     warnings = list(warning_result.all())
@@ -864,25 +867,20 @@ async def delete_exam_config(
             except Exception as e:
                 logger.error(f"Failed to delete capture file {exam_item.capture_path}: {e}")
 
-    # 4. Delete Keycloak groups for each waiting room
-    for wr in waiting_rooms:
-        try:
-            success = await keycloak_client.delete_waiting_room_groups(wr.id)
-            if success:
-                logger.info(f"Deleted Keycloak groups for waiting room {wr.id}")
-            else:
-                logger.warning(f"Failed to delete Keycloak groups for waiting room {wr.id}")
-        except Exception as e:
-            logger.error(f"Error while deleting Keycloak groups for waiting room {wr.id}: {e}")
+    # 4. Delete Keycloak groups for the exam session
+    try:
+        success = await keycloak_client.delete_exam_session_groups(exam_config.id)
+        if success:
+            logger.info(f"Deleted Keycloak groups for exam config {exam_config.id}")
+        else:
+            logger.warning(f"Failed to delete Keycloak groups for exam config {exam_config.id}")
+    except Exception as e:
+        logger.error(f"Error while deleting Keycloak groups for exam config {exam_config.id}: {e}")
 
     # 5. Delete database records in order
     # Delete Warnings
     for w in warnings:
         await session.delete(w)
-    
-    # Delete WaitingRooms
-    for wr in waiting_rooms:
-        await session.delete(wr)
     
     # Delete Exams
     for exam_item in exam_config.exams:
@@ -1136,3 +1134,221 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
 
     return {"message": "Email enviado com sucesso"}
+async def update_exam_session_state(session: AsyncSession, exam_config_id: int, new_state: SessionState) -> Optional[ExamConfig]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+    
+    exam_config.session_state = new_state
+    session.add(exam_config)
+    await session.commit()
+    await session.refresh(exam_config)
+    return exam_config
+
+async def create_exam_session_groups_service(
+    session: AsyncSession,
+    exam_config_id: int,
+    regent_keycloak_id: str,
+    vigilant_keycloak_ids: List[str]
+):
+    """
+    Creates Keycloak groups for an exam session and assigns users.
+    Now tied directly to ExamConfig ID.
+    """
+    await keycloak_client.create_exam_session_groups(
+        exam_config_id=exam_config_id,
+        regent_keycloak_id=regent_keycloak_id,
+        vigilant_ids=vigilant_keycloak_ids
+    )
+
+async def get_exam_session_info_service(session: AsyncSession, exam_config_id: int, user_groups: List[str]) -> Optional[ExamSessionInfoResponse]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+
+    # Get Subject to get the name
+    subject = await session.get(Subject, exam_config.subject_id)
+    if not subject:
+        logger.warning(f"Subject not found for exam config {exam_config_id}")
+        return None
+        
+    exams = await get_exams_by_config_id(session, exam_config_id)
+    exam_ids = [exam.id for exam in exams]
+    
+    formatted_students = []
+    if exam_config.nmec_name_list:
+        try:
+            raw_students = json.loads(exam_config.nmec_name_list)
+
+            for nmec_key, student_data in raw_students.items():
+                formatted_students.append(
+                    StudentInfo(
+                        nmec = str(nmec_key),
+                        name = student_data.get("name", "Unknown")
+                    )
+                )
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
+
+    # Role extraction logic
+    user_role = "Unknown"
+    target_prefix = f"w{exam_config_id}/"
+    for raw_group in user_groups:
+        group = raw_group.lstrip("/")
+        # Check if the group is for THIS specific exam session
+        if group.startswith(target_prefix):
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                extracted_role = parts[1]
+                if extracted_role in ["regent", "vigilant"]:
+                    user_role = extracted_role
+                    break
+            
+    return ExamSessionInfoResponse(
+        id=exam_config.id,
+        subject_id=subject.id,
+        subject_name=subject.name,
+        session_state=exam_config.session_state,
+        associations=exam_config.associations,
+        student_list=formatted_students,
+        exam_ids=exam_ids,
+        total_students=len(formatted_students),
+        total_exams=len(exam_ids),
+        role = user_role
+    )
+
+async def associate_student_to_exam_service(
+    session: AsyncSession,
+    exam_config_id: int,
+    exam_id: int,
+    student_nmec: str
+) -> Optional[ExamConfig]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+
+    association_string = f"{exam_id}:{student_nmec}"
+    if association_string not in exam_config.associations:
+        exam_config.associations = [*exam_config.associations, association_string]
+        session.add(exam_config)
+        await session.commit()
+        await session.refresh(exam_config)
+
+    return exam_config
+
+async def get_exam_session_metrics_service(
+    session: AsyncSession,
+    exam_config_id: int
+) -> Optional[ExamSessionMetricsResponse]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+        
+    associated_exams = set()
+    associated_students = set()
+    
+    for assoc in exam_config.associations:
+        if ":" in assoc:
+            exam_id, student_nmec = assoc.split(":", 1)
+            associated_exams.add(exam_id)
+            associated_students.add(student_nmec)
+            
+    return ExamSessionMetricsResponse(
+        associated_exams_count=len(associated_exams),
+        associated_students_count=len(associated_students)
+    )
+
+async def close_exam_session_service(session: AsyncSession, exam_config_id: int) -> ExamConfig:
+    from src.services.warning import calculate_and_persist_warnings
+    
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
+
+    if exam_config.session_state not in [SessionState.RUNNING, SessionState.CLOSED]:
+        raise ValueError("Exam session must be in running or closed state to be closed.")
+
+    # 1. Update state to CLOSED
+    exam_config.session_state = SessionState.CLOSED
+    session.add(exam_config)
+    await session.commit()
+    await session.refresh(exam_config)
+
+    # 2. Load nmec-name mapping for warnings
+    nmec_to_name = {}
+    if exam_config.nmec_name_list:
+        try:
+            nmec_to_name = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
+
+    # 3. Detect conflicts, persist warnings, and write clean exam.nmec values
+    await calculate_and_persist_warnings(session, exam_config.id, exam_config.associations, nmec_to_name)
+
+    await session.commit()
+    await session.refresh(exam_config)
+
+    return exam_config
+
+async def get_professor_exam_sessions(
+    session: AsyncSession,
+    professor_keycloak_id: str,
+    professor_groups: List[str]
+) -> List[ProfessorExamSessionItem]:
+    """
+    Get all exam sessions where the professor is either a regent or vigilant.
+    """
+    # Extract exam config IDs and roles from groups
+    exam_config_ids_with_roles: Dict[int, str] = {}
+    
+    for group in professor_groups:
+        group = group.lstrip("/")
+
+        if group.startswith("w") and "/" in group:
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                wr_prefix, role = parts
+                if role in ["regent", "vigilant"]:
+                    try:
+                        exam_config_id = int(wr_prefix[1:])
+                        exam_config_ids_with_roles[exam_config_id] = role
+                    except ValueError:
+                        logger.warning(f"Invalid exam config ID in group: {group}")
+                        continue
+    
+    if not exam_config_ids_with_roles:
+        return []
+    
+    # Fetch all exam configs at once
+    stmt = (
+        select(ExamConfig)
+        .where(ExamConfig.id.in_(list(exam_config_ids_with_roles.keys())))
+        .options(selectinload(ExamConfig.exams))
+    )
+    results = await session.exec(stmt)
+    exam_configs = results.all()
+    
+    result: List[ProfessorExamSessionItem] = []
+    
+    for ec in exam_configs:
+        role = exam_config_ids_with_roles.get(ec.id)
+        if not role:
+            continue
+
+        if role == "vigilant" and ec.session_state.value != "running":
+            continue
+        
+        subject = await session.get(Subject, ec.subject_id)
+        if not subject:
+            continue
+        
+        result.append(ProfessorExamSessionItem(
+            subject_id=subject.id,
+            subject_name=subject.name,
+            exam_config_id=ec.id,
+            state=ec.session_state.value,
+            role=role,
+            exam_name=ec.exam_name
+        ))
+    
+    return result

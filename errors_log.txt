@@ -1,0 +1,82 @@
+================================================================= FAILURES =================================================================
+___________________________________________________________ test_complex_queries ___________________________________________________________
+
+session = <sqlalchemy.orm.session.AsyncSession object at 0x73b73e199340>
+
+    @pytest.mark.asyncio
+    async def test_complex_queries(session):
+        # get_topics_questions_and_options_by_subject_id (Hits 259-306)
+        sub = Subject(name="Math")
+        session.add(sub)
+        await session.commit()
+        await session.refresh(sub)
+    
+        topic = Topic(name="Algebra", subject_id=sub.id)
+        session.add(topic)
+        await session.commit()
+        await session.refresh(topic)
+    
+        q = Question(question_text="1+1?", topic_id=topic.id)
+        session.add(q)
+        await session.commit()
+        await session.refresh(q)
+    
+        opt1 = QuestionOption(option_text="2", value=True, question_id=q.id)
+        opt2 = QuestionOption(option_text="3", value=False, question_id=q.id)
+        session.add(opt1)
+        session.add(opt2)
+        await session.commit()
+    
+        res = await get_topics_questions_and_options_by_subject_id(session, sub.id)
+        assert res["subject_name"] == "Math"
+        assert topic.id in res["subject_topics"]
+        assert q.id in res["subject_topics"][topic.id]["topic_questions"]
+        assert res["subject_topics"][topic.id]["topic_questions"][q.id]["answer"] == opt1.id
+    
+        # Not found
+        res_nf = await get_topics_questions_and_options_by_subject_id(session, 99999)
+        assert res_nf == {}
+    
+        # get_all_subject_topics (Hits 309-318)
+>       res_topics = await get_all_subject_topics(session, sub.id)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_subject_service_direct.py:222: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+session = <sqlalchemy.orm.session.AsyncSession object at 0x73b73e199340>, subject_id = 1
+
+    async def get_all_subject_topics(session: AsyncSession, subject_id: int) -> List[Tuple[TopicPublic, int]]:
+        statement = (
+>           select(Topic, func.count(Question.id))
+                          ^^^^
+            .outerjoin(Question, Question.topic_id == Topic.id)
+            .where(Topic.subject_id == subject_id)
+            .group_by(Topic.id)
+        )
+E       NameError: name 'func' is not defined
+
+src/services/subject.py:310: NameError
+============================================================= warnings summary =============================================================
+src/core/settings.py:5
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class Settings(BaseSettings):
+
+src/models/subject.py:34
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/models/subject.py:34: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
+    class SubjectRead(BaseModel):
+
+.venv/lib/python3.12/site-packages/_pytest/config/__init__.py:1434
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/_pytest/config/__init__.py:1434: PytestConfigWarning: Unknown config option: timeout
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+tests/unit/test_exam_router_coverage.py::test_generate_async_value_error
+tests/unit/test_exam_router_coverage.py::test_associate_student_invalid_qr
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/fastapi/routing.py:328: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
+    return await dependant.call(**values)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================================================= short test summary info ==========================================================
+FAILED tests/unit/test_subject_service_direct.py::test_complex_queries - NameError: name 'func' is not defined
+=========================================== 1 failed, 348 passed, 5 warnings in 63.44s (0:01:03) ===========================================

@@ -117,21 +117,19 @@ async def test_manage_professor_permissions_remove(keycloak_client):
     admin_mock.group_user_remove.assert_called_with("uid", "tid")
 
 @pytest.mark.asyncio
-async def test_create_waiting_room_groups_add_regent_fail(keycloak_client):
+async def test_create_exam_session_groups_add_regent_fail(keycloak_client):
     admin_mock = keycloak_client.admin_client
     admin_mock.create_group.side_effect = lambda payload: f"id-{payload['name']}"
     admin_mock.group_user_add.side_effect = Exception("Add regent fail")
     # This should log the error but return True if it doesn't re-raise
-    # Wait, the code says: `except Exception as e: logger.error(...); raise e` in the outer block
-    # but the regent add is inside a nested try-except that just logs.
-    result = await keycloak_client.create_waiting_room_groups(1, "r1", [])
+    result = await keycloak_client.create_exam_session_groups(1, "r1", [])
     assert result is True
 
 @pytest.mark.asyncio
-async def test_delete_waiting_room_groups_partial_not_found(keycloak_client):
+async def test_delete_exam_session_groups_partial_not_found(keycloak_client):
     admin_mock = keycloak_client.admin_client
     admin_mock.get_groups.return_value = [{"name": "w1/regent", "id": "rid"}]
     # w1/vigilant not found
-    result = await keycloak_client.delete_waiting_room_groups(1)
+    result = await keycloak_client.delete_exam_session_groups(1)
     assert result is True
     admin_mock.delete_group.assert_called_once_with("rid")

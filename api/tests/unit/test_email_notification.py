@@ -481,3 +481,49 @@ async def test_notify_student_missing_capture_file(session, mock_subject, mock_e
         render_call_args = mock_html_template.render.call_args[1]
         assert render_call_args["has_capture"] is False
         mock_server.send_message.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_notify_student_attachment_read_error(session, mock_subject, mock_exam_config, mock_exam_with_results, email_options_all_enabled):
+    """Test notification handles file read errors for attachments gracefully"""
+    session.add(mock_subject)
+    await session.commit()
+    await session.refresh(mock_subject)
+    
+    mock_exam_config.subject_id = mock_subject.id
+    session.add(mock_exam_config)
+    await session.commit()
+    await session.refresh(mock_exam_config)
+    
+    mock_exam_with_results.exam_config_id = mock_exam_config.id
+    session.add(mock_exam_with_results)
+    await session.commit()
+    
+    with patch("src.services.exam.get_exam_config_by_id", new_callable=AsyncMock) as mock_get_config, \
+         patch.object(session, "get", new_callable=AsyncMock) as mock_session_get, \
+         patch("src.services.exam.jinja_env.get_template") as mock_template, \
+         patch("src.services.exam.smtplib.SMTP") as mock_smtp, \
+         patch("src.services.exam.os.getenv") as mock_getenv, \
+         patch("os.path.exists", return_value=True), \
+         patch("builtins.open", side_effect=IOError("Could not read file")):
+        
+        mock_getenv.side_effect = lambda key, default=None: {
+            "SENDER_EMAIL": "test@example.com",
+            "EMAIL_NOTIFIER_PORT": "587",
+            "EMAIL_CODE": "test_password"
+        }.get(key, default)
+        
+        mock_get_config.return_value = mock_exam_config
+        mock_session_get.return_value = mock_subject
+        
+        mock_html_template = MagicMock()
+        mock_html_template.render.return_value = "<html>Test Email</html>"
+        mock_template.return_value = mock_html_template
+        
+        mock_server = MagicMock()
+        mock_smtp.return_value = mock_server
+        
+        # Should not raise exception, but log and continue
+        result = await notify_student(session, mock_exam_with_results, email_options_all_enabled)
+        assert result == {"message": "Email enviado com sucesso"}
+        mock_server.send_message.assert_called_once()

@@ -2,6 +2,8 @@
 from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
+from pydantic import BaseModel
+from sqlalchemy import Column, JSON
 
 
 from enum import Enum
@@ -11,6 +13,11 @@ class GenerationStatus(str, Enum):
     PROCESSING = "PROCESSING"
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
+
+class SessionState(str, Enum):
+    PREPARATION = "preparation"
+    RUNNING = "running"
+    CLOSED = "closed"
 
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
@@ -24,6 +31,10 @@ class ExamConfig(SQLModel, table=True):
     num_versions: int = Field(default=1)
     status: GenerationStatus = Field(default=GenerationStatus.PENDING)
     zip_path: Optional[str] = Field(default=None)
+    
+    # Merged from WaitingRoom
+    session_state: SessionState = Field(default=SessionState.PREPARATION)
+    associations: List[str] = Field(default=[], sa_column=Column(JSON))
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
@@ -55,11 +66,47 @@ class ExamConfigResponse(SQLModel):
     id: int
     subject_id: int
     fraction: int
-    topic_configs: List[TopicConfigDTO]
-    nmec_name_list: Optional[str]
-    num_variations: int
-    status: GenerationStatus
+    topic_configs: List[TopicConfigDTO] = []
+    nmec_name_list: Optional[str] = None
+    num_variations: int = 0
+    status: GenerationStatus = GenerationStatus.PENDING
+    session_state: SessionState = SessionState.PREPARATION
+    associations: List[str] = []
 
+class ExamSessionResponse(BaseModel):
+    id: int
+    session_state: SessionState
+    associations: List[str]
+    message: str
+
+class StudentInfo(BaseModel):
+    name: str
+    nmec: str
+
+class ExamSessionInfoResponse(BaseModel):
+    id: int
+    subject_id: int
+    subject_name: str
+    session_state: SessionState
+    associations: List[str]
+    student_list: List[StudentInfo]
+    exam_ids: List[int]
+    total_students: int
+    total_exams: int
+    role: str
+
+class ExamSessionMetricsResponse(BaseModel):
+    associated_exams_count: int
+    associated_students_count: int
+
+class ProfessorExamSessionItem(BaseModel):
+    """Information about a single exam session for a professor."""
+    subject_id: int
+    subject_name: str
+    exam_config_id: int
+    state: str
+    role: str
+    exam_name: Optional[str]
 
 class ExamGenerateRequest(SQLModel):
     subject_id: int
@@ -73,3 +120,11 @@ class ExamGenerateRequest(SQLModel):
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []
     vigilant_keycloak_ids: List[str] = []
+
+class EvaluateBatchRequest(BaseModel):
+    """Request for evaluation. List of files"""
+    files: List[str]
+
+class QRCodeToNMEC(BaseModel):
+    qr: str
+    nmec: int

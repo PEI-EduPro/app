@@ -200,12 +200,12 @@ async def test_manage_professor_permissions(keycloak_client):
     admin_mock.group_user_add.assert_any_call("user-id", "edit-id")
 
 @pytest.mark.asyncio
-async def test_create_waiting_room_groups(keycloak_client):
+async def test_create_exam_session_groups(keycloak_client):
     admin_mock = keycloak_client.admin_client
     admin_mock.create_group.side_effect = lambda payload: f"id-{payload['name']}"
     
-    result = await keycloak_client.create_waiting_room_groups(
-        waiting_room_id=5,
+    result = await keycloak_client.create_exam_session_groups(
+        exam_config_id=5,
         regent_keycloak_id="r1",
         vigilant_ids=["v1", "v2"]
     )
@@ -364,12 +364,12 @@ async def test_manage_professor_permissions_no_groups(keycloak_client):
     assert result is True
 
 @pytest.mark.asyncio
-async def test_create_waiting_room_groups_exception(keycloak_client):
+async def test_create_exam_session_groups_exception(keycloak_client):
     admin_mock = keycloak_client.admin_client
     admin_mock.create_group.side_effect = Exception("WR error")
     # This one raises the exception after logging
     with pytest.raises(Exception, match="WR error"):
-        await keycloak_client.create_waiting_room_groups(1, "r", [])
+        await keycloak_client.create_exam_session_groups(1, "r", [])
 
 @pytest.mark.asyncio
 async def test_get_subject_students_no_group(keycloak_client):

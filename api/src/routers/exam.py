@@ -10,14 +10,27 @@ from sqlalchemy.orm import selectinload
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
+from src import utils
 from src.core.db import get_session, async_session
 from src.core.deps import get_current_user_info, verify_permission
 from src.models.common import MessageResponse
+from src.models.email_options import EmailOptionsPayload
 from src.models.exam import CorrectByHandRequest
-from src.models.exam_config import ExamConfigResponse, GenerationStatus
+from src.models.exam_config import (
+    ExamConfig,
+    ExamConfigResponse, 
+    GenerationStatus, 
+    SessionState, 
+    ExamSessionResponse, 
+    ExamSessionInfoResponse, 
+    ExamSessionMetricsResponse, 
+    ProfessorExamSessionItem, 
+    EvaluateBatchRequest, 
+    QRCodeToNMEC
+)
 from src.models.topic_config import TopicConfig, TopicConfigDTO
 from src.models.user import User
-from src.models.waiting_room import WaitingRoom, WaitingRoomState
+from src.models.warning import Warning
 from src.services.exam import (
     build_exam_questions,
     correct_by_hand,
@@ -32,8 +45,16 @@ from src.services.exam import (
     get_latest_exam_config_id,
     get_subject_id_by_exam_config_id,
     process_student_list_csv,
+    create_exam_session_groups_service,
+    update_exam_session_state,
+    get_exam_session_info_service,
+    associate_student_to_exam_service,
+    get_exam_session_metrics_service,
+    close_exam_session_service,
+    get_professor_exam_sessions,
+    notify_student
 )
-from src.services.waiting_room import get_waiting_room, create_waiting_room_service
+from src.services.omr import evaluate_exam
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -72,7 +93,9 @@ async def get_subject_exam_configs(
             topic_configs=topic_configs_dto,
             nmec_name_list=config.nmec_name_list,
             num_variations=len(config.exams) if config.exams is not None else 0,
-            status=config.status
+            status=config.status,
+            session_state=config.session_state,
+            associations=config.associations
         ))
 
     return response
@@ -112,7 +135,7 @@ async def generate_exams(
         # Get the created exam_config_id from the service
         exam_config_id = await get_latest_exam_config_id(session, subject_id)
 
-        await create_waiting_room_service(
+        await create_exam_session_groups_service(
             session=session,
             exam_config_id=exam_config_id,
             regent_keycloak_id=user_info.user_id,
@@ -178,7 +201,7 @@ async def generate_exams_async(
         if not vigilant_keycloak_ids:
             vigilant_keycloak_ids = []
         
-        await create_waiting_room_service(
+        await create_exam_session_groups_service(
             session=session,
             exam_config_id=exam_config.id,
             regent_keycloak_id=user_info.user_id,
@@ -221,7 +244,9 @@ async def generate_exams_async(
             topic_configs=topic_configs_dto,
             nmec_name_list=exam_config.nmec_name_list,
             num_variations=num_variations,
-            status=exam_config.status
+            status=exam_config.status,
+            session_state=exam_config.session_state,
+            associations=exam_config.associations
         )
 
     except ValueError as ve:
@@ -335,7 +360,9 @@ async def retrieve_student_list(
         topic_configs=exam_config.topic_configs or [],
         nmec_name_list=exam_config.nmec_name_list,
         num_variations=len(exam_config.exams) if exam_config.exams is not None else 0,
-        status=exam_config.status
+        status=exam_config.status,
+        session_state=exam_config.session_state,
+        associations=exam_config.associations
     )
 
 
@@ -355,32 +382,25 @@ async def delete_exam_config_endpoint(
 
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
-    # Check if associated waiting rooms are in PREPARATION state
-    # In theory, there is only one waiting room for the exam config
-    wr_stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
-    wr_result = await session.exec(wr_stmt)
-    waiting_rooms = wr_result.all()
-    
-    for wr in waiting_rooms:
-        if wr.state != WaitingRoomState.PREPARATION:
-            raise HTTPException(
+    # Check if session is in PREPARATION state
+    exam_config = await session.get(ExamConfig, exam_config_id)
+    if not exam_config:
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    if exam_config.session_state != SessionState.PREPARATION:
+         raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete exam configuration because its waiting room is in {wr.state} state. It must be in preparation state."
+                detail=f"Cannot delete exam configuration because its session is in {exam_config.session_state} state. It must be in preparation state."
             )
-    
-    # The previous check is missing another passing clause.
-    # If the entire exam process has already been completed, aka, the students already got their grades
-    # It should be possible to delete an exam_config.
-    # With that said, that is dependent on another implementation. So I am leaving this comment here
-    # To remember in the future to do so.
 
     success = await delete_exam_config(session, exam_config_id)
+
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
     
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-# Deprecated: use POST /api/waiting-rooms/{waiting_room_id}/evaluate instead
+# Deprecated: use POST /api/exams/{exam_config_id}/session/evaluate instead
 # @router.post("/evaluate")
 # async def evaluate_exam_omr(...)
 
@@ -413,21 +433,20 @@ async def validate_exam(
     return {"status": "success"}
 
 
-@router.get("/{waiting_room_id}/all_exams_info")
+@router.get("/{exam_config_id}/all_exams_info")
 async def get_all_exams_info(
-    waiting_room_id: int,
+    exam_config_id: int,
     user_info: User = Depends(get_current_user_info),
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Get info for all exams in an exam configuration, identified by waiting room ID.
+    Get info for all exams in an exam configuration.
     Returns a list of exam info objects with grade, questions breakdown, capture (base64) and correction status.
     Only accessible by the regent of the subject.
     """
-    waiting_room = await get_waiting_room(session, waiting_room_id)
-    if not waiting_room:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Waiting room not found.")
-    exam_config_id = waiting_room.exam_config_id
+    exam_config = await session.get(ExamConfig, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
     subject_id = await get_subject_id_by_exam_config_id(exam_config_id, session)
     verify_permission(user_info, [f"/s{subject_id}/regent"])
@@ -538,3 +557,257 @@ async def correct_by_hand_job(
         "grade": updated.grade,
         "questions": build_exam_questions(updated, fraction),
     }
+
+# --- Exam Session (formerly Waiting Room) Endpoints ---
+
+@router.patch("/{exam_config_id}/session/start", response_model=ExamSessionResponse)
+async def start_exam_session(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Start an exam session (transition from preparation to running).
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if exam_config.session_state != SessionState.PREPARATION:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam session must be in preparation state to be started.")
+
+    try:
+        updated = await update_exam_session_state(session, exam_config_id, SessionState.RUNNING)
+        return ExamSessionResponse(
+            id=updated.id,
+            session_state=updated.session_state,
+            associations=updated.associations,
+            message="Exam session started successfully."
+        )
+    except Exception as e:
+        logger.error(f"Failed to start exam session: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to start exam session")
+
+@router.get("/{exam_config_id}/session/info", response_model=ExamSessionInfoResponse)
+async def get_exam_session_info(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all information regarding the exam session.
+    """
+    verify_permission(user_info, [f"/w{exam_config_id}/vigilant", f"/w{exam_config_id}/regent"])
+
+    try:
+        info = await get_exam_session_info_service(session, exam_config_id, user_info.groups)
+        if not info:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+        return info
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve exam session info: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve session info")
+
+@router.post("/{exam_config_id}/session/student_to_exam", response_model=MessageResponse)
+async def associate_student_to_exam_endpoint(
+    exam_config_id: int,
+    qrcode_to_nmec: QRCodeToNMEC,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Associate a student to an exam during a running session.
+    """
+    verify_permission(user_info, [f"/w{exam_config_id}/vigilant", f"/w{exam_config_id}/regent"])
+
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+        
+    if exam_config.session_state != SessionState.RUNNING:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam session must be in running state.")
+
+    try:
+        exam_id = int(qrcode_to_nmec.qr)
+        student_nmec = qrcode_to_nmec.nmec
+        await associate_student_to_exam_service(
+            session=session,
+            exam_config_id=exam_config_id,
+            exam_id=exam_id,
+            student_nmec=str(student_nmec)
+        )
+        return {"message": "Student associated successfully."}
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Invalid exam ID format.")
+    except Exception as e:
+        logger.error(f"Failed to associate student: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to associate student")
+
+@router.get("/{exam_config_id}/session/metrics", response_model=ExamSessionMetricsResponse)
+async def get_exam_session_metrics(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get real-time metrics for an ongoing exam session.
+    """
+    verify_permission(user_info, [f"/w{exam_config_id}/vigilant", f"/w{exam_config_id}/regent"])
+
+    try:
+        metrics = await get_exam_session_metrics_service(session, exam_config_id)
+        if not metrics:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+        return metrics
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve session metrics: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve metrics")
+
+@router.get("/professor/my-exam-sessions", response_model=list[ProfessorExamSessionItem])
+async def list_professor_exam_sessions(
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all exam sessions where the professor is either a regent or vigilant.
+    """
+    if "professor" not in user_info.realm_roles:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Requires professor role.")
+
+    try:
+        return await get_professor_exam_sessions(session, user_info.user_id, user_info.groups)
+    except Exception as e:
+        logger.error(f"Failed to retrieve professor exam sessions: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve sessions")
+
+@router.patch("/{exam_config_id}/session/close", response_model=ExamSessionResponse)
+async def close_exam_session(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Close an exam session and process associations.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    try:
+        updated = await close_exam_session_service(session, exam_config_id)
+        return ExamSessionResponse(
+            id=updated.id,
+            session_state=updated.session_state,
+            associations=updated.associations,
+            message="Exam session closed successfully."
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(ve))
+    except Exception as e:
+        logger.error(f"Failed to close session: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to close session")
+
+@router.get("/{exam_config_id}/session/submitted_count")
+async def get_submitted_count(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get the number of exams submitted for OMR.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    exams = await get_exams_by_config_id(session, exam_config_id)
+    count = sum(1 for e in exams if e.capture_path is not None)
+    return {"submitted_count": count}
+
+@router.post("/{exam_config_id}/session/evaluate")
+async def evaluate_session_batch(
+    exam_config_id: int,
+    body: EvaluateBatchRequest,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Evaluate a batch of exams using OMR.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if exam_config.session_state != SessionState.CLOSED:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Session must be closed.")
+
+    exam_data = []
+    for b64_str in body.files:
+        exam_id, temp_file_path = utils.decode_base64_image(b64_str)
+        exam_instance = await get_exam_by_id(session, exam_id)
+        if not exam_instance or exam_instance.exam_config_id != exam_config_id:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid exam {exam_id}")
+        exam_data.append((exam_instance, temp_file_path))
+
+    results = []
+    for exam_instance, temp_file_path in exam_data:
+        try:
+            await evaluate_exam(session, exam_instance, temp_file_path)
+            results.append({"exam_id": exam_instance.id, "status": "success"})
+        except Exception as e:
+            logger.error(f"Error evaluating exam {exam_instance.id}: {e}")
+            results.append({"exam_id": exam_instance.id, "status": "error", "detail": str(e)})
+
+    return {"results": results}
+
+@router.post("/{exam_config_id}/session/notify-students")
+async def notify_session_students(
+    exam_config_id: int,
+    email_options: EmailOptionsPayload,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Notify students about their scores.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=404, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if exam_config.session_state != SessionState.CLOSED:
+        raise HTTPException(status_code=400, detail="Session must be closed.")
+    
+    stmt = select(Warning).where(Warning.exam_config_id == exam_config_id)
+    result = await session.exec(stmt)
+    if result.all():
+        raise HTTPException(status_code=400, detail="Resolve warnings first.")
+    
+    exams = await get_exams_by_config_id(session, exam_config_id)
+    
+    for exam in exams:
+        if exam.student_email and exam.nmec:
+            if not (exam.capture_path and exam.grade is not None and exam.validated):
+                raise HTTPException(status_code=400, detail=f"Exam {exam.id} not ready.")
+
+    for exam in exams:
+        if exam.student_email and exam.nmec:
+            try:
+                await notify_student(session, exam, email_options.model_dump())
+            except Exception as e:
+                logger.error(f"Failed to send email for exam {exam.id}: {e}")
+
+    return {"message": "Notification process completed."}
