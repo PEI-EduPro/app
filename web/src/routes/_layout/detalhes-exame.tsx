@@ -11,6 +11,32 @@ import Step7Content from "@/components/detalhes-exam/step7-validacao-correcao";
 import Step8Content from "@/components/detalhes-exam/step8-lancamento-notas";
 import { useGetExamConfig } from "@/hooks/use-exams";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import type { ExamWorkflowStatus } from "@/lib/types";
+
+const tick = <CheckCircle2 className="h-6 w-6 text-green-500" />;
+const cross = <XCircle className="h-6 w-6 text-red-500" />;
+const clock = <Clock className="h-6 w-6 text-yellow-500" />;
+
+function getStepIcons(status: ExamWorkflowStatus | undefined) {
+  switch (status) {
+    case "preparing":
+      return [tick, cross, clock, clock, clock, clock, clock, clock];
+    case "running":
+      return [tick, tick, clock, cross, clock, clock, clock, clock];
+    case "closed_and_capture":
+      return [tick, tick, clock, tick, clock, clock, clock, clock];
+    case "warning_handling":
+      return [tick, tick, clock, tick, clock, cross, clock, clock];
+    case "validation":
+      return [tick, tick, clock, tick, clock, tick, cross, clock];
+    case "completed":
+      return [tick, tick, clock, tick, clock, tick, tick, clock];
+    case "sent":
+      return [tick, tick, tick, tick, tick, tick, tick, tick];
+    default:
+      return [tick, clock, clock, clock, clock, clock, clock, clock];
+  }
+}
 
 const searchSchema = z.object({
   examId: z.string(),
@@ -32,59 +58,71 @@ function RouteComponent() {
   const { data: examConfigs } = useGetExamConfig(realUcId);
   const examConfig = examConfigs?.find((c) => c.id === realExamId);
 
+  const icons = getStepIcons(examConfig?.state);
+
+  const associatedCount = examConfig?.associated_exams_count;
+  const totalExams = examConfig?.total_exams ?? 0;
+  const picturedCount = examConfig?.pictured_exams_count;
+
   const steps = [
     {
       label: "Configuração e Criação do Exame",
-      description: <Step1Content examConfig={examConfig} />,
-      action: <CheckCircle2 className="h-6 w-6 text-green-500" />,
+      description: examConfig && <Step1Content examConfig={examConfig} />,
+      action: icons[0],
       hint: "Visualização da configuração do exame (número de variantes, versões, desconto por resposta errada e distribuição de questões por tópico) e transferência de zip com testes e ficheiro de respostas.",
     },
     {
       label: "Início do Exame",
-      description: <Step2Content />,
-      action: <CheckCircle2 className="h-6 w-6 text-green-500" />,
+      description: <Step2Content examConfigId={realExamId} />,
+      action: icons[1],
       hint: "Inicia o exame e abre a sala de espera para os alunos. Defina os vigilantes antes de iniciar.",
     },
     {
       label: "Associação Exame-Aluno",
-      action: (
-        <span className="text-sm font-semibold text-muted-foreground">
-          25/100
-        </span>
-      ),
+      action:
+        associatedCount != null ? (
+          <span className="text-sm font-semibold text-muted-foreground">
+            {associatedCount}/{totalExams}
+          </span>
+        ) : (
+          icons[2]
+        ),
       hint: "Realizada exclusivamente na aplicação móvel. Os vigilantes associam cada aluno ao respetivo exame físico. O número indica os alunos já associados.",
     },
     {
       label: "Termino do Exame",
-      description: <Step4Content />,
-      action: <CheckCircle2 className="h-6 w-6 text-green-500" />,
+      description: <Step4Content examConfigId={realExamId} />,
+      action: icons[3],
       hint: "Termina o exame e fecha a sala de espera. Pode ser feito na aplicação móvel ou aqui.",
     },
     {
       label: "Captura e Upload dos Exames",
-      action: (
-        <span className="text-sm font-semibold text-muted-foreground">
-          25/100
-        </span>
-      ),
+      action:
+        picturedCount != null ? (
+          <span className="text-sm font-semibold text-muted-foreground">
+            {picturedCount}/{totalExams}
+          </span>
+        ) : (
+          icons[4]
+        ),
       hint: "Realizada exclusivamente na aplicação móvel. Os vigilantes fotografam e fazem upload das folhas de resposta. O número indica os exames já carregados.",
     },
     {
       label: "Correção de Problemas de Associação",
-      description: <Step6Content />,
-      action: <XCircle className="h-6 w-6 text-red-500" />,
+      description: <Step6Content examConfigId={realExamId} />,
+      action: icons[5],
       hint: "Resolução manual de casos em que a associação entre aluno e exame falhou ou ficou ambígua.",
     },
     {
       label: "Validação Manual da Correção",
-      description: <Step7Content />,
-      action: <Clock className="h-6 w-6 text-yellow-500" />,
+      description: <Step7Content examConfigId={realExamId} />,
+      action: icons[6],
       hint: "Revisão e validação manual das correções automáticas antes de lançar as notas.",
     },
     {
       label: "Lançamento de Notas",
-      description: <Step8Content />,
-      action: <Clock className="h-6 w-6 text-yellow-500" />,
+      description: <Step8Content examConfigId={realExamId} />,
+      action: icons[7],
       hint: "Envio das notas finais por email para os alunos. Configure o conteúdo do email, lance as notas e tranfira um pdf com as notas.",
     },
   ];

@@ -12,9 +12,11 @@ function isNewExamConfig(data: ExamConfigCardData): data is NewExamConfigI {
 export function ExamConfigCard({
   examConfigData,
   allTopics = [],
+  download = false,
 }: {
   examConfigData: ExamConfigCardData;
   allTopics?: GetTopicI[];
+  download?: boolean;
 }) {
   const fraction = examConfigData.fraction;
   const num_variations =
@@ -22,9 +24,7 @@ export function ExamConfigCard({
       ? examConfigData.num_variations
       : undefined;
   const num_versions =
-    "num_versions" in examConfigData
-      ? examConfigData.num_versions
-      : undefined;
+    "num_versions" in examConfigData ? examConfigData.num_versions : undefined;
 
   // Normalise to a common list of { id, name, numQuestions, relativeQuotation }
   const topicRows = isNewExamConfig(examConfigData)
@@ -111,10 +111,12 @@ export function ExamConfigCard({
               <p className="text-sm text-muted-foreground">Total de questões</p>
               <p className="text-xl font-bold">{totalQuestions}</p>
             </div>
-            <Button variant="outline" className="cursor-pointer">
-              <Download className="h-4 w-4 mr-2" />
-              Descarregar Exames
-            </Button>
+            {download && (
+              <Button variant="outline" className="cursor-pointer">
+                <Download className="h-4 w-4 mr-2" />
+                Descarregar Exames
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>

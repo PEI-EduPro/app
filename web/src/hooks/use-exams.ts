@@ -6,7 +6,6 @@ import {
   type PostEmailI,
 } from "@/lib/types";
 import { toast } from "sonner";
-
 const saveFile = (blob: Blob, filename: string) => {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -93,10 +92,10 @@ const useDeleteExamConfig = (ucId: number) => {
   });
 };
 
-const usePostGrades = (wrId: number) =>
+const usePostGrades = (examConfigId: number) =>
   useMutation({
     mutationFn: (options: PostEmailI) =>
-      apiClient.post(`/waiting-rooms/${wrId}/notify-students`, options),
+      apiClient.post(`/exams/${examConfigId}/session/notify-students`, options),
     onSuccess: () => {
       toast.dismiss();
       toast.success("Notas lançadas com sucesso!", {
@@ -113,10 +112,44 @@ const usePostGrades = (wrId: number) =>
     },
   });
 
+const useStartExamSession = (examConfigId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.patch(`/exams/${examConfigId}/session/start`, {}),
+    onSuccess: () => {
+      toast.success("Exame iniciado com sucesso!", { position: "top-right" });
+      queryClient.invalidateQueries({ queryKey: ["examConfig"] });
+    },
+    onError: () => toast.error("Erro ao iniciar o exame.", { position: "top-right" }),
+  });
+};
+
+const useCloseExamSession = (examConfigId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.patch(`/exams/${examConfigId}/session/close`, {}),
+    onSuccess: () => {
+      toast.success("Exame fechado com sucesso!", { position: "top-right" });
+      queryClient.invalidateQueries({ queryKey: ["examConfig"] });
+    },
+    onError: () => toast.error("Erro ao fechar o exame.", { position: "top-right" }),
+  });
+};
+
+const useDownloadGrades = (examConfigId: number) =>
+  useMutation({
+    mutationFn: () => apiClient.download(`/exams/${examConfigId}/grades/download`),
+    onSuccess: (blob: Blob) => saveFile(blob, "notas.ods"),
+    onError: () => toast.error("Erro ao descarregar as notas.", { position: "top-right" }),
+  });
+
 export {
   useAddExamConfig,
   useDownloadExamConfig,
   useGetExamConfig,
   useDeleteExamConfig,
   usePostGrades,
+  useStartExamSession,
+  useCloseExamSession,
+  useDownloadGrades,
 };

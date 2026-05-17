@@ -8,9 +8,14 @@ import {
   EmailPreview,
   TOGGLE_OPTIONS,
   type ToggleKey,
-} from "../cenas_pa_mail/email-preview.tsx";
+} from "../cenas_pa_mail/email-preview";
+import { usePostGrades, useDownloadGrades } from "@/hooks/use-exams";
 
-export default function Step8Content() {
+export default function Step8Content({
+  examConfigId,
+}: {
+  examConfigId: number;
+}) {
   const [options, setOptions] = useState<Record<ToggleKey, boolean>>({
     exam_capture: false,
     question_weights: false,
@@ -18,6 +23,8 @@ export default function Step8Content() {
     cumulative_score_table: false,
   });
   const [customText, setCustomText] = useState("");
+  const postGrades = usePostGrades(examConfigId);
+  const downloadGrades = useDownloadGrades(examConfigId);
 
   return (
     <div className="flex gap-8 h-[82vh]">
@@ -48,8 +55,19 @@ export default function Step8Content() {
           />
         </div>
 
-        <Button className="self-start cursor-pointer">Lançar Notas</Button>
-        <Button variant="outline" className="self-start cursor-pointer">
+        <Button
+          className="self-start cursor-pointer"
+          disabled={postGrades.isPending}
+          onClick={() => postGrades.mutate(options)}
+        >
+          Lançar Notas
+        </Button>
+        <Button
+          variant="outline"
+          className="self-start cursor-pointer"
+          disabled={downloadGrades.isPending}
+          onClick={() => downloadGrades.mutate()}
+        >
           <Download className="h-4 w-4 mr-2" />
           Exportar Notas (.pdf)
         </Button>

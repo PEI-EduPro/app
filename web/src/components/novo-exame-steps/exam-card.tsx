@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 
 const statusConfig: Record<
   GenerationStatus,
@@ -58,8 +59,14 @@ export default function ExamCard({
   return (
     <>
       <Card
-        className="group flex flex-row items-center gap-4 px-5 py-4 cursor-pointer border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
+        className={cn(
+          "group flex flex-row items-center gap-4 px-5 py-4 border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 transition-all duration-200 overflow-hidden",
+          examConfig.status === "COMPLETED"
+            ? "cursor-pointer hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5"
+            : "cursor-default opacity-70",
+        )}
         onClick={() =>
+          examConfig.status === "COMPLETED" &&
           navigate({
             to: "/detalhes-exame",
             search: { examId: encodeId(id), examName: name, ucId, ucName },
