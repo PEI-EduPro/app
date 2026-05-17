@@ -29,7 +29,7 @@ def upgrade() -> None:
     # Note: we need to handle the enum conversion carefully if types are different
     op.execute("""
         UPDATE exam_config 
-        SET session_state = CAST(waiting_room.state AS text)::sessionstate,
+        SET session_state = LOWER(CAST(waiting_room.state AS text))::sessionstate,
             associations = waiting_room.associations
         FROM waiting_room
         WHERE waiting_room.exam_config_id = exam_config.id

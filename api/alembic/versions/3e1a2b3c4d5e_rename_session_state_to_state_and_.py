@@ -27,8 +27,8 @@ def upgrade() -> None:
     # 2. Rename the column session_state to state
     op.alter_column('exam_config', 'session_state', new_column_name='state')
 
-    # 3. Migrate data and change type
-    # We use a CASE statement to map old states to new ones
+    # 3. Drop old default, migrate type, set new default
+    op.execute("ALTER TABLE exam_config ALTER COLUMN state DROP DEFAULT")
     op.execute("""
         ALTER TABLE exam_config 
         ALTER COLUMN state TYPE examstate 
@@ -41,9 +41,7 @@ def upgrade() -> None:
             END
         )
     """)
-    
-    # 4. Set the new default
-    op.execute("ALTER TABLE exam_config ALTER COLUMN state SET DEFAULT 'preparing'")
+    op.execute("ALTER TABLE exam_config ALTER COLUMN state SET DEFAULT 'preparing'::examstate")
 
 
 def downgrade() -> None:
