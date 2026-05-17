@@ -1,5 +1,7 @@
 import type { GetTopicI, NewExamConfigI, ExamConfigI } from "@/lib/types";
 import { Card, CardContent } from "../ui/card";
+import { Button } from "../ui/button";
+import { Download } from "lucide-react";
 
 type ExamConfigCardData = NewExamConfigI | ExamConfigI;
 
@@ -109,6 +111,10 @@ export function ExamConfigCard({
               <p className="text-sm text-muted-foreground">Total de questões</p>
               <p className="text-xl font-bold">{totalQuestions}</p>
             </div>
+            <Button variant="outline" className="cursor-pointer">
+              <Download className="h-4 w-4 mr-2" />
+              Descarregar Exames
+            </Button>
           </div>
         </div>
       </CardContent>

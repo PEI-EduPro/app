@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useRef, useState, type ReactNode } from "react";
+import HelperHoverCard from "@/components/helper-hover-card";
 
 export function StepItem({
   step,
@@ -12,6 +13,7 @@ export function StepItem({
     label: string;
     description?: ReactNode;
     action?: ReactNode;
+    hint?: ReactNode;
   };
   index: number;
   isLast: boolean;
@@ -55,14 +57,21 @@ export function StepItem({
             !noExpand && "cursor-pointer",
           )}
         >
-          <span
-            className={cn(
-              "font-semibold text-[#2E2B50] transition-colors text-lg",
-              !noExpand && "group-hover:text-[#3263A8]",
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "font-semibold text-[#2E2B50] transition-colors text-lg",
+                !noExpand && "group-hover:text-[#3263A8]",
+              )}
+            >
+              {step.label}
+            </span>
+            {step.hint && (
+              <div className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                <HelperHoverCard content={step.hint} side="right" iconClassName="h-5 w-5 text-muted-foreground" />
+              </div>
             )}
-          >
-            {step.label}
-          </span>
+          </div>
           <div className="flex items-center gap-4">
             {step.action && (
               <div onClick={(e) => e.stopPropagation()}>{step.action}</div>

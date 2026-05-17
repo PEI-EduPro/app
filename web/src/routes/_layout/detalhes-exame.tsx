@@ -24,17 +24,6 @@ export const Route = createFileRoute("/_layout/detalhes-exame")({
   component: RouteComponent,
 });
 
-const STEP_LABELS = [
-  "Configuração e Criação do Exame",
-  "Início do Exame",
-  "Associação Exame-Aluno",
-  "Termino do Exame",
-  "Captura e Upload dos Exames",
-  "Correção de Problemas de Associação",
-  "Validação Manual da Correção",
-  "Lançamento de Notas",
-];
-
 function RouteComponent() {
   const { examId, examName, ucId, ucName } = Route.useSearch();
   const realExamId = decodeId(examId);
@@ -45,50 +34,58 @@ function RouteComponent() {
 
   const steps = [
     {
-      label: STEP_LABELS[0],
+      label: "Configuração e Criação do Exame",
       description: <Step1Content examConfig={examConfig} />,
       action: <CheckCircle2 className="h-6 w-6 text-green-500" />,
+      hint: "Visualização da configuração do exame (número de variantes, versões, desconto por resposta errada e distribuição de questões por tópico) e transferência de zip com testes e ficheiro de respostas.",
     },
     {
-      label: STEP_LABELS[1],
+      label: "Início do Exame",
       description: <Step2Content />,
       action: <CheckCircle2 className="h-6 w-6 text-green-500" />,
+      hint: "Inicia o exame e abre a sala de espera para os alunos. Defina os vigilantes antes de iniciar.",
     },
     {
-      label: STEP_LABELS[2],
+      label: "Associação Exame-Aluno",
       action: (
         <span className="text-sm font-semibold text-muted-foreground">
           25/100
         </span>
       ),
+      hint: "Realizada exclusivamente na aplicação móvel. Os vigilantes associam cada aluno ao respetivo exame físico. O número indica os alunos já associados.",
     },
     {
-      label: STEP_LABELS[3],
+      label: "Termino do Exame",
       description: <Step4Content />,
       action: <CheckCircle2 className="h-6 w-6 text-green-500" />,
+      hint: "Termina o exame e fecha a sala de espera. Pode ser feito na aplicação móvel ou aqui.",
     },
     {
-      label: STEP_LABELS[4],
+      label: "Captura e Upload dos Exames",
       action: (
         <span className="text-sm font-semibold text-muted-foreground">
           25/100
         </span>
       ),
+      hint: "Realizada exclusivamente na aplicação móvel. Os vigilantes fotografam e fazem upload das folhas de resposta. O número indica os exames já carregados.",
     },
     {
-      label: STEP_LABELS[5],
+      label: "Correção de Problemas de Associação",
       description: <Step6Content />,
       action: <XCircle className="h-6 w-6 text-red-500" />,
+      hint: "Resolução manual de casos em que a associação entre aluno e exame falhou ou ficou ambígua.",
     },
     {
-      label: STEP_LABELS[6],
+      label: "Validação Manual da Correção",
       description: <Step7Content />,
       action: <Clock className="h-6 w-6 text-yellow-500" />,
+      hint: "Revisão e validação manual das correções automáticas antes de lançar as notas.",
     },
     {
-      label: STEP_LABELS[7],
+      label: "Lançamento de Notas",
       description: <Step8Content />,
       action: <Clock className="h-6 w-6 text-yellow-500" />,
+      hint: "Envio das notas finais por email para os alunos. Configure o conteúdo do email, lance as notas e tranfira um pdf com as notas.",
     },
   ];
 
