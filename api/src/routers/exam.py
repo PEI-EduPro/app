@@ -433,10 +433,10 @@ async def delete_exam_config_endpoint(
     if not exam_config:
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
-    if exam_config.state not in [ExamState.PREPARING, ExamState.COMPLETED]:
+    if exam_config.state not in [ExamState.PREPARING, ExamState.SENT]:
          raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete exam configuration because its state is {exam_config.state}. It must be in 'preparing' or 'completed' state."
+                detail=f"Cannot delete exam configuration because its state is {exam_config.state}. It must be in 'preparing' or 'sent' state."
             )
 
     success = await delete_exam_config(session, exam_config_id)
@@ -798,8 +798,8 @@ async def evaluate_session_batch(
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
-    if exam_config.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'closed_and_capture' state. Current state: {exam_config.state}")
+    if exam_config.state not in [ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'warning_handling' state. Current state: {exam_config.state}")
 
     exam_data = []
     for b64_str in body.files:
@@ -857,5 +857,7 @@ async def notify_session_students(
                 await notify_student(session, exam, email_options.model_dump())
             except Exception as e:
                 logger.error(f"Failed to send email for exam {exam.id}: {e}")
+
+    await transition_exam_config_state(session, exam_config_id, ExamState.SENT)
 
     return {"message": "Notification process completed."}

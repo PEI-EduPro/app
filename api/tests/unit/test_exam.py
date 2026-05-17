@@ -719,8 +719,7 @@ async def test_delete_exam_config_wrong_state(client, mock_auth, session):
     
     response = await client.delete(f"/api/exams/config/{ec.id}")
     assert response.status_code == 400
-    assert "It must be in 'preparing' or 'completed' state" in response.json()["detail"]
-
+    assert "It must be in 'preparing' or 'sent' state" in response.json()["detail"]
 @pytest.mark.asyncio
 async def test_delete_exam_config_value_error(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth

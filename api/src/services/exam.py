@@ -1301,8 +1301,8 @@ async def close_exam_session_service(session: AsyncSession, exam_config_id: int)
     if exam_config.state != ExamState.RUNNING:
         raise ValueError(f"Exam session must be in running state to be closed. Current state: {exam_config.state}")
 
-    # 1. Update state to CLOSED_AND_CAPTURE
-    exam_config.state = ExamState.CLOSED_AND_CAPTURE
+    # 1. Update state to WARNING_HANDLING
+    exam_config.state = ExamState.WARNING_HANDLING
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)

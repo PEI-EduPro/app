@@ -17,10 +17,10 @@ class GenerationStatus(str, Enum):
 class ExamState(str, Enum):
     PREPARING = "preparing"
     RUNNING = "running"
-    CLOSED_AND_CAPTURE = "closed_and_capture"
     WARNING_HANDLING = "warning_handling"
     VALIDATION = "validation"
     COMPLETED = "completed"
+    SENT = "sent"
 
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
@@ -57,7 +57,7 @@ class ExamConfig(SQLModel, table=True):
     @property
     def associated_exams_count(self) -> Optional[int]:
         """Count of exams that have been associated with a student."""
-        if self.state not in [ExamState.RUNNING, ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        if self.state not in [ExamState.RUNNING, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED, ExamState.SENT]:
             return None
         try:
             return sum(1 for e in self.exams if e.nmec is not None) if self.exams is not None else 0
@@ -67,7 +67,7 @@ class ExamConfig(SQLModel, table=True):
     @property
     def pictured_exams_count(self) -> Optional[int]:
         """Count of exams that have a capture path (OMR processed)."""
-        if self.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        if self.state not in [ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED, ExamState.SENT]:
             return None
         try:
             return sum(1 for e in self.exams if e.capture_path is not None) if self.exams is not None else 0
