@@ -20,21 +20,21 @@ const clock = <Clock className="h-6 w-6 text-yellow-500" />;
 function getStepIcons(status: ExamWorkflowStatus | undefined) {
   switch (status) {
     case "preparing":
-      return [tick, cross, clock, clock, clock, clock, clock, clock];
+      return [tick, cross, undefined, clock, undefined, clock, clock, clock];
     case "running":
-      return [tick, tick, clock, cross, clock, clock, clock, clock];
+      return [tick, tick, undefined, cross, undefined, clock, clock, clock];
     case "closed_and_capture":
-      return [tick, tick, clock, tick, clock, clock, clock, clock];
+      return [tick, tick, undefined, tick, undefined, clock, clock, clock];
     case "warning_handling":
-      return [tick, tick, clock, tick, clock, cross, clock, clock];
+      return [tick, tick, undefined, tick, undefined, cross, clock, clock];
     case "validation":
-      return [tick, tick, clock, tick, clock, tick, cross, clock];
+      return [tick, tick, undefined, tick, undefined, tick, cross, clock];
     case "completed":
-      return [tick, tick, clock, tick, clock, tick, tick, clock];
+      return [tick, tick, undefined, tick, undefined, tick, tick, clock];
     case "sent":
-      return [tick, tick, tick, tick, tick, tick, tick, tick];
+      return [tick, tick, undefined, tick, undefined, tick, tick, tick];
     default:
-      return [tick, clock, clock, clock, clock, clock, clock, clock];
+      return [tick, clock, undefined, clock, undefined, clock, clock, clock];
   }
 }
 

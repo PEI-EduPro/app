@@ -3,7 +3,7 @@ from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
 from pydantic import BaseModel
-from sqlalchemy import Column, JSON
+from sqlalchemy import Column, JSON, Enum as SAEnum
 
 
 from enum import Enum
@@ -36,7 +36,10 @@ class ExamConfig(SQLModel, table=True):
     zip_path: Optional[str] = Field(default=None)
     
     # Merged from WaitingRoom
-    state: ExamState = Field(default=ExamState.PREPARING)
+    state: ExamState = Field(
+        default=ExamState.PREPARING,
+        sa_column=Column(SAEnum(ExamState, values_callable=lambda x: [e.value for e in x], name="examstate"))
+    )
     associations: List[str] = Field(default=[], sa_column=Column(JSON))
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",

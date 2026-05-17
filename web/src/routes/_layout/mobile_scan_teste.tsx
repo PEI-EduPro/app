@@ -74,7 +74,7 @@ function RouteComponent() {
     <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Scan de Exames"}
-        crumbs={[{ name: "Salas", link: "/unidades-curriculares" }]}
+        crumbs={[{ name: "Exames", link: "/unidades-curriculares" }]}
       />
 
       <h1 className="font-rubik text-center text-base font-bold text-foreground mb-2 animate-fade-in-up truncate">
@@ -146,12 +146,33 @@ function RouteComponent() {
                     </AlertDialogContent>
                   </AlertDialog>
                 ) : (
-                  <Button
-                    className="cursor-pointer h-auto px-4 py-2 bg-[#41B5C0] text-white hover:bg-[#41B5C0]/80 font-semibold"
-                    onClick={() => startRoom()}
-                  >
-                    Abrir Exame
-                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="cursor-pointer h-auto px-4 py-2 bg-[#41B5C0] text-white hover:bg-[#41B5C0]/80 font-semibold">
+                        Abrir Exame
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Abrir Exame</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Ao abrir o exame os utilizadores poderão começar a fazer scan dos códigos QR e associar os testes aos alunos. Deseja continuar?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                        <AlertDialogCancel variant="outline" size="lg" className="cursor-pointer">
+                          Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          size="lg"
+                          className="cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/80"
+                          onClick={() => startRoom()}
+                        >
+                          Abrir
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 )}
               </div>
             )}

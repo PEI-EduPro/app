@@ -10,7 +10,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { DownloadIcon, Trash2Icon } from "lucide-react";
+import { Trash2Icon } from "lucide-react";
 import type { ExamConfigI, GenerationStatus } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -30,7 +30,7 @@ const statusConfig: Record<
   COMPLETED: { label: "Concluído", variant: "outline" },
   FAILED: { label: "Falhado", variant: "destructive" },
 };
-import { useDeleteExamConfig, useDownloadExamConfig } from "@/hooks/use-exams";
+import { useDeleteExamConfig } from "@/hooks/use-exams";
 import { decodeId, encodeId } from "@/lib/id-encoder";
 
 export default function ExamCard({
@@ -48,7 +48,6 @@ export default function ExamCard({
 }) {
   const navigate = useNavigate();
   const deleteMutation = useDeleteExamConfig(decodeId(ucId));
-  const downloadMutation = useDownloadExamConfig();
 
   const totalQuestions =
     examConfig.topic_configs?.reduce(
@@ -117,21 +116,6 @@ export default function ExamCard({
             </p>
           </div>
         </div>
-
-        {examConfig.status === "COMPLETED" && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              downloadMutation.mutate(id);
-            }}
-            disabled={downloadMutation.isPending}
-            className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-primary hover:bg-primary/10 rounded-full"
-          >
-            <DownloadIcon className="h-4 w-4" />
-          </Button>
-        )}
 
         <AlertDialog>
           <AlertDialogTrigger asChild>

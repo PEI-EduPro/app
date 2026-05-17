@@ -92,7 +92,7 @@ function RouteComponent() {
     <div className="py-3.5 px-4 w-full flex flex-col min-h-screen">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Detalhes"}
-        crumbs={[{ name: "Salas", link: "/unidades-curriculares" }]}
+        crumbs={[{ name: "Exames", link: "/unidades-curriculares" }]}
       />
 
       <div className="flex flex-col items-center flex-1 gap-4">
