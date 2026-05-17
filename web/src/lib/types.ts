@@ -47,6 +47,7 @@ export interface ExamConfigI {
   subject_id: number;
   fraction: number;
   num_variations: number;
+  num_versions: number;
   status: GenerationStatus;
   topic_configs: {
     topic_id: number;

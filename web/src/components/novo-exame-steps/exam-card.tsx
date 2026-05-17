@@ -10,14 +10,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { DownloadIcon, Trash2Icon } from "lucide-react";
-import { useCallback, useState } from "react";
 import type { ExamConfigI, GenerationStatus } from "@/lib/types";
-import { ExamConfigCard } from "./exam-config-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useNavigate } from "@tanstack/react-router";
 
 const statusConfig: Record<
   GenerationStatus,
@@ -32,22 +30,22 @@ const statusConfig: Record<
   FAILED: { label: "Falhado", variant: "destructive" },
 };
 import { useDeleteExamConfig, useDownloadExamConfig } from "@/hooks/use-exams";
-import { decodeId } from "@/lib/id-encoder";
+import { decodeId, encodeId } from "@/lib/id-encoder";
 
 export default function ExamCard({
   name,
   examConfig,
   ucId,
+  ucName,
   id,
 }: {
   id: number;
   name: string;
   ucId: string;
+  ucName: string;
   examConfig: ExamConfigI;
 }) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
-  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  const navigate = useNavigate();
   const deleteMutation = useDeleteExamConfig(decodeId(ucId));
   const downloadMutation = useDownloadExamConfig();
 
@@ -61,7 +59,12 @@ export default function ExamCard({
     <>
       <Card
         className="group flex flex-row items-center gap-4 px-5 py-4 cursor-pointer border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
-        onClick={handleOpenModal}
+        onClick={() =>
+          navigate({
+            to: "/detalhes-exame",
+            search: { examId: encodeId(id), examName: name, ucId, ucName },
+          })
+        }
       >
         <div className="shrink-0 w-1 self-stretch rounded-full bg-linear-to-b from-[#41B5C0] to-[#3263A8]" />
 
@@ -165,14 +168,6 @@ export default function ExamCard({
           </AlertDialogContent>
         </AlertDialog>
       </Card>
-
-      {isModalOpen && (
-        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-          <DialogContent className="max-w-lg p-0 overflow-y-auto max-h-[90vh]">
-            <ExamConfigCard examConfigData={examConfig} />
-          </DialogContent>
-        </Dialog>
-      )}
     </>
   );
 }

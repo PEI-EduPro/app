@@ -19,6 +19,10 @@ export function ExamConfigCard({
     "num_variations" in examConfigData
       ? examConfigData.num_variations
       : undefined;
+  const num_versions =
+    "num_versions" in examConfigData
+      ? examConfigData.num_versions
+      : undefined;
 
   // Normalise to a common list of { id, name, numQuestions, relativeQuotation }
   const topicRows = isNewExamConfig(examConfigData)
@@ -50,12 +54,20 @@ export function ExamConfigCard({
           <h3 className="text-lg font-semibold text-center mb-3">
             Configuração Geral
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-center">
+          <div className="grid grid-cols-3 gap-4 text-center">
             {num_variations !== undefined && (
               <div className="p-3 bg-white rounded-lg shadow-sm">
                 <p className="text-sm text-muted-foreground">Exames a gerar</p>
                 <p className="text-2xl font-bold text-primary">
                   {num_variations || 1}
+                </p>
+              </div>
+            )}
+            {num_versions !== undefined && (
+              <div className="p-3 bg-white rounded-lg shadow-sm">
+                <p className="text-sm text-muted-foreground">Versões</p>
+                <p className="text-2xl font-bold text-primary">
+                  {num_versions || 1}
                 </p>
               </div>
             )}

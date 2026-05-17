@@ -19,7 +19,13 @@ import type { GenerationStatus } from "@/lib/types";
 
 type StatusFilter = "all" | GenerationStatus;
 
-export default function ExamesTab({ realId }: { realId: number }) {
+export default function ExamesTab({
+  realId,
+  ucName,
+}: {
+  realId: number;
+  ucName: string;
+}) {
   const { data: examConfigs } = useGetExamConfig(realId);
   const { data: topics } = useGetUCTopics(realId);
 
@@ -105,6 +111,7 @@ export default function ExamesTab({ realId }: { realId: number }) {
             id={el.id}
             name={`Exame ${(indexMap.get(el.id) ?? 0) + 1}`}
             ucId={encodeId(realId)}
+            ucName={ucName}
             key={el.id}
             examConfig={el}
           />
