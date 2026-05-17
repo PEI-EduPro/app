@@ -18,9 +18,10 @@ from src.models.email_options import EmailOptionsPayload
 from src.models.exam import CorrectByHandRequest
 from src.models.exam_config import (
     ExamConfig,
+    ExamConfigRead,
     ExamConfigResponse, 
     GenerationStatus, 
-    SessionState, 
+    ExamState, 
     ExamSessionResponse, 
     ExamSessionInfoResponse, 
     ExamSessionMetricsResponse, 
@@ -46,7 +47,7 @@ from src.services.exam import (
     get_subject_id_by_exam_config_id,
     process_student_list_csv,
     create_exam_session_groups_service,
-    update_exam_session_state,
+    transition_exam_config_state,
     get_exam_session_info_service,
     associate_student_to_exam_service,
     get_exam_session_metrics_service,
@@ -94,8 +95,11 @@ async def get_subject_exam_configs(
             nmec_name_list=config.nmec_name_list,
             num_variations=len(config.exams) if config.exams is not None else 0,
             status=config.status,
-            session_state=config.session_state,
-            associations=config.associations
+            state=config.state,
+            associations=config.associations,
+            total_exams=config.total_exams,
+            associated_exams_count=config.associated_exams_count,
+            pictured_exams_count=config.pictured_exams_count
         ))
 
     return response
@@ -245,8 +249,9 @@ async def generate_exams_async(
             nmec_name_list=exam_config.nmec_name_list,
             num_variations=num_variations,
             status=exam_config.status,
-            session_state=exam_config.session_state,
-            associations=exam_config.associations
+            state=exam_config.state,
+            associations=exam_config.associations,
+            total_exams=len(exam_config.exams) if exam_config.exams else num_variations
         )
 
     except ValueError as ve:
@@ -361,8 +366,11 @@ async def retrieve_student_list(
         nmec_name_list=exam_config.nmec_name_list,
         num_variations=len(exam_config.exams) if exam_config.exams is not None else 0,
         status=exam_config.status,
-        session_state=exam_config.session_state,
-        associations=exam_config.associations
+        state=exam_config.state,
+        associations=exam_config.associations,
+        total_exams=exam_config.total_exams,
+        associated_exams_count=exam_config.associated_exams_count,
+        pictured_exams_count=exam_config.pictured_exams_count
     )
 
 
@@ -382,15 +390,15 @@ async def delete_exam_config_endpoint(
 
     verify_permission(user_info, [f"/s{subject_id}/regent"])
 
-    # Check if session is in PREPARATION state
+    # Check if session is in PREPARING or COMPLETED state
     exam_config = await session.get(ExamConfig, exam_config_id)
     if not exam_config:
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
-    if exam_config.session_state != SessionState.PREPARATION:
+    if exam_config.state not in [ExamState.PREPARING, ExamState.COMPLETED]:
          raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot delete exam configuration because its session is in {exam_config.session_state} state. It must be in preparation state."
+                detail=f"Cannot delete exam configuration because its state is {exam_config.state}. It must be in 'preparing' or 'completed' state."
             )
 
     success = await delete_exam_config(session, exam_config_id)
@@ -567,7 +575,7 @@ async def start_exam_session(
     session: AsyncSession = Depends(get_session)
 ):
     """
-    Start an exam session (transition from preparation to running).
+    Start an exam session (transition from preparing to running).
     """
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
@@ -575,14 +583,14 @@ async def start_exam_session(
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
-    if exam_config.session_state != SessionState.PREPARATION:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam session must be in preparation state to be started.")
+    if exam_config.state != ExamState.PREPARING:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam session must be in 'preparing' state to be started.")
 
     try:
-        updated = await update_exam_session_state(session, exam_config_id, SessionState.RUNNING)
+        updated = await transition_exam_config_state(session, exam_config_id, ExamState.RUNNING)
         return ExamSessionResponse(
             id=updated.id,
-            session_state=updated.session_state,
+            state=updated.state,
             associations=updated.associations,
             message="Exam session started successfully."
         )
@@ -628,8 +636,8 @@ async def associate_student_to_exam_endpoint(
     if not exam_config:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
         
-    if exam_config.session_state != SessionState.RUNNING:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam session must be in running state.")
+    if exam_config.state != ExamState.RUNNING:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Student association is only allowed during the 'running' state. Current state: {exam_config.state}")
 
     try:
         exam_id = int(qrcode_to_nmec.qr)
@@ -705,7 +713,7 @@ async def close_exam_session(
         updated = await close_exam_session_service(session, exam_config_id)
         return ExamSessionResponse(
             id=updated.id,
-            session_state=updated.session_state,
+            state=updated.state,
             associations=updated.associations,
             message="Exam session closed successfully."
         )
@@ -750,8 +758,8 @@ async def evaluate_session_batch(
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
-    if exam_config.session_state != SessionState.CLOSED:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Session must be closed.")
+    if exam_config.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'closed_and_capture' state. Current state: {exam_config.state}")
 
     exam_data = []
     for b64_str in body.files:
@@ -788,8 +796,8 @@ async def notify_session_students(
 
     verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
 
-    if exam_config.session_state != SessionState.CLOSED:
-        raise HTTPException(status_code=400, detail="Session must be closed.")
+    if exam_config.state != ExamState.COMPLETED:
+        raise HTTPException(status_code=400, detail="Exam must be in 'completed' state to notify students.")
     
     stmt = select(Warning).where(Warning.exam_config_id == exam_config_id)
     result = await session.exec(stmt)

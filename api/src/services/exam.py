@@ -1249,7 +1249,7 @@ async def get_exam_session_info_service(session: AsyncSession, exam_config_id: i
         id=exam_config.id,
         subject_id=subject.id,
         subject_name=subject.name,
-        session_state=exam_config.state,
+        state=exam_config.state,
         associations=exam_config.associations,
         student_list=formatted_students,
         exam_ids=exam_ids,

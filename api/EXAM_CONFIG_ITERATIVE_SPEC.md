@@ -67,7 +67,7 @@ During the `warning_handling`, `validation`, and `completed` states, the regent 
 - [x] **Late Photo Upload Logic:** Update the `evaluate_exam` (or OMR processing service) to check the current `ExamConfig` state. If it is `warning_handling`, `validation`, or `completed`, implement the logic to revert the state based on whether warnings were generated.
 
 ### 4. Routers & Endpoints
-- [ ] **New Endpoint:** `POST /exam_configs/{id}/state` (or similar) to allow the regent to advance the state.
-- [ ] **Delete Endpoint:** Update `DELETE /exam_configs/{id}` to enforce the `preparing` or `completed` state restriction.
-- [ ] **Association Endpoint:** Update the endpoints that link students to exams to ensure they return a 403/400 if the state is not `running`.
-- [ ] **Validation Endpoint:** Ensure endpoints related to validating exams function correctly with the new states.
+- [x] **New Endpoint:** `POST /exam_configs/{id}/state` (or similar) to allow the regent to advance the state.
+- [x] **Delete Endpoint:** Update `DELETE /exam_configs/{id}` to enforce the `preparing` or `completed` state restriction.
+- [x] **Association Endpoint:** Update the endpoints that link students to exams to ensure they return a 403/400 if the state is not `running`.
+- [x] **Validation Endpoint:** Ensure endpoints related to validating exams function correctly with the new states.
