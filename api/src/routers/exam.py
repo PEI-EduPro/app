@@ -375,6 +375,43 @@ async def retrieve_student_list(
     )
 
 
+@router.get("/config/{exam_config_id}", response_model=ExamConfigResponse)
+async def get_exam_config_endpoint(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Get all information on an exam configuration by its ID.
+    Only accessible by the regent of the subject.
+    """
+    try:
+        subject_id = await get_subject_id_by_exam_config_id(exam_config_id, session)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+
+    verify_permission(user_info, [f"/s{subject_id}/regent"])
+
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    return ExamConfigResponse(
+        id=exam_config.id,
+        subject_id=exam_config.subject_id,
+        fraction=exam_config.fraction,
+        topic_configs=exam_config.topic_configs or [],
+        nmec_name_list=exam_config.nmec_name_list,
+        num_versions=exam_config.num_versions,
+        status=exam_config.status,
+        state=exam_config.state,
+        associations=exam_config.associations,
+        total_exams=exam_config.total_exams,
+        associated_exams_count=exam_config.associated_exams_count,
+        pictured_exams_count=exam_config.pictured_exams_count
+    )
+
+
 @router.delete("/config/{exam_config_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_exam_config_endpoint(
     exam_config_id: int,
