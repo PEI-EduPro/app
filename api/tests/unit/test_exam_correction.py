@@ -75,7 +75,7 @@ async def _setup_exam(session, exam_config_id, *, corrected=False):
 async def test_evaluate_batch_session_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
     body = {"files": ["fakebase64string"]}
-    with patch("src.routers.exam.utils.decode_base64_image") as mock_decode:
+    with patch("src.routers.waiting_room.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
         mock_decode.return_value = (1, "/tmp/exam.jpg")
         response = await client.post("/api/exams/9999/session/evaluate", json=body)
     assert response.status_code == 404
@@ -117,7 +117,7 @@ async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
     ec2 = await _setup_exam_config(session, sub.id)
     exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
 
-    with patch("src.routers.exam.utils.decode_base64_image") as mock_decode:
+    with patch("src.routers.waiting_room.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
         mock_decode.return_value = (exam_wrong.id, "/tmp/exam.jpg")
         body = {"files": ["fakebase64string"]}
         response = await client.post(f"/api/exams/{ec1.id}/session/evaluate", json=body)
@@ -141,8 +141,8 @@ async def test_evaluate_batch_success(client, mock_auth, session):
     ec = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
     exam_instance = await _setup_exam(session, ec.id)
 
-    with patch("src.routers.exam.utils.decode_base64_image") as mock_decode, \
-         patch("src.routers.exam.evaluate_exam", new_callable=AsyncMock) as mock_eval:
+    with patch("src.routers.waiting_room.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode, \
+         patch("src.routers.waiting_room.evaluate_exam", new_callable=AsyncMock) as mock_eval:
         mock_decode.return_value = (exam_instance.id, "/tmp/exam.jpg")
         mock_eval.return_value = None
         body = {"files": ["fakebase64string"]}

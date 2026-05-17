@@ -1,3 +1,4 @@
+import anyio
 import base64
 import logging
 import os
@@ -473,8 +474,9 @@ async def get_all_exams_info(
 
         capture_b64 = None
         if corrected and os.path.exists(e.correction_path):
-            with open(e.correction_path, "rb") as f:
-                capture_b64 = base64.b64encode(f.read()).decode("utf-8")
+            async with await anyio.open_file(e.correction_path, "rb") as f:
+                content = await f.read()
+                capture_b64 = base64.b64encode(content).decode("utf-8")
                 
         result.append({
             "corrected": corrected,
@@ -513,8 +515,9 @@ async def get_exam_info(
 
     capture_b64 = None
     if corrected and os.path.exists(e.correction_path):
-        with open(e.correction_path, "rb") as f:
-            capture_b64 = base64.b64encode(f.read()).decode("utf-8")
+        async with await anyio.open_file(e.correction_path, "rb") as f:
+            content = await f.read()
+            capture_b64 = base64.b64encode(content).decode("utf-8")
 
     questions = []
     if corrected:

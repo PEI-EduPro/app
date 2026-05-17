@@ -66,7 +66,8 @@ def email_options_all_enabled():
         "exam_capture": True,
         "question_weights": True,
         "red_green_cross_table": True,
-        "cumulative_score_table": True
+        "cumulative_score_table": True,
+        "custom_description": "Custom message for students"
     }
 
 
@@ -76,7 +77,8 @@ def email_options_minimal():
         "exam_capture": False,
         "question_weights": False,
         "red_green_cross_table": False,
-        "cumulative_score_table": False
+        "cumulative_score_table": False,
+        "custom_description": ""
     }
 
 
