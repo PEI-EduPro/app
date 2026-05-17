@@ -27,7 +27,7 @@ from src.models.exam import Exam
 from src.models.exam_config import (
     ExamConfig, 
     GenerationStatus, 
-    SessionState, 
+    ExamState, 
     ExamSessionInfoResponse, 
     ExamSessionMetricsResponse, 
     ProfessorExamSessionItem, 
@@ -720,7 +720,7 @@ async def get_exam_config_by_id(
     exam_config_id: int
 ) -> ExamConfig | None:
     """
-    Get a specific exam configuration by ID.
+    Get a specific exam configuration by ID, with computed metrics.
     """
     statement = (
         select(ExamConfig)
@@ -731,7 +731,23 @@ async def get_exam_config_by_id(
         )
     )
     result = await session.exec(statement)
-    return result.first()
+    exam_config = result.first()
+    
+    if not exam_config:
+        return None
+
+    # Calculate counters
+    exam_config.total_exams = len(exam_config.exams)
+    
+    # associated_exams_count: Only if state >= running
+    if exam_config.state in [ExamState.RUNNING, ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        exam_config.associated_exams_count = sum(1 for e in exam_config.exams if e.nmec is not None)
+    
+    # pictured_exams_count: Only if state >= closed_and_capture
+    if exam_config.state in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+        exam_config.pictured_exams_count = sum(1 for e in exam_config.exams if e.capture_path is not None)
+
+    return exam_config
 
 
 async def process_student_list_csv(
@@ -1134,12 +1150,37 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
 
     return {"message": "Email enviado com sucesso"}
-async def update_exam_session_state(session: AsyncSession, exam_config_id: int, new_state: SessionState) -> Optional[ExamConfig]:
+async def transition_exam_config_state(
+    session: AsyncSession, 
+    exam_config_id: int, 
+    target_state: ExamState
+) -> ExamConfig:
+    """
+    Transition ExamConfig to a new state with business logic validation.
+    """
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
-        return None
-    
-    exam_config.session_state = new_state
+        raise ValueError("Exam configuration not found")
+
+    current_state = exam_config.state
+
+    # 1. Validation Logic for specific transitions
+    if target_state == ExamState.VALIDATION:
+        # Must resolve all warnings before moving to validation
+        from src.models.warning import Warning
+        warning_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config_id)
+        warning_count = (await session.exec(warning_stmt)).one()
+        if warning_count > 0:
+            raise ValueError(f"Cannot transition to {target_state} because there are {warning_count} unresolved warnings.")
+
+    elif target_state == ExamState.COMPLETED:
+        # All exams with pictures must be validated
+        unvalidated_pictured_exams = [e for e in exam_config.exams if e.capture_path is not None and not e.validated]
+        if unvalidated_pictured_exams:
+            raise ValueError(f"Cannot transition to {target_state} because there are {len(unvalidated_pictured_exams)} pictured exams that have not been validated.")
+
+    # 2. Update state
+    exam_config.state = target_state
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -1208,7 +1249,7 @@ async def get_exam_session_info_service(session: AsyncSession, exam_config_id: i
         id=exam_config.id,
         subject_id=subject.id,
         subject_name=subject.name,
-        session_state=exam_config.session_state,
+        session_state=exam_config.state,
         associations=exam_config.associations,
         student_list=formatted_students,
         exam_ids=exam_ids,
@@ -1265,11 +1306,11 @@ async def close_exam_session_service(session: AsyncSession, exam_config_id: int)
     if not exam_config:
         raise ValueError("Exam configuration not found")
 
-    if exam_config.session_state not in [SessionState.RUNNING, SessionState.CLOSED]:
-        raise ValueError("Exam session must be in running or closed state to be closed.")
+    if exam_config.state != ExamState.RUNNING:
+        raise ValueError(f"Exam session must be in running state to be closed. Current state: {exam_config.state}")
 
-    # 1. Update state to CLOSED
-    exam_config.session_state = SessionState.CLOSED
+    # 1. Update state to CLOSED_AND_CAPTURE
+    exam_config.state = ExamState.CLOSED_AND_CAPTURE
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -1335,7 +1376,7 @@ async def get_professor_exam_sessions(
         if not role:
             continue
 
-        if role == "vigilant" and ec.session_state.value != "running":
+        if role == "vigilant" and ec.state.value != "running":
             continue
         
         subject = await session.get(Subject, ec.subject_id)
@@ -1346,7 +1387,7 @@ async def get_professor_exam_sessions(
             subject_id=subject.id,
             subject_name=subject.name,
             exam_config_id=ec.id,
-            state=ec.session_state.value,
+            state=ec.state.value,
             role=role,
             exam_name=ec.exam_name
         ))

@@ -62,9 +62,9 @@ During the `warning_handling`, `validation`, and `completed` states, the regent 
 - [x] Update `ExamConfigCreate` and `ExamConfigUpdate` schemas to reflect the new state naming and remove any manual state setting that shouldn't be exposed directly.
 
 ### 3. Services
-- [ ] **State Transition Logic:** Create a service function to handle manual state transitions (e.g., `transition_exam_config_state(exam_config_id, target_state)`). This function must validate the business rules (e.g., checking for unresolved warnings before moving to `validation`, or checking if all pictured exams are validated before moving to `completed`).
-- [ ] **Counters Logic:** In the `get_exam_config` service, query the database to calculate `total_exams`, `associated_exams_count`, and `pictured_exams_count` based on the current state.
-- [ ] **Late Photo Upload Logic:** Update the `evaluate_exam` (or OMR processing service) to check the current `ExamConfig` state. If it is `warning_handling`, `validation`, or `completed`, implement the logic to revert the state based on whether warnings were generated.
+- [x] **State Transition Logic:** Create a service function to handle manual state transitions (e.g., `transition_exam_config_state(exam_config_id, target_state)`). This function must validate the business rules (e.g., checking for unresolved warnings before moving to `validation`, or checking if all pictured exams are validated before moving to `completed`).
+- [x] **Counters Logic:** In the `get_exam_config` service, query the database to calculate `total_exams`, `associated_exams_count`, and `pictured_exams_count` based on the current state.
+- [x] **Late Photo Upload Logic:** Update the `evaluate_exam` (or OMR processing service) to check the current `ExamConfig` state. If it is `warning_handling`, `validation`, or `completed`, implement the logic to revert the state based on whether warnings were generated.
 
 ### 4. Routers & Endpoints
 - [ ] **New Endpoint:** `POST /exam_configs/{id}/state` (or similar) to allow the regent to advance the state.

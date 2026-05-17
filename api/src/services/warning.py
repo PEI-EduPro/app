@@ -31,6 +31,7 @@ async def calculate_and_persist_warnings(
     Delete all existing warnings for exam_config_id, then recalculate and persist
     new ones based on the provided associations list.
     Also writes exam.nmec for clean (conflict-free) 1:1 associations.
+    Includes 'exam_correction_no_student' warnings for exams with photos but no student associated.
     """
     # Delete old warnings
     await session.exec(delete(Warning).where(Warning.exam_config_id == exam_config_id))
@@ -52,6 +53,7 @@ async def calculate_and_persist_warnings(
     conflict_students: Set[str] = set()
     conflict_exams: Set[int] = set()
 
+    # 1. Multiple exams to one student
     for student_nmec, exams in student_to_exams.items():
         if len(exams) > 1:
             conflict_students.add(student_nmec)
@@ -63,6 +65,7 @@ async def calculate_and_persist_warnings(
                 exam_list=list(exams)
             ))
 
+    # 2. Multiple students to one exam
     for exam_id, students in exam_to_students.items():
         if len(students) > 1:
             conflict_exams.add(exam_id)
@@ -74,7 +77,7 @@ async def calculate_and_persist_warnings(
                 exam_list=[exam_id]
             ))
 
-    # Write exam.nmec, student_name, student_email for clean 1:1 associations
+    # 3. Clean 1:1 associations: Write exam.nmec, student_name, student_email
     for exam_id, students in exam_to_students.items():
         if len(students) == 1:
             student_nmec = next(iter(students))
@@ -93,8 +96,22 @@ async def calculate_and_persist_warnings(
                     except (ValueError, TypeError):
                         logger.warning(
                             f"Could not set nmec on exam {exam_id}: "
-                            f"'{student_nmec}' is not a valid integer. Association data may be corrupt."
+                            f"'{student_nmec}' is not a valid integer."
                         )
+
+    # 4. Exam correction without student association
+    # Fetch all exams for this config to check who has a capture but no nmec
+    all_exams_stmt = select(Exam).where(Exam.exam_config_id == exam_config_id)
+    all_exams = (await session.exec(all_exams_stmt)).all()
+    
+    for exam in all_exams:
+        if exam.capture_path is not None and exam.nmec is None:
+            session.add(Warning(
+                exam_config_id=exam_config_id,
+                type=WarningType.exam_correction_no_student,
+                student_list=None,
+                exam_list=[exam.id]
+            ))
 
 async def get_filtered_students(
     session: AsyncSession,
