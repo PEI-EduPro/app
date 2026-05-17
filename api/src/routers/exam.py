@@ -14,6 +14,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src import utils
 from src.core.db import get_session, async_session
 from src.core.deps import get_current_user_info, verify_permission
+from src.core.keycloak import keycloak_client
 from src.models.common import MessageResponse
 from src.models.email_options import EmailOptionsPayload
 from src.models.exam import CorrectByHandRequest
@@ -396,6 +397,8 @@ async def get_exam_config_endpoint(
     if not exam_config:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
 
+    vigilants = await keycloak_client.get_group_members_by_name(f"w{exam_config_id}/vigilant")
+
     return ExamConfigResponse(
         id=exam_config.id,
         subject_id=exam_config.subject_id,
@@ -415,6 +418,7 @@ async def get_exam_config_endpoint(
         status=exam_config.status,
         state=exam_config.state,
         associations=exam_config.associations or [],
+        vigilants=[v["username"] for v in vigilants],
         total_exams=exam_config.total_exams,
         associated_exams_count=exam_config.associated_exams_count,
         pictured_exams_count=exam_config.pictured_exams_count
