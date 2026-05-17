@@ -42,6 +42,15 @@ export type GenerationStatus =
   | "COMPLETED"
   | "FAILED";
 
+export type ExamWorkflowStatus =
+  | "preparing"
+  | "running"
+  | "closed_and_capture"
+  | "warning_handling"
+  | "validation"
+  | "completed"
+  | "sent";
+
 export interface ExamConfigI {
   id: number;
   subject_id: number;
@@ -49,6 +58,10 @@ export interface ExamConfigI {
   num_variations: number;
   num_versions: number;
   status: GenerationStatus;
+  state: ExamWorkflowStatus;
+  total_exams: number;
+  associated_exams_count: number | null;
+  pictured_exams_count: number | null;
   topic_configs: {
     topic_id: number;
     topic_name: string;

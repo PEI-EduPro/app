@@ -2,48 +2,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import type { OptionKey, QuestionsI } from "@/lib/types";
+import {
+  useGetExamsResponses,
+  useValidateExam,
+  useCorrectExam,
+} from "@/hooks/use-waiting-rooms";
 
 type Grid = Record<number, Record<OptionKey, boolean>>;
 const OPTIONS: OptionKey[] = ["a", "b", "c", "d"];
-
-const MOCK_QUESTIONS: QuestionsI[] = [
-  {
-    question_number: 0,
-    correct_answer: "b",
-    discount: 25,
-    value: 2,
-    answers: { a: false, b: true, c: false, d: false },
-  },
-  {
-    question_number: 1,
-    correct_answer: "a",
-    discount: 25,
-    value: 2,
-    answers: { a: true, b: false, c: false, d: false },
-  },
-  {
-    question_number: 2,
-    correct_answer: "c",
-    discount: 25,
-    value: 2,
-    answers: { a: false, b: false, c: false, d: true },
-  },
-  {
-    question_number: 3,
-    correct_answer: "d",
-    discount: 25,
-    value: 2,
-    answers: { a: false, b: false, c: true, d: false },
-  },
-];
-
-const MOCK_EXAMS = Array.from({ length: 30 }, (_, i) => ({
-  exam_id: 201 + i,
-  corrected: i < 25,
-  validated: i < 10,
-  grade: i < 25 ? Math.round((10 + Math.random() * 10) * 100) / 100 : null,
-  questions: i < 25 ? MOCK_QUESTIONS : null,
-}));
 
 function buildGrid(questions: QuestionsI[]): Grid {
   return Object.fromEntries(
@@ -132,31 +98,42 @@ function AnswerGrid({
   );
 }
 
-export default function Step7Content() {
-  const [selected, setSelected] = useState<number | null>(null);
-  const [exams, setExams] = useState(MOCK_EXAMS);
+export default function Step7Content({
+  examConfigId,
+}: {
+  examConfigId: number;
+}) {
+  const { data: exams = [] } = useGetExamsResponses(examConfigId);
+  const validateMutation = useValidateExam(examConfigId);
+  const correctMutation = useCorrectExam(examConfigId);
+
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [grid, setGrid] = useState<Grid | null>(null);
   const [grade, setGrade] = useState<number | null>(null);
-  const [validated, setValidated] = useState(false);
+  const [localValidated, setLocalValidated] = useState(false);
 
   function handleSelect(examId: number) {
     const exam = exams.find((e) => e.exam_id === examId);
     if (!exam?.questions) return;
-    setSelected(examId);
+    setSelectedId(examId);
     setGrid(buildGrid(exam.questions));
     setGrade(exam.grade);
-    setValidated(exam.validated);
+    setLocalValidated(exam.validated);
   }
 
   function handleValidate() {
-    if (!selected || !grid) return;
-    setValidated(true);
-    setExams((prev) =>
-      prev.map((e) => (e.exam_id === selected ? { ...e, validated: true } : e)),
-    );
+    if (!selectedId || !grid) return;
+    validateMutation.mutate(selectedId, {
+      onSuccess: () => setLocalValidated(true),
+    });
   }
 
-  const selectedExam = exams.find((e) => e.exam_id === selected);
+  function handleCorrect() {
+    if (!selectedId || !grid) return;
+    correctMutation.mutate({ examId: selectedId, props: { grid } });
+  }
+
+  const selectedExam = exams.find((e) => e.exam_id === selectedId);
 
   return (
     <div className="flex gap-4">
@@ -165,7 +142,7 @@ export default function Step7Content() {
           <li key={exam.exam_id}>
             <Button
               disabled={!exam.corrected}
-              variant={selected === exam.exam_id ? "secondary" : "ghost"}
+              variant={selectedId === exam.exam_id ? "secondary" : "ghost"}
               className="w-full justify-between cursor-pointer"
               onClick={() => handleSelect(exam.exam_id)}
             >
@@ -184,16 +161,16 @@ export default function Step7Content() {
       </ul>
 
       <div className="flex-1 flex items-start">
-        {selected !== null && selectedExam?.questions && grid ? (
+        {selectedId !== null && selectedExam?.questions && grid ? (
           <div className="flex flex-col gap-6 w-full">
             <AnswerGrid
               questions={selectedExam.questions}
               grid={grid}
               onGridChange={setGrid}
               onGradeChange={setGrade}
-              readOnly={validated}
+              readOnly={localValidated}
             />
-            {validated ? (
+            {localValidated ? (
               <div className="flex flex-col items-center gap-3 py-6 border rounded-xl bg-muted/40">
                 <div className="flex items-baseline gap-1">
                   <span className="text-5xl font-extrabold text-primary">
@@ -208,7 +185,7 @@ export default function Step7Content() {
                   variant="outline"
                   size="sm"
                   className="cursor-pointer"
-                  onClick={() => setValidated(false)}
+                  onClick={() => setLocalValidated(false)}
                 >
                   Corrigir novamente
                 </Button>
@@ -224,13 +201,25 @@ export default function Step7Content() {
                   </span>
                   <span className="text-sm text-muted-foreground">/ 20</span>
                 </div>
-                <Button
-                  size="lg"
-                  className="font-bold cursor-pointer"
-                  onClick={handleValidate}
-                >
-                  Validar
-                </Button>
+                <div className="flex gap-2">
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="cursor-pointer"
+                    disabled={correctMutation.isPending}
+                    onClick={handleCorrect}
+                  >
+                    Guardar correção
+                  </Button>
+                  <Button
+                    size="lg"
+                    className="font-bold cursor-pointer"
+                    disabled={validateMutation.isPending}
+                    onClick={handleValidate}
+                  >
+                    Validar
+                  </Button>
+                </div>
               </div>
             )}
           </div>

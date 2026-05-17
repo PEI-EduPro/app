@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Smartphone } from "lucide-react";
+import { useCloseExamSession } from "@/hooks/use-exams";
 
-export default function Step4Content() {
+export default function Step4Content({ examConfigId }: { examConfigId: number }) {
+  const closeMutation = useCloseExamSession(examConfigId);
+
   return (
     <div className="flex flex-col gap-4 text-sm text-muted-foreground">
       <p>
@@ -13,7 +16,12 @@ export default function Step4Content() {
         <Smartphone className="h-4 w-4 shrink-0" />
         <span>Esta ação pode ser realizada a partir da aplicação móvel.</span>
       </div>
-      <Button variant="destructive" className="self-start cursor-pointer">
+      <Button
+        variant="destructive"
+        className="self-start cursor-pointer"
+        disabled={closeMutation.isPending}
+        onClick={() => closeMutation.mutate()}
+      >
         Fechar Exame
       </Button>
     </div>

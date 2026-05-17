@@ -1,15 +1,21 @@
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Smartphone } from "lucide-react";
+import { useState } from "react";
 import { Label } from "@/components/ui/label";
 import { MultiSelect } from "@/components/multi-select";
-import { Smartphone } from "lucide-react";
 import { useGetProfessors } from "@/hooks/use-users";
 import { useKeycloak } from "@/hooks/use-keycloak";
+import { useStartExamSession } from "@/hooks/use-exams";
 
-export default function Step2Content() {
+export default function Step2Content({
+  examConfigId,
+}: {
+  examConfigId: number;
+}) {
   const [vigilants, setVigilants] = useState<string[]>([]);
   const { data: professors } = useGetProfessors();
   const { keycloak } = useKeycloak();
+  const startMutation = useStartExamSession(examConfigId);
 
   const options =
     professors
@@ -45,7 +51,13 @@ export default function Step2Content() {
           popoverClassName="w-[var(--radix-popover-trigger-width)]"
         />
       </div>
-      <Button className="self-start cursor-pointer">Iniciar Exame</Button>
+      <Button
+        className="self-start cursor-pointer"
+        disabled={startMutation.isPending}
+        onClick={() => startMutation.mutate()}
+      >
+        Iniciar Exame
+      </Button>
     </div>
   );
 }
