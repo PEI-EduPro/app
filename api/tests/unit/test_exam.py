@@ -820,3 +820,31 @@ async def test_correct_by_hand_job_value_error(client, mock_auth, session):
         assert response.status_code == 404
         assert "Invalid grid" in response.json()["detail"]
 
+
+@pytest.mark.asyncio
+async def test_list_professor_exam_sessions_no_role(client, mock_auth):
+    """Test list_professor_exam_sessions requires professor role"""
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/exams/professor/my-exam-sessions")
+    assert response.status_code == 403
+    assert "Requires professor role" in response.json()["detail"]
+
+
+@pytest.mark.asyncio
+async def test_get_exam_session_info_not_found(client, mock_auth, session):
+    """Test get_exam_session_info returns 404 if config not found"""
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    # We need to mock permissions because verify_permission is called
+    with patch("src.routers.exam.verify_permission"):
+        response = await client.get("/api/exams/9999/session/info")
+        assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_get_exam_session_metrics_not_found(client, mock_auth):
+    """Test get_exam_session_metrics returns 404 if config not found"""
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.exam.verify_permission"):
+        response = await client.get("/api/exams/9999/session/metrics")
+        assert response.status_code == 404
+
