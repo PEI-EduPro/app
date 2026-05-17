@@ -1,77 +1,271 @@
 ================================================================= FAILURES =================================================================
-__________________________________________________ test_delete_config_not_in_preparation ___________________________________________________
+__________________________________________________ test_evaluate_batch_exam_wrong_config ___________________________________________________
 
-client = <httpx.AsyncClient object at 0x7a3e7d551190>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7a3e7d433ce0>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7a3e7d78da60>
+client = <httpx.AsyncClient object at 0x7a226c4086b0>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7a226c31e840>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7a226c8a6150>
 
     @pytest.mark.asyncio
-    async def test_delete_config_not_in_preparation(client, mock_auth, session):
-        """400 when session is not in PREPARING state."""
+    async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
         app.dependency_overrides[get_current_user_info] = mock_auth
     
-        sub = Subject(name="Del Sub")
+        from src.models.subject import Subject
+        from src.models.exam_config import ExamState
+    
+        sub = Subject(name="Subj")
         session.add(sub)
         await session.commit()
         await session.refresh(sub)
     
-        ec = ExamConfig(
-            subject_id=sub.id, fraction=0,
-            state=ExamState.RUNNING
-        )
-        session.add(ec)
-        await session.commit()
-        await session.refresh(ec)
+        ec1 = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
+        ec2 = await _setup_exam_config(session, sub.id)
+        exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
     
-        response = await client.delete(f"/api/exams/config/{ec.id}")
-        assert response.status_code == 400
->       assert "preparation" in response.json()["detail"].lower()
-E       assert 'preparation' in "cannot delete exam configuration because its state is examstate.running. it must be in 'preparing' or 'completed' state."
-E        +  where "cannot delete exam configuration because its state is examstate.running. it must be in 'preparing' or 'completed' state." = <built-in method lower of str object at 0x7a3e7d4b12c0>()
-E        +    where <built-in method lower of str object at 0x7a3e7d4b12c0> = "Cannot delete exam configuration because its state is ExamState.RUNNING. It must be in 'preparing' or 'completed' state.".lower
+        with patch("src.routers.exam.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
+            mock_decode.return_value = (exam_wrong.id, "/tmp/exam.jpg")
+            body = {"files": ["fakebase64string"]}
+>           response = await client.post(f"/api/exams/{ec1.id}/session/evaluate", json=body)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_exam_router_coverage.py:239: AssertionError
------------------------------------------------------------ Captured stdout call -----------------------------------------------------------
-2026-05-17 18:29:17,124 - httpx - INFO - HTTP Request: DELETE http://test/api/exams/config/1 "HTTP/1.1 400 Bad Request"
------------------------------------------------------------- Captured log call -------------------------------------------------------------
-INFO     httpx:_client.py:1740 HTTP Request: DELETE http://test/api/exams/config/1 "HTTP/1.1 400 Bad Request"
-_________________________________________________ test_notify_students_session_not_closed __________________________________________________
+tests/unit/test_exam_correction.py:123: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post
+    return await self.request(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.12/site-packages/starlette/middleware/cors.py:88: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+/usr/lib/python3.12/contextlib.py:158: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.12/site-packages/starlette/_utils.py:87: in collapse_excgroups
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/main.py:49: in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.12/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-client = <httpx.AsyncClient object at 0x7a3e7d5b7aa0>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7a3e7d2f0c20>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7a3e7d7266c0>
+exam_config_id = 1, body = EvaluateBatchRequest(files=['fakebase64string'])
+user_info = User(user_id='manager-id-123', username='manager', email='manager@example.com', first_name=None, last_name=None, realm_roles=['manager'], groups=['/s1/regent', '/s99999/regent'], nmec=None)
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7a226c8a6150>
+
+    @router.post("/{exam_config_id}/session/evaluate")
+    async def evaluate_session_batch(
+        exam_config_id: int,
+        body: EvaluateBatchRequest,
+        user_info: User = Depends(get_current_user_info),
+        session: AsyncSession = Depends(get_session)
+    ):
+        """
+        Evaluate a batch of exams using OMR.
+        """
+        exam_config = await get_exam_config_by_id(session, exam_config_id)
+        if not exam_config:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+    
+        verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+    
+        if exam_config.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'closed_and_capture' state. Current state: {exam_config.state}")
+    
+        exam_data = []
+        for b64_str in body.files:
+>           exam_id, temp_file_path = utils.decode_base64_image(b64_str)
+            ^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: cannot unpack non-iterable coroutine object
+
+src/routers/exam.py:769: TypeError
+_______________________________________________________ test_evaluate_batch_success ________________________________________________________
+
+client = <httpx.AsyncClient object at 0x7a226c312c00>
+mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7a226c6acfe0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7a226c39d9a0>
 
     @pytest.mark.asyncio
-    async def test_notify_students_session_not_closed(client, mock_auth, session):
-        """400 when session is not COMPLETED."""
+    async def test_evaluate_batch_success(client, mock_auth, session):
         app.dependency_overrides[get_current_user_info] = mock_auth
     
-        sub = Subject(name="Notify Sub")
+        from src.models.subject import Subject
+        from src.models.exam_config import ExamState
+    
+        sub = Subject(name="Subj")
         session.add(sub)
         await session.commit()
         await session.refresh(sub)
     
-        ec = ExamConfig(subject_id=sub.id, fraction=0, state=ExamState.RUNNING)
-        session.add(ec)
-        await session.commit()
-        await session.refresh(ec)
+        ec = await _setup_exam_config(session, sub.id, state=ExamState.CLOSED_AND_CAPTURE)
+        exam_instance = await _setup_exam(session, ec.id)
     
-        response = await client.post(
-            f"/api/exams/{ec.id}/session/notify-students",
-            json={"exam_capture": True, "question_weights": True,
-                  "red_green_cross_table": True, "cumulative_score_table": True}
-        )
-        assert response.status_code == 400
->       assert "closed" in response.json()["detail"].lower()
-E       assert 'closed' in "exam must be in 'completed' state to notify students."
-E        +  where "exam must be in 'completed' state to notify students." = <built-in method lower of str object at 0x7a3e7d66c8d0>()
-E        +    where <built-in method lower of str object at 0x7a3e7d66c8d0> = "Exam must be in 'completed' state to notify students.".lower
+        with patch("src.routers.exam.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode, \
+             patch("src.routers.exam.evaluate_exam", new_callable=AsyncMock) as mock_eval:
+            mock_decode.return_value = (exam_instance.id, "/tmp/exam.jpg")
+            mock_eval.return_value = None
+            body = {"files": ["fakebase64string"]}
+>           response = await client.post(f"/api/exams/{ec.id}/session/evaluate", json=body)
+                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_exam_router_coverage.py:555: AssertionError
------------------------------------------------------------ Captured stdout call -----------------------------------------------------------
-2026-05-17 18:29:21,460 - httpx - INFO - HTTP Request: POST http://test/api/exams/1/session/notify-students "HTTP/1.1 400 Bad Request"
------------------------------------------------------------- Captured log call -------------------------------------------------------------
-INFO     httpx:_client.py:1740 HTTP Request: POST http://test/api/exams/1/session/notify-students "HTTP/1.1 400 Bad Request"
+tests/unit/test_exam_correction.py:149: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+.venv/lib/python3.12/site-packages/httpx/_client.py:1859: in post
+    return await self.request(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request
+    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send
+    response = await self._send_handling_auth(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth
+    response = await self._send_handling_redirects(
+.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects
+    response = await self._send_single_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request
+    response = await transport.handle_async_request(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
+    await super().__call__(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/applications.py:90: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:186: in __call__
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:164: in __call__
+    await self.app(scope, receive, _send)
+.venv/lib/python3.12/site-packages/starlette/middleware/cors.py:88: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:191: in __call__
+    with recv_stream, send_stream, collapse_excgroups():
+/usr/lib/python3.12/contextlib.py:158: in __exit__
+    self.gen.throw(value)
+.venv/lib/python3.12/site-packages/starlette/_utils.py:87: in collapse_excgroups
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:193: in __call__
+    response = await self.dispatch_func(request, call_next)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src/main.py:49: in dispatch
+    response = await call_next(request)
+               ^^^^^^^^^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:168: in call_next
+    raise app_exc from app_exc.__cause__ or app_exc.__context__
+.venv/lib/python3.12/site-packages/starlette/middleware/base.py:144: in coro
+    await self.app(scope, receive_or_disconnect, send_no_error)
+.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py:63: in __call__
+    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:660: in __call__
+    await self.middleware_stack(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:680: in app
+    await route.handle(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/routing.py:276: in handle
+    await self.app(scope, receive, send)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:134: in app
+    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
+    raise exc
+.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
+    await app(scope, receive, sender)
+.venv/lib/python3.12/site-packages/fastapi/routing.py:120: in app
+    response = await f(request)
+               ^^^^^^^^^^^^^^^^
+.venv/lib/python3.12/site-packages/fastapi/routing.py:674: in app
+    raw_response = await run_endpoint_function(
+.venv/lib/python3.12/site-packages/fastapi/routing.py:328: in run_endpoint_function
+    return await dependant.call(**values)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+exam_config_id = 1, body = EvaluateBatchRequest(files=['fakebase64string'])
+user_info = User(user_id='manager-id-123', username='manager', email='manager@example.com', first_name=None, last_name=None, realm_roles=['manager'], groups=['/s1/regent', '/s99999/regent'], nmec=None)
+session = <sqlalchemy.orm.session.AsyncSession object at 0x7a226c39d9a0>
+
+    @router.post("/{exam_config_id}/session/evaluate")
+    async def evaluate_session_batch(
+        exam_config_id: int,
+        body: EvaluateBatchRequest,
+        user_info: User = Depends(get_current_user_info),
+        session: AsyncSession = Depends(get_session)
+    ):
+        """
+        Evaluate a batch of exams using OMR.
+        """
+        exam_config = await get_exam_config_by_id(session, exam_config_id)
+        if not exam_config:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+    
+        verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+    
+        if exam_config.state not in [ExamState.CLOSED_AND_CAPTURE, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"OMR evaluation is only allowed starting from the 'closed_and_capture' state. Current state: {exam_config.state}")
+    
+        exam_data = []
+        for b64_str in body.files:
+>           exam_id, temp_file_path = utils.decode_base64_image(b64_str)
+            ^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: cannot unpack non-iterable coroutine object
+
+src/routers/exam.py:769: TypeError
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -86,6 +280,13 @@ src/models/subject.py:34
   
     self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
 
+tests/unit/test_exam_correction.py::test_evaluate_batch_exam_wrong_config
+tests/unit/test_exam_correction.py::test_evaluate_batch_success
+  /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/routers/exam.py:769: RuntimeWarning: coroutine 'AsyncMockMixin._execute_mock_call' was never awaited
+    exam_id, temp_file_path = utils.decode_base64_image(b64_str)
+  Enable tracemalloc to get traceback where the object was allocated.
+  See https://docs.pytest.org/en/stable/how-to/capture-warnings.html#resource-warnings for more info.
+
 tests/unit/test_exam_router_coverage.py::test_generate_async_value_error
 tests/unit/test_exam_router_coverage.py::test_associate_student_invalid_qr
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/.venv/lib/python3.12/site-packages/fastapi/routing.py:328: DeprecationWarning: 'HTTP_422_UNPROCESSABLE_ENTITY' is deprecated. Use 'HTTP_422_UNPROCESSABLE_CONTENT' instead.
@@ -93,16 +294,6 @@ tests/unit/test_exam_router_coverage.py::test_associate_student_invalid_qr
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_exam_router_coverage.py::test_delete_config_not_in_preparation - assert 'preparation' in "cannot delete exam configuration because its state is examstate.running. it must be in 'preparing' or 'complet...
-FAILED tests/unit/test_exam_router_coverage.py::test_notify_students_session_not_closed - assert 'closed' in "exam must be in 'completed' state to notify students."
-================================================ 2 failed, 347 passed, 5 warnings in 59.36s ================================================
-Cleaning up test infrastructure...
-[+] down 6/6
- ✔ Container edupro-test-db-1          Removed                                                                                          0.3s
- ✔ Container edupro-test-keycloak-1    Removed                                                                                          0.6s
- ✔ Container edupro-test-keycloak-db-1 Removed                                                                                          0.3s
- ✔ Volume edupro-test_db_data          Removed                                                                                          0.1s
- ✔ Volume edupro-test_keycloak_db_data Removed                                                                                          0.2s
- ✔ Network edupro-test_default         Removed                                                                                          0.1s
-i@i:~/Desktop/Pedro/Universidade/PEI/project/app$ 
-
+FAILED tests/unit/test_exam_correction.py::test_evaluate_batch_exam_wrong_config - TypeError: cannot unpack non-iterable coroutine object
+FAILED tests/unit/test_exam_correction.py::test_evaluate_batch_success - TypeError: cannot unpack non-iterable coroutine object
+================================================ 2 failed, 375 passed, 7 warnings in 51.16s ================================================

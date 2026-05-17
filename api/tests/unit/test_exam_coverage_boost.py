@@ -306,27 +306,28 @@ def test_get_answers_map():
     res = _get_answers_map([q1])
     assert 1 in res
 
-def test_latex_helpers():
+@pytest.mark.asyncio
+async def test_latex_helpers():
     with tempfile.TemporaryDirectory() as tmpdir:
         # _update_rules
         rules_path = os.path.join(tmpdir, "Rules.tex")
         with open(rules_path, "w") as f:
             f.write("#NUM_QUESTIONS #FRACTION")
-        _update_rules(tmpdir, 10, 0.5)
+        await _update_rules(tmpdir, 10, 0.5)
         with open(rules_path, "r") as f:
             content = f.read()
             assert content == "10 0.5"
         
         # _write_blank_answers
-        _write_blank_answers(tmpdir, 5)
+        await _write_blank_answers(tmpdir, 5)
         assert os.path.exists(os.path.join(tmpdir, "T-answers.tex"))
         
         # _write_answer_key
-        _write_answer_key(tmpdir, {1: "A"}, 5)
+        await _write_answer_key(tmpdir, {1: "A"}, 5)
         assert os.path.exists(os.path.join(tmpdir, "T-answers.tex"))
         
         # _write_all_solutions
-        _write_all_solutions(tmpdir, [("1", {1: "A"})], 5)
+        await _write_all_solutions(tmpdir, [("1", {1: "A"})], 5)
         assert os.path.exists(os.path.join(tmpdir, "solutions.tex"))
 
 @pytest.mark.asyncio
@@ -463,32 +464,34 @@ def test_build_exam_questions_success():
     assert len(res) == 1
     assert res[0]["question_number"] == 0
 
-def test_compile_latex_success():
+@pytest.mark.asyncio
+async def test_compile_latex_success():
     with tempfile.TemporaryDirectory() as tmpdir:
         main_file = "main.tex"
         with open(os.path.join(tmpdir, main_file), "w") as f:
             f.write("\\newcommand\\tttnumber{0}\\newcommand\\qrcodecontent{0}Exame Época Normal")
         
-        # Mock subprocess.run to succeed and create a PDF
-        def side_effect(*args, **kwargs):
+        # Mock anyio.run_process to succeed and create a PDF
+        async def side_effect(*args, **kwargs):
             pdf_path = os.path.join(tmpdir, "main.pdf")
             with open(pdf_path, "wb") as f:
                 f.write(b"fake pdf")
             return MagicMock()
 
-        with patch("subprocess.run", side_effect=side_effect):
-            res = _compile_latex(tmpdir, main_file, 1, subject_name="Math", exam_title="Final", semester="1", academic_year="2025")
+        with patch("anyio.run_process", side_effect=side_effect):
+            res = await _compile_latex(tmpdir, main_file, 1, subject_name="Math", exam_title="Final", semester="1", academic_year="2025")
             assert res == b"fake pdf"
 
-def test_compile_latex_failure():
+@pytest.mark.asyncio
+async def test_compile_latex_failure():
     with tempfile.TemporaryDirectory() as tmpdir:
         main_file = "main.tex"
         with open(os.path.join(tmpdir, main_file), "w") as f:
             f.write("\\newcommand\\tttnumber{0}\\newcommand\\qrcodecontent{0}Exame Época Normal")
         
-        # Mock subprocess.run to fail
-        with patch("subprocess.run", side_effect=Exception("Fail")):
-            res = _compile_latex(tmpdir, main_file, 1)
+        # Mock anyio.run_process to fail
+        with patch("anyio.run_process", side_effect=Exception("Fail")):
+            res = await _compile_latex(tmpdir, main_file, 1)
             assert res is None
 
 @pytest.mark.asyncio

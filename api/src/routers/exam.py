@@ -766,7 +766,7 @@ async def evaluate_session_batch(
 
     exam_data = []
     for b64_str in body.files:
-        exam_id, temp_file_path = utils.decode_base64_image(b64_str)
+        exam_id, temp_file_path = await utils.decode_base64_image(b64_str)
         exam_instance = await get_exam_by_id(session, exam_id)
         if not exam_instance or exam_instance.exam_config_id != exam_config_id:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid exam {exam_id}")
