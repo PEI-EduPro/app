@@ -597,6 +597,9 @@ async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session
     mock_config.fraction = 0
     mock_config.topic_configs = [mock_tc]
     mock_config.nmec_name_list = None
+    mock_config.exam_name = "Test Exam"
+    mock_config.exam_date = "2026-05-18"
+    mock_config.num_versions = 1
     mock_config.exams = []
     mock_config.status = GenerationStatus.COMPLETED
     mock_config.state = ExamState.PREPARING

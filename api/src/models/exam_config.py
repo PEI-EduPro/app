@@ -31,6 +31,7 @@ class ExamConfig(SQLModel, table=True):
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
     exam_name: Optional[str] = Field(default=None, max_length=255)
+    exam_date: Optional[str] = Field(default=None, max_length=50)
     num_versions: int = Field(default=1)
     status: GenerationStatus = Field(default=GenerationStatus.PENDING)
     zip_path: Optional[str] = Field(default=None)
@@ -93,6 +94,8 @@ class ExamConfigRead(SQLModel):
     id: int
     fraction: int
     subject_id: int
+    exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     status: GenerationStatus
     state: ExamState
     zip_path: Optional[str] = None
@@ -106,6 +109,8 @@ class ExamConfigResponse(SQLModel):
     id: int
     subject_id: int
     fraction: int
+    exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     topic_configs: List[TopicConfigDTO] = []
     nmec_name_list: Optional[str] = None
     num_versions: int = 1
@@ -152,11 +157,13 @@ class ProfessorExamSessionItem(BaseModel):
     state: str
     role: str
     exam_name: Optional[str]
+    exam_date: Optional[str]
 
 class ExamGenerateRequest(SQLModel):
     subject_id: int
     fraction: int
     exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     topics: List[str]
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
