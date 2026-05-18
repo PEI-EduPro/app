@@ -4,11 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import HelperHoverCard from "@/components/helper-hover-card";
 import { format, toDate } from "date-fns";
 import type { StepProps } from "./types";
-
-const NUMERIC_KEYS = ["Backspace","Delete","Tab","Escape","Enter","ArrowLeft","ArrowRight","ArrowUp","ArrowDown","Home","End"];
 
 const currentYear = new Date().getFullYear();
 const yearOptions = [
@@ -79,31 +76,6 @@ export function Step3Configuracoes({ form, onNext, onPrev }: StepProps) {
                   ))}
                 </SelectContent>
               </Select>
-            </FormItem>
-          )} />
-
-          <FormField control={control} name="fraction" render={({ field }) => (
-            <FormItem className="flex items-center justify-between">
-              <div className="flex items-center gap-2 justify-center">
-                <FormLabel className="shrink-0">Desconto (%)</FormLabel>
-                <HelperHoverCard
-                  side="bottom"
-                  iconClassName="h-4 w-4 color-gray-500 cursor-pointer"
-                  content={`Para cada questão errada, será descontado ${watch("fraction") || 0}% do valor da questão. Exemplo: Se uma questão vale 2 valores e o desconto é de 20%, cada erro nessa questão resulta numa penalização de 0.4 valores.`}
-                />
-              </div>
-              <FormControl>
-                <Input
-                  className="w-fit" type="number" min="0" max="100" placeholder="0"
-                  value={field.value || ""}
-                  onChange={(e) => {
-                    const v = parseInt(e.target.value);
-                    field.onChange(isNaN(v) ? 0 : Math.max(0, Math.min(100, v)));
-                  }}
-                  onBlur={(e) => { if (isNaN(parseInt(e.target.value))) field.onChange(0); }}
-                  onKeyDown={(e) => { if (!/[0-9]/.test(e.key) && !NUMERIC_KEYS.includes(e.key) && !e.ctrlKey && !e.metaKey) e.preventDefault(); }}
-                />
-              </FormControl>
             </FormItem>
           )} />
         </div>

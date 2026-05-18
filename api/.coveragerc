@@ -1,0 +1,6 @@
+[run]
+source = src
+concurrency = greenlet
+omit = 
+    tests/*
+    */__init__.py

@@ -356,7 +356,7 @@ async def evaluate_exam_batch(
     # Read QR codes and validate all exams belong to this waiting room's exam_config
     exam_data = []
     for b64_str in body.files:
-        exam_id, temp_file_path = utils.decode_base64_image(b64_str)
+        exam_id, temp_file_path = await utils.decode_base64_image(b64_str)
         exam_instance = await get_exam_by_id(session, exam_id)
         if not exam_instance:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Exam {exam_id} not found.")

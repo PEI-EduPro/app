@@ -28,6 +28,11 @@
         </tr>
     </table><br>
 
+    <!-- Custom Description -->
+    {% if custom_description %}
+        <div style="margin: 20px 0; line-height: 1.5; white-space: pre-wrap;">{{ custom_description }}</div>
+    {% endif %}
+
     <!-- Exam Capture Image -->
     {% if options.exam_capture %}
         <p>Foto da sua tabela de resposta:<br><br></p>

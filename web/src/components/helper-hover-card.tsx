@@ -12,6 +12,7 @@ interface HelperHoverCardProps {
   iconClassName?: string;
   side: "top" | "right" | "bottom" | "left";
   trigger?: ReactNode;
+  open?: boolean;
 }
 
 export default function HelperHoverCard({
@@ -19,9 +20,10 @@ export default function HelperHoverCard({
   iconClassName,
   side,
   trigger,
+  open,
 }: HelperHoverCardProps) {
   return (
-    <HoverCard openDelay={50} closeDelay={100}>
+    <HoverCard openDelay={50} closeDelay={100} {...(open !== undefined ? { open } : {})}>
       <HoverCardTrigger className={trigger ? "flex self-stretch" : undefined}>
         {trigger || <HelpCircle className={iconClassName} />}
       </HoverCardTrigger>

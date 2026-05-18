@@ -1,7 +1,7 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { DeleteUcDialog } from "@/components/delete-uc-dialog";
+import { DeleteUcDialog } from "@/components/nova-uc/delete-uc-dialog";
 import { NovaUcModal } from "@/components/nova-uc/nova-uc-modal";
-import { UCCard } from "@/components/uc-card";
+import { UCCard } from "@/components/nova-uc/uc-card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useKeycloak } from "@/hooks/use-keycloak";
