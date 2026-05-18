@@ -180,7 +180,7 @@ async def test_close_exam_session_service(session):
     await session.commit()
     
     res = await close_exam_session_service(session, ec.id)
-    assert res.state == ExamState.WARNING_HANDLING
+    assert res.state == ExamState.VALIDATION
 
 @pytest.mark.asyncio
 async def test_get_professor_exam_sessions(session):

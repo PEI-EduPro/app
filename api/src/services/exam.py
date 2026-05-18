@@ -6,11 +6,14 @@ import json
 import logging
 import os
 import random
+import re
 import shutil
 import smtplib
 import subprocess
 import tempfile
 import traceback
+import zipfile
+from datetime import datetime
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -40,6 +43,7 @@ from src.models.subject import Subject
 from src.models.topic import Topic
 from src.models.topic_config import TopicConfig
 from src.models.warning import Warning
+from src.services.warning import calculate_and_persist_warnings
 
 
 
@@ -170,7 +174,6 @@ async def generate_grades_report_pdf(
         formatted_date = ""
         if exam_date:
             try:
-                from datetime import datetime
                 date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
                 formatted_date = date_obj.strftime("%d de %B de %Y")
                 pt_months = {
@@ -263,9 +266,6 @@ async def generate_exams_to_disk(
     num_versions: int = None
 ) -> Tuple[bytes, str]:
     """Generate LaTeX exams and answer keys, save to disk and return (bytes, path)."""
-    import zipfile
-    import io
-
     if num_versions is None:
         num_versions = total_exams
 
@@ -303,7 +303,6 @@ async def generate_exams_to_disk(
 
         # Write custom date.tex
         if exam_date:
-            from datetime import datetime
             date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
             formatted_date = date_obj.strftime("%d de %B de %Y")
             # Portuguese month names
@@ -740,13 +739,11 @@ async def _compile_latex(workdir: str, main_file: str, var_num: int, subject_nam
             )
         else:
             # Replace existing version number (Batch ID)
-            import re
             h_content = re.sub(
                 r"Versão \d+",
                 f"Versão {var_num}",
                 h_content
             )
-
         async with await anyio.open_file(h_path, "w") as f:
             await f.write(h_content)
 
@@ -1262,7 +1259,6 @@ async def transition_exam_config_state(
     # 1. Validation Logic for specific transitions
     if target_state == ExamState.VALIDATION:
         # Must resolve all warnings before moving to validation
-        from src.models.warning import Warning
         warning_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config_id)
         warning_count = (await session.exec(warning_stmt)).one()
         if warning_count > 0:
@@ -1407,8 +1403,6 @@ async def get_exam_session_metrics_service(
     )
 
 async def close_exam_session_service(session: AsyncSession, exam_config_id: int) -> ExamConfig:
-    from src.services.warning import calculate_and_persist_warnings
-    
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
         raise ValueError("Exam configuration not found")

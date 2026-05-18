@@ -2,11 +2,11 @@ import json
 import logging
 from typing import List, Dict, Set
 
-from sqlmodel import select, delete
+from sqlmodel import select, delete, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.models.exam import Exam
-from src.models.exam_config import ExamConfig
+from src.models.exam_config import ExamConfig, ExamState
 from src.models.warning import Warning, WarningType, WarningAssignment, StudentSummary
 
 logger = logging.getLogger(__name__)
@@ -112,6 +112,19 @@ async def calculate_and_persist_warnings(
                 student_list=None,
                 exam_list=[exam.id]
             ))
+
+    # 5. Automatic State Transition
+    # If no warnings exist and we are in WARNING_HANDLING, move to VALIDATION
+    await session.flush() # Ensure counts are accurate
+    count_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config_id)
+    warning_count = (await session.exec(count_stmt)).one()
+
+    if warning_count == 0:
+        exam_config = await session.get(ExamConfig, exam_config_id)
+        if exam_config and exam_config.state == ExamState.WARNING_HANDLING:
+            exam_config.state = ExamState.VALIDATION
+            session.add(exam_config)
+            logger.info(f"ExamConfig {exam_config_id} automatically transitioned to VALIDATION (zero warnings).")
 
 async def get_filtered_students(
     session: AsyncSession,

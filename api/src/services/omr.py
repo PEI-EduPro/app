@@ -1,17 +1,18 @@
-import json
-import logging
-import os
-
 import cv2
 import imutils
+import json
+import logging
 import numpy as np
+import os
 from imutils.perspective import order_points
+from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.models.exam import Exam
 from src.models.exam_config import ExamConfig, ExamState
 from src.models.warning import Warning, WarningType
 from src.services.exam import get_exam_config_by_id
+from src.services.warning import calculate_and_persist_warnings
 
 logger = logging.getLogger(__name__)
 
@@ -279,51 +280,20 @@ async def evaluate_exam(
 
     exam.capture_path = clean_path          
     exam.correction_path = correction_path
-
-    # Check for association warnings
-    has_warning = False
-    if exam.nmec is None:
-        has_warning = True
-        # Create exam_correction_no_student warning if it doesn't exist
-        from sqlmodel import select
-        stmt = select(Warning).where(
-            Warning.exam_config_id == exam_config.id,
-            Warning.type == WarningType.exam_correction_no_student
-        )
-        existing_warnings = (await session.exec(stmt)).all()
-        
-        # Check if this specific exam is already in any of these warnings
-        already_warned = False
-        for w in existing_warnings:
-            if exam.id in w.exam_list:
-                already_warned = True
-                break
-        
-        if not already_warned:
-            session.add(Warning(
-                exam_config_id=exam_config.id,
-                type=WarningType.exam_correction_no_student,
-                exam_list=[exam.id]
-            ))
-            logger.info(f"Created warning for exam {exam.id}: no student associated.")
-    else:
-        # If it has an NMEC, check if there are OTHER unresolved warnings for this config
-        from sqlmodel import func
-        warning_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config.id)
-        warning_count = (await session.exec(warning_stmt)).one()
-        if warning_count > 0:
-            has_warning = True
-
-    # State transition logic for late photo submissions
-    if exam_config.state in [ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED]:
-        if has_warning:
-            exam_config.state = ExamState.WARNING_HANDLING
-        else:
-            exam_config.state = ExamState.VALIDATION
-        session.add(exam_config)
-        logger.info(f"ExamConfig {exam_config.id} state updated to {exam_config.state} due to late photo.")
-
     session.add(exam)
     await session.commit()
     await session.refresh(exam)
+
+    # 2. Re-calculate all warnings (including the new one if nmec is missing)
+    # This automatically transitions the state between WARNING_HANDLING and VALIDATION
+    nmec_to_name = {}
+    if exam_config.nmec_name_list:
+        try:
+            nmec_to_name = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
+
+    await calculate_and_persist_warnings(session, exam_config.id, exam_config.associations, nmec_to_name)
+
+    await session.commit()
     await session.refresh(exam_config)

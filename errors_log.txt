@@ -1,149 +1,29 @@
 ================================================================= FAILURES =================================================================
-_________________________________________________ test_generate_grades_report_pdf_success __________________________________________________
+_____________________________________________________ test_close_exam_session_service ______________________________________________________
 
-session = <sqlalchemy.orm.session.AsyncSession object at 0x715c76a00650>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x73c6e94928a0>
 
     @pytest.mark.asyncio
-    async def test_generate_grades_report_pdf_success(session):
-        """Test successful report generation (mocking pdflatex)"""
-        # Setup test data
-        subject = Subject(name="Test Subject")
-        session.add(subject)
+    async def test_close_exam_session_service(session):
+        sub = Subject(name="Sub")
+        session.add(sub)
         await session.commit()
-        await session.refresh(subject)
-    
-        exam_config = ExamConfig(
-            subject_id=subject.id,
-            exam_name="Midterm",
-            exam_date="2024-05-20"
-        )
-        session.add(exam_config)
-        await session.commit()
-        await session.refresh(exam_config)
-    
-        exam_instance = Exam(
-            exam_config_id=exam_config.id,
-            nmec=12345,
-            student_name="John Doe",
-            grade=18.5,
-            answer_key={"0": 0}, # To avoid issues with other functions if they check this
-            relative_weights={"0": 1.0}
-        )
-        session.add(exam_instance)
+        ec = ExamConfig(subject_id=sub.id, state=ExamState.RUNNING)
+        session.add(ec)
         await session.commit()
     
-        # We need to mock os.path.exists specifically for the report.pdf file
-        original_exists = os.path.exists
-        def side_effect_exists(path):
-            if "report.pdf" in str(path):
-                return True
-            return original_exists(path)
-    
-        with patch("shutil.which", return_value="/usr/bin/pdflatex"), \
-             patch("anyio.run_process") as mock_run, \
-             patch("os.path.exists", side_effect=side_effect_exists):
-    
-            # Mock anyio.open_file
-            mock_file = MagicMock()
-            # Reads: 1. template
-            # Other calls are writes: UC.tex, date.tex, report.tex
-            # Final read: report.pdf
-            mock_file.__aenter__.return_value.read.side_effect = [
-                b"__EXAM_NAME__ __ROWS__",
-                b"fake pdf content"
-            ]
-            mock_file.__aenter__.return_value.write = AsyncMock()
-    
-            with patch("anyio.open_file", return_value=mock_file):
->               pdf_bytes = await exam.generate_grades_report_pdf(session, exam_config.id)
-                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        res = await close_exam_session_service(session, ec.id)
+>       assert res.state == ExamState.WARNING_HANDLING
+E       AssertionError: assert <ExamState.VA... 'validation'> == <ExamState.WA...ing_handling'>
+E         
+E         - warning_handling
+E         + validation
 
-tests/unit/test_grades_report.py:68: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-
-session = <sqlalchemy.orm.session.AsyncSession object at 0x715c76a00650>, exam_config_id = 1
-
-    async def generate_grades_report_pdf(
-        session: AsyncSession,
-        exam_config_id: int
-    ) -> bytes:
-        """Generate a PDF report of student grades using project standard templates."""
-        if shutil.which("pdflatex") is None:
-            raise RuntimeError("pdflatex is not installed.")
-    
-        # 1. Fetch data
-        exam_config = await get_exam_config_by_id(session, exam_config_id)
-        if not exam_config:
-            raise ValueError("Exam configuration not found")
-    
-        subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
-        subject = subject_result.first()
-        subject_name = subject.name if subject else "Unknown Subject"
-    
-        exams = await get_exams_by_config_id(session, exam_config_id)
-        corrected_exams = [e for e in exams if e.grade is not None]
-        corrected_exams.sort(key=lambda x: x.nmec if x.nmec else 0)
-    
-        # 2. Setup Temporary Directory and Templates
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Copy base templates if any were needed (though report is mostly self-contained)
-            # For consistency, we'll write the specific files needed
-    
-            # Write UC.tex (following project pattern)
-            # Defaulting to 1st Semester and 2025/26 as seen in other parts of the code
-            semester_text_en = "1st Semester"
-            semester_text_pt = "1º Semestre"
-            academic_year = "2025/26"
-            uc_content = f"""\\iftoggle{{english}}{{
-    {subject_name}\\\\
-    {semester_text_en}, {academic_year}\\\\
-    }}{{
-    {subject_name}\\\\
-    {semester_text_pt}, {academic_year}\\\\
-    }}"""
-            async with await anyio.open_file(os.path.join(tmpdir, "UC.tex"), "w") as f:
-                await f.write(uc_content)
-    
-            # Write date.tex (following project pattern)
-            exam_date = exam_config.exam_date
-            formatted_date = ""
-            if exam_date:
-                try:
-                    from datetime import datetime
-                    date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
-                    formatted_date = date_obj.strftime("%d de %B de %Y")
-                    pt_months = {
-                        "January": "janeiro", "February": "fevereiro", "March": "março",
-                        "April": "abril", "May": "maio", "June": "junho",
-                        "July": "julho", "August": "agosto", "September": "setembro",
-                        "October": "outubro", "November": "novembro", "December": "dezembro"
-                    }
-                    for en, pt in pt_months.items():
-                        formatted_date = formatted_date.replace(en, pt)
-                except Exception:
-                    formatted_date = exam_date
-            async with await anyio.open_file(os.path.join(tmpdir, "date.tex"), "w") as f:
-                await f.write(formatted_date)
-    
-            # Build ROWS
-            rows = []
-            for e in corrected_exams:
-                nmec = str(e.nmec) if e.nmec else ""
-                name = e.student_name or "Unknown Student"
-                grade = f"{e.grade:.2f}"
-                safe_name = name.replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
-                rows.append(f"{nmec} & {safe_name} & {grade} \\\\ \\hline")
-    
-            # Read Main Template
-            template_path = os.path.join(LATEX_TEMPLATES_DIR, "grades_report.tex")
-            async with await anyio.open_file(template_path, "r") as f:
-                latex_content = await f.read()
-    
->           latex_content = latex_content.replace("__EXAM_NAME__", exam_config.exam_name or "Exame")
-                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-E           TypeError: a bytes-like object is required, not 'str'
-
-src/services/exam.py:203: TypeError
+tests/unit/test_exam_coverage_boost.py:183: AssertionError
+----------------------------------------------------------- Captured stdout call -----------------------------------------------------------
+2026-05-18 02:06:22,423 - src.services.warning - INFO - ExamConfig 1 automatically transitioned to VALIDATION (zero warnings).
+------------------------------------------------------------ Captured log call -------------------------------------------------------------
+INFO     src.services.warning:warning.py:127 ExamConfig 1 automatically transitioned to VALIDATION (zero warnings).
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -165,5 +45,5 @@ tests/unit/test_exam_router_coverage.py::test_associate_student_invalid_qr
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_grades_report.py::test_generate_grades_report_pdf_success - TypeError: a bytes-like object is required, not 'str'
-================================================ 1 failed, 381 passed, 5 warnings in 27.79s ================================================
+FAILED tests/unit/test_exam_coverage_boost.py::test_close_exam_session_service - AssertionError: assert <ExamState.VA... 'validation'> == <ExamState.WA...ing_handling'>
+================================================ 1 failed, 384 passed, 5 warnings in 50.13s ================================================
