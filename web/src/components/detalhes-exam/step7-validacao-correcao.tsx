@@ -133,7 +133,7 @@ export default function Step7Content({
     <div className="flex gap-4">
       <ul className="w-40 border-r flex flex-col gap-1 p-2 shrink-0 overflow-y-auto custom-scrollbar max-h-[82vh]">
         {exams.map((exam) => (
-          <li key={exam.exam_id}>
+          <li key={exam.batch_number}>
             <Button
               disabled={!exam.corrected}
               variant={selectedId === exam.exam_id ? "secondary" : "ghost"}
@@ -157,6 +157,13 @@ export default function Step7Content({
       <div className="flex-1 flex items-start">
         {selectedId !== null && selectedExam?.questions && grid ? (
           <div className="flex flex-col gap-6 w-full">
+            {selectedExam.capture && (
+              <img
+                src={`data:image/jpeg;base64,${selectedExam.capture}`}
+                alt="Test example"
+                className="h-fit object-contain rounded-md border w-full max-h-50"
+              />
+            )}
             <AnswerGrid
               questions={selectedExam.questions}
               grid={grid}

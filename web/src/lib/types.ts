@@ -154,6 +154,7 @@ export interface ExamResponseI {
   capture: string | null;
   corrected: boolean;
   validated: boolean;
+  batch_number: number;
 }
 
 export type OptionKey = "a" | "b" | "c" | "d";
@@ -167,4 +168,5 @@ export interface PostEmailI {
   question_weights: boolean;
   red_green_cross_table: boolean;
   cumulative_score_table: boolean;
+  custom_description: string;
 }

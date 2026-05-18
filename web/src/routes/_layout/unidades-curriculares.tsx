@@ -70,10 +70,10 @@ function UCS() {
   return (
     <div className="flex flex-col h-screen overflow-hidden py-3.5 px-4 md:px-6 w-full">
       <div className="shrink-0">
-        <AppBreadcrumb page={isMobile ? "Salas" : "Unidades Curriculares"} />
+        <AppBreadcrumb page={isMobile ? "Exames" : "Unidades Curriculares"} />
 
         <div className="font-rubik flex justify-center mb-7 md:mb-8 font-bold text-foreground animate-fade-in-up typography-h1">
-          Unidades Curriculares
+          {isMobile ? "Exames" : "Unidades Curriculares"}
         </div>
         <div className="flex items-center gap-2 w-full md:px-47.5 mx-auto mb-4 md:mb-12 animate-fade-in-up">
           {isManager && !isMobile && (
@@ -109,7 +109,9 @@ function UCS() {
         </div>
         {isMobile && (
           <div className="flex gap-2 mb-4 animate-fade-in-up">
-            {(["all", "running", "preparing", "closed_and_capture"] as const).map((s) => (
+            {(
+              ["all", "running", "preparing", "closed_and_capture"] as const
+            ).map((s) => (
               <button
                 key={s}
                 onClick={() => setStateFilter(s)}

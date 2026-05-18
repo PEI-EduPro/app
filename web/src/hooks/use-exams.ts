@@ -71,13 +71,11 @@ const useGetExamConfigById = (examConfigId: number) =>
     enabled: !!examConfigId,
     refetchInterval: (query) => {
       const state = query.state.data?.state;
-      const doneStates: ExamWorkflowStatus[] = [
-        "warning_handling",
-        "validation",
-        "completed",
-        "sent",
-      ];
-      return state && doneStates.includes(state) ? false : 5000;
+      const doneStates: ExamWorkflowStatus[] = ["completed", "sent"];
+      const noMorePic: boolean =
+        query.state.data?.pictured_exams_count ===
+        query.state.data?.total_exams;
+      return state && doneStates.includes(state) && noMorePic ? false : 5000;
     },
   });
 
