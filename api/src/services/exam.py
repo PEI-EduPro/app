@@ -1055,6 +1055,7 @@ async def correct_by_hand(
 
     exam_instance.results = json.dumps(normalised_grid)
     exam_instance.grade = max(0.0, total_score)
+    exam_instance.validated = True
 
     session.add(exam_instance)
     await session.commit()

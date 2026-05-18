@@ -122,9 +122,23 @@ async def calculate_and_persist_warnings(
     if warning_count == 0:
         exam_config = await session.get(ExamConfig, exam_config_id)
         if exam_config and exam_config.state == ExamState.WARNING_HANDLING:
+            # Move to VALIDATION first
             exam_config.state = ExamState.VALIDATION
             session.add(exam_config)
+            await session.flush()
             logger.info(f"ExamConfig {exam_config_id} automatically transitioned to VALIDATION (zero warnings).")
+
+            # Then check if we can move straight to COMPLETED
+            # Fetch exams to check validation status
+            exam_stmt = select(Exam).where(Exam.exam_config_id == exam_config_id)
+            exams = (await session.exec(exam_stmt)).all()
+            unvalidated_pictured = [e for e in exams if e.capture_path is not None and not e.validated]
+            
+            if not unvalidated_pictured:
+                # Need to use transition_exam_config_state to ensure all logic is applied
+                from src.services.exam import transition_exam_config_state
+                await transition_exam_config_state(session, exam_config_id, ExamState.COMPLETED)
+                logger.info(f"ExamConfig {exam_config_id} automatically transitioned from VALIDATION to COMPLETED (all exams already validated).")
 
 async def get_filtered_students(
     session: AsyncSession,

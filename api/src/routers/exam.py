@@ -510,52 +510,6 @@ async def delete_exam_config_endpoint(
 # async def evaluate_exam_omr(...)
 
 
-@router.post("/{exam_id}/validate")
-async def validate_exam(
-    exam_id: int,
-    user_info: User = Depends(get_current_user_info),
-    session: AsyncSession = Depends(get_session)
-):
-    """
-    The regent validates that an exam has been rightfully corrected.
-    This is to help the regent understand the exams he has already validated.
-    """
-
-    exam_instance = await get_exam_by_id(session, exam_id)
-    if not exam_instance:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam not found.")
-
-    exam_config = await get_exam_config_by_id(session, exam_instance.exam_config_id)
-    if not exam_config or exam_config.state != ExamState.VALIDATION:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot validate exam: configuration is in {exam_config.state.value if exam_config else 'unknown'} state, not {ExamState.VALIDATION.value}."
-        )
-
-    subject_id = await get_subject_id_by_exam_config_id(exam_instance.exam_config_id, session)
-    verify_permission(user_info, [f"/s{subject_id}/regent"])
-
-    if exam_instance.grade is None or exam_instance.results is None or exam_instance.capture_path is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Exam has not been corrected yet.")
-
-    exam_instance.validated = True
-    session.add(exam_instance)
-    await session.commit()
-    await session.refresh(exam_instance)
-
-    # Automatic State Transition: if all pictured exams are validated, move to COMPLETED
-    exam_config_id = exam_instance.exam_config_id
-    exam_config = await get_exam_config_by_id(session, exam_config_id)
-    if exam_config and exam_config.state == ExamState.VALIDATION:
-        # Check if there are any pictured exams that are NOT validated
-        unvalidated_pictured = [e for e in exam_config.exams if e.capture_path is not None and not e.validated]
-        if not unvalidated_pictured:
-            await transition_exam_config_state(session, exam_config_id, ExamState.COMPLETED)
-            logger.info(f"ExamConfig {exam_config_id} automatically transitioned to COMPLETED (all exams validated).")
-
-    return {"status": "success"}
-
-
 @router.get("/{exam_config_id}/all_exams_info")
 async def get_all_exams_info(
     exam_config_id: int,
@@ -683,6 +637,13 @@ async def correct_by_hand_job(
 
     exam_config = await get_exam_config_by_id(session, updated.exam_config_id)
     fraction = exam_config.fraction if exam_config else 0
+
+    # Automatic State Transition: if all pictured exams are validated, move to COMPLETED
+    if exam_config and exam_config.state == ExamState.VALIDATION:
+        unvalidated_pictured = [e for e in exam_config.exams if e.capture_path is not None and not e.validated]
+        if not unvalidated_pictured:
+            await transition_exam_config_state(session, updated.exam_config_id, ExamState.COMPLETED)
+            logger.info(f"ExamConfig {updated.exam_config_id} automatically transitioned to COMPLETED (all exams validated after hand correction).")
 
     return {
         "exam_id": updated.id,

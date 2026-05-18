@@ -127,56 +127,6 @@ async def test_evaluate_batch_success(client, mock_auth, session):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/exams/{exam_id}/validate
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_validate_exam_not_found(client, mock_auth):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    response = await client.post("/api/exams/9999/validate")
-    assert response.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_validate_exam_not_corrected(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-
-    from src.models.subject import Subject
-    sub = Subject(name="Subj")
-    session.add(sub)
-    await session.commit()
-    await session.refresh(sub)
-
-    ec = await _setup_exam_config(session, sub.id)
-    e = await _setup_exam(session, ec.id, corrected=False)
-
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 400
-    assert "not been corrected" in response.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_validate_exam_success(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-
-    from src.models.subject import Subject
-    from src.models.exam import Exam
-    sub = Subject(name="Subj")
-    session.add(sub)
-    await session.commit()
-    await session.refresh(sub)
-
-    ec = await _setup_exam_config(session, sub.id)
-    e = await _setup_exam(session, ec.id, corrected=True)
-
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 200
-
-    await session.refresh(e)
-    assert e.validated is True
-
-
-# ---------------------------------------------------------------------------
 # GET /api/exams/{exam_id}/exam_info
 # ---------------------------------------------------------------------------
 

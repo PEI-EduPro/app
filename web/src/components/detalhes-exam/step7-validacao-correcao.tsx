@@ -4,7 +4,6 @@ import { Eye, EyeOff } from "lucide-react";
 import type { OptionKey, QuestionsI } from "@/lib/types";
 import {
   useGetExamsResponses,
-  useValidateExam,
   useCorrectExam,
 } from "@/hooks/use-exams";
 
@@ -104,7 +103,6 @@ export default function Step7Content({
   examConfigId: number;
 }) {
   const { data: exams = [] } = useGetExamsResponses(examConfigId);
-  const validateMutation = useValidateExam(examConfigId);
   const correctMutation = useCorrectExam(examConfigId);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -121,16 +119,12 @@ export default function Step7Content({
     setLocalValidated(exam.validated);
   }
 
-  function handleValidate() {
-    if (!selectedId || !grid) return;
-    validateMutation.mutate(selectedId, {
-      onSuccess: () => setLocalValidated(true),
-    });
-  }
-
   function handleCorrect() {
     if (!selectedId || !grid) return;
-    correctMutation.mutate({ examId: selectedId, props: { grid } });
+    correctMutation.mutate(
+      { examId: selectedId, props: { grid } },
+      { onSuccess: () => setLocalValidated(true) },
+    );
   }
 
   const selectedExam = exams.find((e) => e.exam_id === selectedId);
@@ -204,20 +198,11 @@ export default function Step7Content({
                 <div className="flex gap-2">
                   <Button
                     size="lg"
-                    variant="outline"
-                    className="cursor-pointer"
+                    className="font-bold cursor-pointer"
                     disabled={correctMutation.isPending}
                     onClick={handleCorrect}
                   >
                     Guardar correção
-                  </Button>
-                  <Button
-                    size="lg"
-                    className="font-bold cursor-pointer"
-                    disabled={validateMutation.isPending}
-                    onClick={handleValidate}
-                  >
-                    Validar
                   </Button>
                 </div>
               </div>

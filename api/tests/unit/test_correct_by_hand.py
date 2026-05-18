@@ -70,6 +70,7 @@ async def test_correct_by_hand_service_all_correct(session):
     updated = await correct_by_hand(session, e.id, VALID_GRID)
 
     assert updated.grade == pytest.approx(20.0)
+    assert updated.validated is True
     results = json.loads(updated.results)
     assert results["0"]["B"] is True
     assert results["1"]["A"] is True
@@ -212,3 +213,4 @@ async def test_correct_by_hand_endpoint_updates_db(client, mock_auth, session):
     await session.refresh(e)
     assert e.grade is not None
     assert e.results is not None
+    assert e.validated is True

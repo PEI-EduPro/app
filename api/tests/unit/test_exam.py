@@ -527,29 +527,6 @@ async def test_download_exam_zip_not_ready(client, mock_auth, session):
     assert "Generation is not completed" in response.json()["detail"]
 
 @pytest.mark.asyncio
-async def test_validate_exam_success(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, ExamState
-    from src.models.exam import Exam
-    
-    sub = Subject(name="S")
-    session.add(sub)
-    await session.commit()
-    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
-    session.add(ec)
-    await session.commit()
-    e = Exam(exam_config_id=ec.id, grade=10, results="{}", capture_path="p")
-    session.add(e)
-    await session.commit()
-    await session.refresh(e)
-    
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 200
-    await session.refresh(e)
-    assert e.validated is True
-
-@pytest.mark.asyncio
 async def test_correct_by_hand_job(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
@@ -731,32 +708,6 @@ async def test_delete_exam_config_value_error(client, mock_auth):
     with patch("src.routers.exam.get_subject_id_by_exam_config_id", side_effect=ValueError("Bad ID")):
         response = await client.delete("/api/exams/config/999")
         assert response.status_code == 404
-
-@pytest.mark.asyncio
-async def test_validate_exam_not_found(client, mock_auth):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    response = await client.post("/api/exams/99999/validate")
-    assert response.status_code == 404
-
-@pytest.mark.asyncio
-async def test_validate_exam_not_corrected_yet(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, ExamState
-    from src.models.exam import Exam
-    sub = Subject(name="S")
-    session.add(sub)
-    await session.commit()
-    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
-    session.add(ec)
-    await session.commit()
-    e = Exam(exam_config_id=ec.id, grade=None) # Not corrected
-    session.add(e)
-    await session.commit()
-    
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 400
-    assert "Exam has not been corrected yet" in response.json()["detail"]
 
 @pytest.mark.asyncio
 async def test_get_all_exams_info_success(client, mock_auth, session):

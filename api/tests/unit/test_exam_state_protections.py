@@ -42,29 +42,6 @@ VALID_GRID = {
 }
 
 @pytest.mark.asyncio
-async def test_validate_exam_wrong_state(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    sub = await _setup_subject(session)
-    ec = await _setup_exam_config(session, sub.id, state=ExamState.RUNNING)
-    e = await _setup_exam(session, ec.id, corrected=True)
-
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 400
-    assert "not validation" in response.json()["detail"].lower()
-
-@pytest.mark.asyncio
-async def test_validate_exam_correct_state(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    sub = await _setup_subject(session)
-    ec = await _setup_exam_config(session, sub.id, state=ExamState.VALIDATION)
-    e = await _setup_exam(session, ec.id, corrected=True)
-
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 200
-    await session.refresh(e)
-    assert e.validated is True
-
-@pytest.mark.asyncio
 async def test_correct_by_hand_wrong_state(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     sub = await _setup_subject(session)

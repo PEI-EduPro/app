@@ -310,23 +310,6 @@ const useGetExamInfo = (examId: number | null) =>
     enabled: examId !== null,
   });
 
-const useValidateExam = (examConfigId: number) => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (examId: number) =>
-      apiClient.post(`/exams/${examId}/validate`, { exam_id: examId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ["exams_responses", examConfigId],
-      });
-    },
-    onError: () =>
-      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
-        position: "top-right",
-      }),
-  });
-};
-
 const useCorrectExam = (examConfigId: number) => {
   const queryClient = useQueryClient();
   return useMutation({
