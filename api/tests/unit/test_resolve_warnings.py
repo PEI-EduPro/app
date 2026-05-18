@@ -227,6 +227,11 @@ async def test_resolve_replaces_previous_assignment_for_same_exam(client, mock_a
     assert response.status_code == 200
     assert response.json() == []
 
+    # Verify state transition to VALIDATION
+    ec = await session.get(ExamConfig, d["exam_config_id"])
+    await session.refresh(ec)
+    assert ec.state == ExamState.VALIDATION
+
     exam1 = await session.get(Exam, exam1_id)
     assert exam1.nmec == 222
 
