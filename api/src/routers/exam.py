@@ -600,6 +600,7 @@ async def get_all_exams_info(
             "exam_id": e.id,
             "capture": capture_b64,
             "questions": build_exam_questions(e, fraction),
+            "batch_number": e.batch_number,
         })
 
     return result

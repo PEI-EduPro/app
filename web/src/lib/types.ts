@@ -154,6 +154,7 @@ export interface ExamResponseI {
   capture: string | null;
   corrected: boolean;
   validated: boolean;
+  batch_number: number;
 }
 
 export type OptionKey = "a" | "b" | "c" | "d";
