@@ -534,6 +534,17 @@ async def validate_exam(
     exam_instance.validated = True
     session.add(exam_instance)
     await session.commit()
+    await session.refresh(exam_instance)
+
+    # Automatic State Transition: if all pictured exams are validated, move to COMPLETED
+    exam_config_id = exam_instance.exam_config_id
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if exam_config and exam_config.state == ExamState.VALIDATION:
+        # Check if there are any pictured exams that are NOT validated
+        unvalidated_pictured = [e for e in exam_config.exams if e.capture_path is not None and not e.validated]
+        if not unvalidated_pictured:
+            await transition_exam_config_state(session, exam_config_id, ExamState.COMPLETED)
+            logger.info(f"ExamConfig {exam_config_id} automatically transitioned to COMPLETED (all exams validated).")
 
     return {"status": "success"}
 
