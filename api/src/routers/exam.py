@@ -396,7 +396,7 @@ async def retrieve_student_list(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
 
-    verify_permission(user_info, [f"/w{group_name}/vigilante", f"/w{group_name}/regent"])
+    verify_permission(user_info, [f"/w{exam_config_id}/vigilant", f"/w{exam_config_id}/regent", f"/s{group_name}/regent"])
 
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:
@@ -928,6 +928,10 @@ async def evaluate_session_batch(
             results.append({"exam_id": exam_instance.id, "status": "success"})
         except Exception as e:
             logger.error(f"Error evaluating exam {exam_instance.id}: {e}")
+            # If it's a single file (typical for mobile), raise the error directly
+            # so the frontend receives a 400 status instead of a silent failure in a 200 response.
+            if len(exam_data) == 1:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
             results.append({"exam_id": exam_instance.id, "status": "error", "detail": str(e)})
 
     return {"results": results}
