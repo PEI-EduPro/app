@@ -65,7 +65,9 @@ export default function Step8Content({
           className="self-start cursor-pointer"
           disabled={isPostingGrades || state === "sent"}
           onClick={() => {
-            toast.loading("Lançando notas...");
+            toast.loading("Lançando notas...", {
+              position: "top-right",
+            });
             postGrades({
               cumulative_score_table: options.cumulative_score_table,
               exam_capture: options.exam_capture,

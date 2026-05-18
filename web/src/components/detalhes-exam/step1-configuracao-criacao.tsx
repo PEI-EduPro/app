@@ -8,7 +8,7 @@ export default function Step1Content({
 }) {
   return (
     <div className="shrink-0 overflow-y-auto custom-scrollbar max-h-[82vh]">
-      <ExamConfigCard examConfigData={examConfig} download />
+      <ExamConfigCard examConfigData={examConfig} />
     </div>
   );
 }
