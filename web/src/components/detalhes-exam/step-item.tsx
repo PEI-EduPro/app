@@ -8,6 +8,7 @@ export function StepItem({
   index,
   isLast,
   noExpand,
+  progress,
 }: {
   step: {
     label: string;
@@ -18,6 +19,7 @@ export function StepItem({
   index: number;
   isLast: boolean;
   noExpand?: boolean;
+  progress?: 0 | 1 | 2;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -41,12 +43,23 @@ export function StepItem({
           onClick={toggle}
           className={cn(
             "w-11 h-11 rounded-full flex items-center justify-center text-base font-bold transition-all duration-300 ease-in-out cursor-pointer shrink-0",
-            open ? "bg-primary text-white" : "bg-primary/30 text-primary",
+            progress === 2
+              ? "bg-primary text-white"
+              : progress === 1
+                ? "bg-primary/60 text-white"
+                : "bg-primary/20 text-primary/40",
           )}
         >
           {index + 1}
         </button>
-        {!isLast && <div className="w-1 flex-1 min-h-4 bg-primary/30" />}
+        {!isLast && (
+          <div
+            className={cn(
+              "w-1 flex-1 min-h-4 transition-colors duration-300",
+              progress === 2 ? "bg-primary" : "bg-primary/20",
+            )}
+          />
+        )}
       </div>
 
       <div className="flex-1 pb-6">
@@ -67,8 +80,15 @@ export function StepItem({
               {step.label}
             </span>
             {step.hint && (
-              <div className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                <HelperHoverCard content={step.hint} side="right" iconClassName="h-5 w-5 text-muted-foreground" />
+              <div
+                className="cursor-pointer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <HelperHoverCard
+                  content={step.hint}
+                  side="right"
+                  iconClassName="h-5 w-5 text-muted-foreground"
+                />
               </div>
             )}
           </div>

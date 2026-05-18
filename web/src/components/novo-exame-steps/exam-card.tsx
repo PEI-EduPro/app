@@ -94,7 +94,7 @@ export default function ExamCard({
               Variações
             </p>
             <p className="text-lg font-bold text-[#3263A8] leading-none">
-              {examConfig.num_variations}
+              {examConfig.total_exams}
             </p>
           </div>
           <div className="w-px h-8 bg-border" />

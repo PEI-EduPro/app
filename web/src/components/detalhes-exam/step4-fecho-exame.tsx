@@ -2,7 +2,13 @@ import { Button } from "@/components/ui/button";
 import { Smartphone } from "lucide-react";
 import { useCloseExamSession } from "@/hooks/use-exams";
 
-export default function Step4Content({ examConfigId }: { examConfigId: number }) {
+export default function Step4Content({
+  examConfigId,
+  disabled,
+}: {
+  examConfigId: number;
+  disabled?: boolean;
+}) {
   const closeMutation = useCloseExamSession(examConfigId);
 
   return (
@@ -19,7 +25,7 @@ export default function Step4Content({ examConfigId }: { examConfigId: number })
       <Button
         variant="destructive"
         className="self-start cursor-pointer"
-        disabled={closeMutation.isPending}
+        disabled={disabled || closeMutation.isPending}
         onClick={() => closeMutation.mutate()}
       >
         Fechar Exame

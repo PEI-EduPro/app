@@ -65,7 +65,7 @@ const useDownloadExamConfig = () =>
 
 const useGetExamConfigById = (examConfigId: number) =>
   useQuery<ExamConfigI>({
-    queryKey: ["examConfig", examConfigId],
+    queryKey: ["examConfigById", examConfigId],
     queryFn: () => apiClient.get(`/exams/config/${examConfigId}`),
     enabled: !!examConfigId,
   });

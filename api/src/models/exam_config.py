@@ -117,6 +117,7 @@ class ExamConfigResponse(SQLModel):
     status: GenerationStatus = GenerationStatus.PENDING
     state: ExamState = ExamState.PREPARING
     associations: List[str] = []
+    vigilants: List[str] = []
     
     # Computed metrics
     total_exams: int = 0

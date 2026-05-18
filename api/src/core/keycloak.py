@@ -413,6 +413,18 @@ class KeycloakClient:
                 return g['id']
         return None
 
+    async def get_group_members_by_name(self, group_name: str) -> list[dict]:
+        """Fetch all members of a group by its name (e.g., 's1/students', 'w5/vigilant')"""
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                return []
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+        except Exception as e:
+            logger.error(f"Failed to fetch members for group {group_name}: {e}")
+            return []
+
     async def get_subject_students(self, subject_id: str) -> list[dict]:
         """Fetch all users in the subject's student group"""
         group_name = f"s{subject_id}/students"
