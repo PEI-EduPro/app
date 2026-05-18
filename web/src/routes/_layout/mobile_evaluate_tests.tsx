@@ -1,10 +1,10 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
 import { RefreshCw, Camera } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import {
   useGetSubmittedExams,
@@ -83,10 +83,21 @@ function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
   const [photo, setPhoto] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const { data: roomDetails } = useGetExamSessionInfo(realId);
   const { mutate } = useSendExamsPhotos(realId);
   const { data: submitedExams } = useGetSubmittedExams(realId);
+
+  useEffect(() => {
+    if (
+      roomDetails &&
+      roomDetails.role !== "regent" &&
+      roomDetails.state !== "running"
+    ) {
+      navigate({ to: "/unidades-curriculares" });
+    }
+  }, [roomDetails, navigate]);
 
   return (
     <div className="py-3.5 px-4 w-full flex flex-col min-h-screen">

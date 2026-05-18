@@ -185,8 +185,8 @@ const useCloseExamSession = (examConfigId: number) => {
 const useDownloadGrades = (examConfigId: number) =>
   useMutation({
     mutationFn: () =>
-      apiClient.download(`/exams/${examConfigId}/grades/download`),
-    onSuccess: (blob: Blob) => saveFile(blob, "notas.ods"),
+      apiClient.download(`/exams/${examConfigId}/grades_report`),
+    onSuccess: (blob: Blob) => saveFile(blob, "notas.pdf"),
     onError: () =>
       toast.error("Erro ao descarregar as notas.", { position: "top-right" }),
   });
@@ -352,6 +352,5 @@ export {
   useResolveWarnings,
   useGetExamsResponses,
   useGetExamInfo,
-  useValidateExam,
   useCorrectExam,
 };

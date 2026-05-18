@@ -2,10 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import type { OptionKey, QuestionsI } from "@/lib/types";
-import {
-  useGetExamsResponses,
-  useCorrectExam,
-} from "@/hooks/use-exams";
+import { useGetExamsResponses, useCorrectExam } from "@/hooks/use-exams";
 
 type Grid = Record<number, Record<OptionKey, boolean>>;
 const OPTIONS: OptionKey[] = ["a", "b", "c", "d"];
@@ -103,7 +100,8 @@ export default function Step7Content({
   examConfigId: number;
 }) {
   const { data: exams = [] } = useGetExamsResponses(examConfigId);
-  const correctMutation = useCorrectExam(examConfigId);
+  const { mutate: correctMutation, isPending: isCorrecting } =
+    useCorrectExam(examConfigId);
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [grid, setGrid] = useState<Grid | null>(null);
@@ -121,7 +119,7 @@ export default function Step7Content({
 
   function handleCorrect() {
     if (!selectedId || !grid) return;
-    correctMutation.mutate(
+    correctMutation(
       { examId: selectedId, props: { grid } },
       { onSuccess: () => setLocalValidated(true) },
     );
@@ -206,7 +204,7 @@ export default function Step7Content({
                   <Button
                     size="lg"
                     className="font-bold cursor-pointer"
-                    disabled={correctMutation.isPending}
+                    disabled={isCorrecting}
                     onClick={handleCorrect}
                   >
                     Guardar correção
