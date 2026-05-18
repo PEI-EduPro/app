@@ -54,12 +54,49 @@ from src.services.exam import (
     get_exam_session_metrics_service,
     close_exam_session_service,
     get_professor_exam_sessions,
-    notify_student
+    notify_student,
+    generate_grades_report_pdf
 )
 from src.services.omr import evaluate_exam
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+@router.get("/{exam_config_id}/grades_report")
+async def get_grades_report(
+    exam_config_id: int,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Generate a PDF report with all the grades of the students.
+    Only available in 'completed' and 'sent' states for the regent.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    if exam_config.state not in [ExamState.COMPLETED, ExamState.SENT]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail=f"Grades report is only available in 'completed' or 'sent' state. Current state: {exam_config.state}"
+        )
+
+    try:
+        pdf_bytes = await generate_grades_report_pdf(session, exam_config_id)
+        return Response(
+            content=pdf_bytes,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename=grades_report_{exam_config_id}.pdf"}
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate grades report: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
 
 @router.get("/subject/{subject_id}/configs", response_model=List[ExamConfigResponse])
 async def get_subject_exam_configs(

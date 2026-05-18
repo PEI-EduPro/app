@@ -1,140 +1,149 @@
 ================================================================= FAILURES =================================================================
-_______________________________________________ test_get_subject_exam_configs_missing_topic ________________________________________________
+_________________________________________________ test_generate_grades_report_pdf_success __________________________________________________
 
-client = <httpx.AsyncClient object at 0x7008c87d43b0>
-mock_auth = <function mock_auth.<locals>.override_get_current_user_info at 0x7008c87d2200>
-session = <sqlalchemy.orm.session.AsyncSession object at 0x7008c87b19a0>
+session = <sqlalchemy.orm.session.AsyncSession object at 0x715c76a00650>
 
     @pytest.mark.asyncio
-    async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
-        app.dependency_overrides[get_current_user_info] = mock_auth
-        from src.models.subject import Subject
-        from src.models.exam_config import ExamConfig, ExamState, GenerationStatus
-        from src.models.topic_config import TopicConfig
+    async def test_generate_grades_report_pdf_success(session):
+        """Test successful report generation (mocking pdflatex)"""
+        # Setup test data
+        subject = Subject(name="Test Subject")
+        session.add(subject)
+        await session.commit()
+        await session.refresh(subject)
     
-        sub = Subject(name="S")
-        session.add(sub)
+        exam_config = ExamConfig(
+            subject_id=subject.id,
+            exam_name="Midterm",
+            exam_date="2024-05-20"
+        )
+        session.add(exam_config)
+        await session.commit()
+        await session.refresh(exam_config)
+    
+        exam_instance = Exam(
+            exam_config_id=exam_config.id,
+            nmec=12345,
+            student_name="John Doe",
+            grade=18.5,
+            answer_key={"0": 0}, # To avoid issues with other functions if they check this
+            relative_weights={"0": 1.0}
+        )
+        session.add(exam_instance)
         await session.commit()
     
-        # Mock return value to simulate missing topic in relationship
-        mock_tc = MagicMock()
-        mock_tc.id = 1
-        mock_tc.topic_id = 999
-        mock_tc.topic = None
-        mock_tc.num_questions = 1
-        mock_tc.relative_weight = 1.0
+        # We need to mock os.path.exists specifically for the report.pdf file
+        original_exists = os.path.exists
+        def side_effect_exists(path):
+            if "report.pdf" in str(path):
+                return True
+            return original_exists(path)
     
-        mock_config = MagicMock()
-        mock_config.id = 1
-        mock_config.subject_id = sub.id
-        mock_config.fraction = 0
-        mock_config.topic_configs = [mock_tc]
-        mock_config.nmec_name_list = None
-        mock_config.exams = []
-        mock_config.status = GenerationStatus.COMPLETED
-        mock_config.state = ExamState.PREPARING
-        mock_config.associations = []
+        with patch("shutil.which", return_value="/usr/bin/pdflatex"), \
+             patch("anyio.run_process") as mock_run, \
+             patch("os.path.exists", side_effect=side_effect_exists):
     
-        with patch("src.routers.exam.get_exam_configs_by_subject", new_callable=AsyncMock) as mock_get:
-            mock_get.return_value = [mock_config]
->           response = await client.get(f"/api/exams/subject/{sub.id}/configs")
-                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            # Mock anyio.open_file
+            mock_file = MagicMock()
+            # Reads: 1. template
+            # Other calls are writes: UC.tex, date.tex, report.tex
+            # Final read: report.pdf
+            mock_file.__aenter__.return_value.read.side_effect = [
+                b"__EXAM_NAME__ __ROWS__",
+                b"fake pdf content"
+            ]
+            mock_file.__aenter__.return_value.write = AsyncMock()
+    
+            with patch("anyio.open_file", return_value=mock_file):
+>               pdf_bytes = await exam.generate_grades_report_pdf(session, exam_config.id)
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_exam.py:607: 
-_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
-.venv/lib/python3.12/site-packages/httpx/_client.py:1768: in get
-    return await self.request(
-.venv/lib/python3.12/site-packages/httpx/_client.py:1540: in request
-    return await self.send(request, auth=auth, follow_redirects=follow_redirects)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/httpx/_client.py:1629: in send
-    response = await self._send_handling_auth(
-.venv/lib/python3.12/site-packages/httpx/_client.py:1657: in _send_handling_auth
-    response = await self._send_handling_redirects(
-.venv/lib/python3.12/site-packages/httpx/_client.py:1694: in _send_handling_redirects
-    response = await self._send_single_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/httpx/_client.py:1730: in _send_single_request
-    response = await transport.handle_async_request(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/httpx/_transports/asgi.py:170: in handle_async_request
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/fastapi/applications.py:1159: in __call__
-    await super().__call__(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/applications.py:90: in __call__
-    await self.middleware_stack(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:186: in __call__
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/middleware/errors.py:164: in __call__
-    await self.app(scope, receive, _send)
-.venv/lib/python3.12/site-packages/starlette/middleware/cors.py:88: in __call__
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:191: in __call__
-    with recv_stream, send_stream, collapse_excgroups():
-/usr/lib/python3.12/contextlib.py:158: in __exit__
-    self.gen.throw(value)
-.venv/lib/python3.12/site-packages/starlette/_utils.py:87: in collapse_excgroups
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:193: in __call__
-    response = await self.dispatch_func(request, call_next)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-src/main.py:49: in dispatch
-    response = await call_next(request)
-               ^^^^^^^^^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:168: in call_next
-    raise app_exc from app_exc.__cause__ or app_exc.__context__
-.venv/lib/python3.12/site-packages/starlette/middleware/base.py:144: in coro
-    await self.app(scope, receive_or_disconnect, send_no_error)
-.venv/lib/python3.12/site-packages/starlette/middleware/exceptions.py:63: in __call__
-    await wrap_app_handling_exceptions(self.app, conn)(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
-    await app(scope, receive, sender)
-.venv/lib/python3.12/site-packages/fastapi/middleware/asyncexitstack.py:18: in __call__
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/routing.py:660: in __call__
-    await self.middleware_stack(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/routing.py:680: in app
-    await route.handle(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/routing.py:276: in handle
-    await self.app(scope, receive, send)
-.venv/lib/python3.12/site-packages/fastapi/routing.py:134: in app
-    await wrap_app_handling_exceptions(app, request)(scope, receive, send)
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:53: in wrapped_app
-    raise exc
-.venv/lib/python3.12/site-packages/starlette/_exception_handler.py:42: in wrapped_app
-    await app(scope, receive, sender)
-.venv/lib/python3.12/site-packages/fastapi/routing.py:120: in app
-    response = await f(request)
-               ^^^^^^^^^^^^^^^^
-.venv/lib/python3.12/site-packages/fastapi/routing.py:674: in app
-    raw_response = await run_endpoint_function(
-.venv/lib/python3.12/site-packages/fastapi/routing.py:328: in run_endpoint_function
-    return await dependant.call(**values)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-src/routers/exam.py:91: in get_subject_exam_configs
-    response.append(ExamConfigResponse(
-.venv/lib/python3.12/site-packages/sqlmodel/main.py:847: in __init__
-    sqlmodel_init(self=__pydantic_self__, data=data)
+tests/unit/test_grades_report.py:68: 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 
-    def sqlmodel_init(*, self: "SQLModel", data: dict[str, Any]) -> None:
-        old_dict = self.__dict__.copy()
-        if not is_table_model_class(self.__class__):
->           self.__pydantic_validator__.validate_python(
-                data,
-                self_instance=self,
-            )
-E           pydantic_core._pydantic_core.ValidationError: 2 validation errors for ExamConfigResponse
-E           exam_name
-E             Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.exa...e' id='123183025711168'>, input_type=MagicMock]
-E               For further information visit https://errors.pydantic.dev/2.13/v/string_type
-E           exam_date
-E             Input should be a valid string [type=string_type, input_value=<MagicMock name='mock.exa...e' id='123183044850272'>, input_type=MagicMock]
-E               For further information visit https://errors.pydantic.dev/2.13/v/string_type
+session = <sqlalchemy.orm.session.AsyncSession object at 0x715c76a00650>, exam_config_id = 1
 
-.venv/lib/python3.12/site-packages/sqlmodel/_compat.py:332: ValidationError
+    async def generate_grades_report_pdf(
+        session: AsyncSession,
+        exam_config_id: int
+    ) -> bytes:
+        """Generate a PDF report of student grades using project standard templates."""
+        if shutil.which("pdflatex") is None:
+            raise RuntimeError("pdflatex is not installed.")
+    
+        # 1. Fetch data
+        exam_config = await get_exam_config_by_id(session, exam_config_id)
+        if not exam_config:
+            raise ValueError("Exam configuration not found")
+    
+        subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
+        subject = subject_result.first()
+        subject_name = subject.name if subject else "Unknown Subject"
+    
+        exams = await get_exams_by_config_id(session, exam_config_id)
+        corrected_exams = [e for e in exams if e.grade is not None]
+        corrected_exams.sort(key=lambda x: x.nmec if x.nmec else 0)
+    
+        # 2. Setup Temporary Directory and Templates
+        with tempfile.TemporaryDirectory() as tmpdir:
+            # Copy base templates if any were needed (though report is mostly self-contained)
+            # For consistency, we'll write the specific files needed
+    
+            # Write UC.tex (following project pattern)
+            # Defaulting to 1st Semester and 2025/26 as seen in other parts of the code
+            semester_text_en = "1st Semester"
+            semester_text_pt = "1º Semestre"
+            academic_year = "2025/26"
+            uc_content = f"""\\iftoggle{{english}}{{
+    {subject_name}\\\\
+    {semester_text_en}, {academic_year}\\\\
+    }}{{
+    {subject_name}\\\\
+    {semester_text_pt}, {academic_year}\\\\
+    }}"""
+            async with await anyio.open_file(os.path.join(tmpdir, "UC.tex"), "w") as f:
+                await f.write(uc_content)
+    
+            # Write date.tex (following project pattern)
+            exam_date = exam_config.exam_date
+            formatted_date = ""
+            if exam_date:
+                try:
+                    from datetime import datetime
+                    date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
+                    formatted_date = date_obj.strftime("%d de %B de %Y")
+                    pt_months = {
+                        "January": "janeiro", "February": "fevereiro", "March": "março",
+                        "April": "abril", "May": "maio", "June": "junho",
+                        "July": "julho", "August": "agosto", "September": "setembro",
+                        "October": "outubro", "November": "novembro", "December": "dezembro"
+                    }
+                    for en, pt in pt_months.items():
+                        formatted_date = formatted_date.replace(en, pt)
+                except Exception:
+                    formatted_date = exam_date
+            async with await anyio.open_file(os.path.join(tmpdir, "date.tex"), "w") as f:
+                await f.write(formatted_date)
+    
+            # Build ROWS
+            rows = []
+            for e in corrected_exams:
+                nmec = str(e.nmec) if e.nmec else ""
+                name = e.student_name or "Unknown Student"
+                grade = f"{e.grade:.2f}"
+                safe_name = name.replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
+                rows.append(f"{nmec} & {safe_name} & {grade} \\\\ \\hline")
+    
+            # Read Main Template
+            template_path = os.path.join(LATEX_TEMPLATES_DIR, "grades_report.tex")
+            async with await anyio.open_file(template_path, "r") as f:
+                latex_content = await f.read()
+    
+>           latex_content = latex_content.replace("__EXAM_NAME__", exam_config.exam_name or "Exame")
+                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           TypeError: a bytes-like object is required, not 'str'
+
+src/services/exam.py:203: TypeError
 ============================================================= warnings summary =============================================================
 src/core/settings.py:5
   /home/i/Desktop/Pedro/Universidade/PEI/project/app/api/src/core/settings.py:5: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.13/migration/
@@ -156,5 +165,5 @@ tests/unit/test_exam_router_coverage.py::test_associate_student_invalid_qr
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ========================================================= short test summary info ==========================================================
-FAILED tests/unit/test_exam.py::test_get_subject_exam_configs_missing_topic - pydantic_core._pydantic_core.ValidationError: 2 validation errors for ExamConfigResponse
-================================================ 1 failed, 379 passed, 5 warnings in 37.82s ================================================
+FAILED tests/unit/test_grades_report.py::test_generate_grades_report_pdf_success - TypeError: a bytes-like object is required, not 'str'
+================================================ 1 failed, 381 passed, 5 warnings in 27.79s ================================================

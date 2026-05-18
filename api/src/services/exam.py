@@ -124,6 +124,108 @@ def _compute_normalized_weights(topic_configs: List[TopicConfig]) -> Dict[int, f
     return {tc.topic_id: tc.relative_weight * norm for tc in topic_configs}
 
 # put the exam batch number rendered in the LaTeX
+async def generate_grades_report_pdf(
+    session: AsyncSession,
+    exam_config_id: int
+) -> bytes:
+    """Generate a PDF report of student grades using project standard templates."""
+    if shutil.which("pdflatex") is None:
+        raise RuntimeError("pdflatex is not installed.")
+
+    # 1. Fetch data
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
+
+    subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
+    subject = subject_result.first()
+    subject_name = subject.name if subject else "Unknown Subject"
+
+    exams = await get_exams_by_config_id(session, exam_config_id)
+    corrected_exams = [e for e in exams if e.grade is not None]
+    corrected_exams.sort(key=lambda x: x.nmec if x.nmec else 0)
+
+    # 2. Setup Temporary Directory and Templates
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Copy base templates if any were needed (though report is mostly self-contained)
+        # For consistency, we'll write the specific files needed
+        
+        # Write UC.tex (following project pattern)
+        # Defaulting to 1st Semester and 2025/26 as seen in other parts of the code
+        semester_text_en = "1st Semester"
+        semester_text_pt = "1º Semestre"
+        academic_year = "2025/26"
+        uc_content = f"""\\iftoggle{{english}}{{
+{subject_name}\\\\
+{semester_text_en}, {academic_year}\\\\
+}}{{
+{subject_name}\\\\
+{semester_text_pt}, {academic_year}\\\\
+}}"""
+        async with await anyio.open_file(os.path.join(tmpdir, "UC.tex"), "w") as f:
+            await f.write(uc_content)
+
+        # Write date.tex (following project pattern)
+        exam_date = exam_config.exam_date
+        formatted_date = ""
+        if exam_date:
+            try:
+                from datetime import datetime
+                date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d de %B de %Y")
+                pt_months = {
+                    "January": "janeiro", "February": "fevereiro", "March": "março",
+                    "April": "abril", "May": "maio", "June": "junho",
+                    "July": "julho", "August": "agosto", "September": "setembro",
+                    "October": "outubro", "November": "novembro", "December": "dezembro"
+                }
+                for en, pt in pt_months.items():
+                    formatted_date = formatted_date.replace(en, pt)
+            except Exception:
+                formatted_date = exam_date
+        async with await anyio.open_file(os.path.join(tmpdir, "date.tex"), "w") as f:
+            await f.write(formatted_date)
+
+        # Build ROWS
+        rows = []
+        for e in corrected_exams:
+            nmec = str(e.nmec) if e.nmec else ""
+            name = e.student_name or "Unknown Student"
+            grade = f"{e.grade:.2f}"
+            safe_name = name.replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
+            rows.append(f"{nmec} & {safe_name} & {grade} \\\\ \\hline")
+
+        # Read Main Template
+        template_path = os.path.join(LATEX_TEMPLATES_DIR, "grades_report.tex")
+        async with await anyio.open_file(template_path, "r") as f:
+            latex_content = await f.read()
+
+        latex_content = latex_content.replace("__EXAM_NAME__", exam_config.exam_name or "Exame")
+        latex_content = latex_content.replace("__ROWS__", "\n".join(rows))
+
+        main_file = "report.tex"
+        async with await anyio.open_file(os.path.join(tmpdir, main_file), "w") as f:
+            await f.write(latex_content)
+
+        # 3. Compile
+        try:
+            with anyio.fail_after(30):
+                await anyio.run_process(
+                    ["pdflatex", "-interaction=nonstopmode", main_file],
+                    cwd=tmpdir,
+                    check=False,
+                )
+            pdf_path = os.path.join(tmpdir, "report.pdf")
+            if os.path.exists(pdf_path):
+                async with await anyio.open_file(pdf_path, "rb") as f:
+                    return await f.read()
+            else:
+                raise RuntimeError("LaTeX compilation failed - PDF not generated")
+        except Exception as e:
+            logger.error(f"LaTeX report compilation failed: {e}")
+            raise RuntimeError(f"Failed to generate PDF report: {e}")
+
+
 async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
