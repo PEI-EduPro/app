@@ -27,8 +27,8 @@ const STATE_STEP: Record<ExamWorkflowStatus, number> = {
   sent: 7,
 };
 
-function getStepIcons(status: ExamWorkflowStatus | undefined) {
-  switch (status) {
+function getStepIcons(state: ExamWorkflowStatus | undefined) {
+  switch (state) {
     case "preparing":
       return [tick, cross, undefined, clock, undefined, clock, clock, clock];
     case "running":
@@ -42,7 +42,7 @@ function getStepIcons(status: ExamWorkflowStatus | undefined) {
     case "completed":
       return [tick, tick, undefined, tick, undefined, tick, tick, cross];
     default:
-      return [tick, clock, undefined, clock, undefined, clock, clock, clock];
+      return [tick, tick, undefined, tick, undefined, tick, tick, tick];
   }
 }
 
@@ -142,7 +142,9 @@ function RouteComponent() {
     },
     {
       label: "Lançamento de Notas",
-      description: <Step8Content examConfigId={realExamId} />,
+      description: (
+        <Step8Content examConfigId={realExamId} state={examConfig?.state} />
+      ),
       action: icons[7],
       hint: "Envio das notas finais por email para os alunos. Configure o conteúdo do email, lance as notas e tranfira um pdf com as notas.",
     },

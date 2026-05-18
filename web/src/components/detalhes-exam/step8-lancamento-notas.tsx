@@ -10,11 +10,15 @@ import {
   type ToggleKey,
 } from "../cenas_pa_mail/email-preview";
 import { usePostGrades, useDownloadGrades } from "@/hooks/use-exams";
+import { toast } from "sonner";
+import type { ExamWorkflowStatus } from "@/lib/types";
 
 export default function Step8Content({
   examConfigId,
+  state,
 }: {
   examConfigId: number;
+  state: ExamWorkflowStatus | undefined;
 }) {
   const [options, setOptions] = useState<Record<ToggleKey, boolean>>({
     exam_capture: false,
@@ -23,8 +27,10 @@ export default function Step8Content({
     cumulative_score_table: false,
   });
   const [customText, setCustomText] = useState("");
-  const postGrades = usePostGrades(examConfigId);
-  const downloadGrades = useDownloadGrades(examConfigId);
+  const { mutate: postGrades, isPending: isPostingGrades } =
+    usePostGrades(examConfigId);
+  const { mutate: downloadGrades, isPending: isDownloadingGrades } =
+    useDownloadGrades(examConfigId);
 
   return (
     <div className="flex gap-8 h-[82vh]">
@@ -57,24 +63,25 @@ export default function Step8Content({
 
         <Button
           className="self-start cursor-pointer"
-          disabled={postGrades.isPending}
-          onClick={() =>
-            postGrades.mutate({
+          disabled={isPostingGrades || state === "sent"}
+          onClick={() => {
+            toast.loading("Lançando notas...");
+            postGrades({
               cumulative_score_table: options.cumulative_score_table,
               exam_capture: options.exam_capture,
               question_weights: options.question_weights,
               red_green_cross_table: options.red_green_cross_table,
               custom_description: customText,
-            })
-          }
+            });
+          }}
         >
           Lançar Notas
         </Button>
         <Button
           variant="outline"
           className="self-start cursor-pointer"
-          disabled={downloadGrades.isPending}
-          onClick={() => downloadGrades.mutate()}
+          disabled={isDownloadingGrades}
+          onClick={() => downloadGrades()}
         >
           <Download className="h-4 w-4 mr-2" />
           Exportar Notas (.pdf)
