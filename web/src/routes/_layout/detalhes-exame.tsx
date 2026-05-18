@@ -104,14 +104,11 @@ function RouteComponent() {
     },
     {
       label: "Associação Exame-Aluno",
-      action:
-        associatedCount != null ? (
-          <span className="text-sm font-semibold text-muted-foreground">
-            {associatedCount}/{totalExams}
-          </span>
-        ) : (
-          icons[2]
-        ),
+      action: (
+        <span className="text-sm font-semibold text-muted-foreground">
+          {associatedCount || 0}/{totalExams}
+        </span>
+      ),
       hint: "Realizada exclusivamente na aplicação móvel. Os vigilantes associam cada aluno ao respetivo exame físico. O número indica os alunos já associados.",
     },
     {
@@ -124,14 +121,11 @@ function RouteComponent() {
     },
     {
       label: "Captura e Upload dos Exames",
-      action:
-        picturedCount != null ? (
-          <span className="text-sm font-semibold text-muted-foreground">
-            {picturedCount}/{totalExams}
-          </span>
-        ) : (
-          icons[4]
-        ),
+      action: (
+        <span className="text-sm font-semibold text-muted-foreground">
+          {picturedCount || 0}/{totalExams}
+        </span>
+      ),
       hint: "Realizada exclusivamente na aplicação móvel. Os vigilantes fotografam e fazem upload das folhas de resposta. O número indica os exames já carregados.",
     },
     {
@@ -178,6 +172,11 @@ function RouteComponent() {
                 index={i}
                 isLast={i === steps.length - 1}
                 noExpand={i === 2 || i === 4}
+                disabled={
+                  step.action === clock ||
+                  (i === 2 && icons[1] !== tick) ||
+                  (i === 4 && icons[3] !== tick)
+                }
                 progress={stepProgress(i, currentStep)}
               />
             ))}
