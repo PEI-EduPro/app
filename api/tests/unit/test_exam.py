@@ -171,7 +171,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
         username="vigilant",
         email="vigilant@example.com",
         realm_roles=["vigilant"],
-        groups=["/w1/vigilante"]
+        groups=["/w1/vigilant"]
     )
     
     async def override_get_current_user_info():
@@ -259,7 +259,7 @@ async def test_retrieve_student_list_nonexistent_config(client, mock_auth, sessi
         username="vigilant",
         email="vigilant@example.com",
         realm_roles=["vigilant"],
-        groups=["/w99999/vigilante"]  # Permission for non-existent config
+        groups=["/w99999/vigilant"]  # Permission for non-existent config
     )
     
     async def override_get_current_user_info():
