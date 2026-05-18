@@ -48,7 +48,8 @@ export type ExamWorkflowStatus =
   | "closed_and_capture"
   | "warning_handling"
   | "validation"
-  | "completed";
+  | "completed"
+  | "sent";
 
 export interface ExamConfigI {
   id: number;
@@ -58,9 +59,11 @@ export interface ExamConfigI {
   num_versions: number;
   status: GenerationStatus;
   state: ExamWorkflowStatus;
-  total_exams: number;
-  associated_exams_count: number | null;
+  associations: string[];
+  vigilants: { id: string; username?: string }[];
   pictured_exams_count: number | null;
+  exam_name: string;
+  exam_date: string;
   topic_configs: {
     topic_id: number;
     topic_name: string;

@@ -36,12 +36,12 @@ export default function ExamesTab({
 
   const filtered = useMemo(() => {
     if (!examConfigs) return [];
-    return examConfigs.filter((el, index) => {
+    return examConfigs.filter((el) => {
       const matchesStatus =
         statusFilter === "all" || el.status === statusFilter;
       const matchesSearch =
         !search ||
-        `Exame ${index + 1}`.toLowerCase().includes(search.toLowerCase());
+        (el.exam_name ?? "").toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     });
   }, [examConfigs, statusFilter, search]);
@@ -49,6 +49,18 @@ export default function ExamesTab({
   const indexMap = useMemo(() => {
     if (!examConfigs) return new Map<number, number>();
     return new Map(examConfigs.map((el, i) => [el.id, i]));
+  }, [examConfigs]);
+
+  const nameMap = useMemo(() => {
+    if (!examConfigs) return new Map<number, string>();
+    return new Map(
+      examConfigs.map((el) => {
+        return [
+          el.id,
+          `${el.exam_name} - ${new Date(el.exam_date).toLocaleDateString("pt-PT")}`,
+        ];
+      }),
+    );
   }, [examConfigs]);
 
   return (
@@ -109,7 +121,9 @@ export default function ExamesTab({
         {filtered.map((el) => (
           <ExamCard
             id={el.id}
-            name={`Exame ${(indexMap.get(el.id) ?? 0) + 1}`}
+            name={
+              nameMap.get(el.id) ?? `Exame ${(indexMap.get(el.id) ?? 0) + 1}`
+            }
             ucId={encodeId(realId)}
             ucName={ucName}
             key={el.id}

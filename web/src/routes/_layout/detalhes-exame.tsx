@@ -74,7 +74,9 @@ function RouteComponent() {
   const currentStep =
     examConfig?.state != null ? STATE_STEP[examConfig.state] : -1;
 
-  const associatedCount = examConfig?.associated_exams_count;
+  const associatedCount = examConfig
+    ? new Set(examConfig.associations.map((a) => a.split(":")[0])).size
+    : undefined;
   const totalExams = examConfig?.total_exams ?? 0;
   const picturedCount = examConfig?.pictured_exams_count;
 
@@ -91,7 +93,11 @@ function RouteComponent() {
     {
       label: "Início do Exame",
       description: (
-        <Step2Content examConfigId={realExamId} disabled={step2Done} />
+        <Step2Content
+          examConfigId={realExamId}
+          disabled={step2Done}
+          savedVigilants={examConfig?.vigilants ?? []}
+        />
       ),
       action: icons[1],
       hint: "Inicia o exame e abre a sala de espera para os alunos. Defina os vigilantes antes de iniciar.",
