@@ -49,6 +49,8 @@ export default function ExamCard({
   const navigate = useNavigate();
   const deleteMutation = useDeleteExamConfig(decodeId(ucId));
 
+  const canDelete =
+    examConfig.state === "preparing" || examConfig.state === "sent";
   const totalQuestions =
     examConfig.topic_configs?.reduce(
       (sum, t) => sum + (t.num_questions || 0),
@@ -117,6 +119,7 @@ export default function ExamCard({
           </div>
         </div>
 
+        <div onClick={(e) => e.stopPropagation()}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -133,10 +136,17 @@ export default function ExamCard({
               <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                 <Trash2Icon />
               </AlertDialogMedia>
-              <AlertDialogTitle>Apagar Configuração de Exame</AlertDialogTitle>
+              <AlertDialogTitle>Apagar Exame</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação irá apagar permanentemente a configuração de exame.
-                Deseja continuar?
+                {canDelete && (
+                  <p>
+                    Esta ação irá apagar permanentemente o exame. Deseja
+                    continuar?
+                    <br />
+                  </p>
+                )}
+                Só é possível apagar um exame antes de ser iniciado ou após o
+                envio das notas.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="w-full! flex flex-row justify-between!">
@@ -147,17 +157,23 @@ export default function ExamCard({
               >
                 Cancelar
               </AlertDialogCancel>
-              <AlertDialogAction
-                size="lg"
-                variant="destructive"
-                className="cursor-pointer"
-                onClick={() => deleteMutation.mutate(id)}
-              >
-                Apagar
-              </AlertDialogAction>
+              {canDelete && (
+                <AlertDialogAction
+                  size="lg"
+                  variant="destructive"
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteMutation.mutate(id);
+                  }}
+                >
+                  Apagar
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
       </Card>
     </>
   );

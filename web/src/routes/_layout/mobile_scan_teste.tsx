@@ -85,7 +85,10 @@ function RouteComponent() {
     !isLoading && roomDetails && roomDetails.state === "preparing";
 
   return (
-    <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs">
+    <div
+      className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs"
+      onClick={(e) => e.stopPropagation()}
+    >
       <AlertDialog open={!!examNotOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -135,51 +138,53 @@ function RouteComponent() {
                     </span>
                   </div>
                 )}
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button
-                      variant="destructive"
-                      className="cursor-pointer h-auto px-4 py-2"
-                    >
-                      Fechar Exame
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogMedia className="bg-destructive/10 text-destructive">
-                        <TriangleAlert />
-                      </AlertDialogMedia>
-                      <AlertDialogTitle>Fechar Exame</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Ao fechar o exame nenhum outro utilizador conseguirá
-                        fazer scan a mais nenhum código QR. Deseja continuar?
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter className="w-full! flex flex-row justify-between!">
-                      <AlertDialogCancel
-                        variant="outline"
-                        size="lg"
-                        className="cursor-pointer"
-                      >
-                        Cancelar
-                      </AlertDialogCancel>
-                      <AlertDialogAction
+                <div onClick={(e) => e.stopPropagation()}>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
                         variant="destructive"
-                        size="lg"
-                        className="cursor-pointer"
-                        onClick={() => {
-                          closeRoom();
-                          navigate({
-                            to: "/mobile_evaluate_tests",
-                            search: { ucId },
-                          });
-                        }}
+                        className="cursor-pointer h-auto px-4 py-2"
                       >
-                        Continuar
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                        Fechar Exame
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogMedia className="bg-destructive/10 text-destructive">
+                          <TriangleAlert />
+                        </AlertDialogMedia>
+                        <AlertDialogTitle>Fechar Exame</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Ao fechar o exame nenhum outro utilizador conseguirá
+                          fazer scan a mais nenhum código QR. Deseja continuar?
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                        <AlertDialogCancel
+                          variant="outline"
+                          size="lg"
+                          className="cursor-pointer"
+                        >
+                          Cancelar
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          variant="destructive"
+                          size="lg"
+                          className="cursor-pointer"
+                          onClick={() => {
+                            closeRoom();
+                            navigate({
+                              to: "/mobile_evaluate_tests",
+                              search: { ucId },
+                            });
+                          }}
+                        >
+                          Continuar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </div>
             )}
 
