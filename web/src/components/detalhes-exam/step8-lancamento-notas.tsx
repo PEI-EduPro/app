@@ -58,7 +58,15 @@ export default function Step8Content({
         <Button
           className="self-start cursor-pointer"
           disabled={postGrades.isPending}
-          onClick={() => postGrades.mutate(options)}
+          onClick={() =>
+            postGrades.mutate({
+              cumulative_score_table: options.cumulative_score_table,
+              exam_capture: options.exam_capture,
+              question_weights: options.question_weights,
+              red_green_cross_table: options.red_green_cross_table,
+              custom_description: customText,
+            })
+          }
         >
           Lançar Notas
         </Button>

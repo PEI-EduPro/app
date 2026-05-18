@@ -163,6 +163,13 @@ export default function Step7Content({
       <div className="flex-1 flex items-start">
         {selectedId !== null && selectedExam?.questions && grid ? (
           <div className="flex flex-col gap-6 w-full">
+            {selectedExam.capture && (
+              <img
+                src={`data:image/jpeg;base64,${selectedExam.capture}`}
+                alt="Test example"
+                className="h-fit object-contain rounded-md border w-full max-h-50"
+              />
+            )}
             <AnswerGrid
               questions={selectedExam.questions}
               grid={grid}

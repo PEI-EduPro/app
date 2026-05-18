@@ -167,4 +167,5 @@ export interface PostEmailI {
   question_weights: boolean;
   red_green_cross_table: boolean;
   cumulative_score_table: boolean;
+  custom_description: string;
 }
