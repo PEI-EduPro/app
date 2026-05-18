@@ -19,8 +19,8 @@ async def _setup_subject(session):
 
 
 async def _setup_exam_config(session, subject_id, fraction=25.0):
-    from src.models.exam_config import ExamConfig
-    ec = ExamConfig(subject_id=subject_id, fraction=fraction)
+    from src.models.exam_config import ExamConfig, ExamState
+    ec = ExamConfig(subject_id=subject_id, fraction=fraction, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)

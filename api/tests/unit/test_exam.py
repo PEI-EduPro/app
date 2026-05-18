@@ -75,7 +75,7 @@ async def test_get_subject_exam_configs(client, mock_auth, session):
     
     from src.models.subject import Subject
     from src.models.topic import Topic
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.topic_config import TopicConfig
     
     # Setup test data
@@ -120,7 +120,7 @@ async def test_store_student_list(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     
     # Setup test data
     subject = Subject(name="Test Subject")
@@ -163,7 +163,7 @@ async def test_retrieve_student_list(client, mock_auth, session):
     # Create a user with waiting room permissions
     from src.models.user import User
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from unittest.mock import patch
     
     vigilant_user = User(
@@ -222,7 +222,7 @@ async def test_store_student_list_invalid_file_type(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     
     # Setup test data
     subject = Subject(name="Test Subject")
@@ -352,7 +352,7 @@ async def test_get_submitted_exams_count(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.exam import Exam
 
     subject = Subject(name="Test Subject")
@@ -433,7 +433,7 @@ async def test_generate_exam_with_session(client, mock_auth, session):
         
         # Verify exam config was created
         from src.services.exam import get_latest_exam_config_id
-        from src.models.exam_config import ExamConfig
+        from src.models.exam_config import ExamConfig, ExamState
         from sqlmodel import select
         
         config_id = await get_latest_exam_config_id(session, sub.id)
@@ -467,7 +467,7 @@ async def test_generate_exams_async_success(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
     from src.models.topic import Topic
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.topic_config import TopicConfig
     
     sub = Subject(name="S")
@@ -496,7 +496,7 @@ async def test_generate_exams_async_success(client, mock_auth, session):
 async def test_get_config_status(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig, ExamState, GenerationStatus
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
@@ -513,7 +513,7 @@ async def test_get_config_status(client, mock_auth, session):
 async def test_download_exam_zip_not_ready(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig, ExamState, GenerationStatus
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
@@ -530,13 +530,13 @@ async def test_download_exam_zip_not_ready(client, mock_auth, session):
 async def test_validate_exam_success(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.exam import Exam
     
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id)
+    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     e = Exam(exam_config_id=ec.id, grade=10, results="{}", capture_path="p")
@@ -553,13 +553,13 @@ async def test_validate_exam_success(client, mock_auth, session):
 async def test_correct_by_hand_job(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.exam import Exam
     
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id)
+    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     e = Exam(exam_config_id=ec.id)
@@ -576,7 +576,7 @@ async def test_correct_by_hand_job(client, mock_auth, session):
 async def test_get_subject_exam_configs_missing_topic(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, ExamState, GenerationStatus
+    from src.models.exam_config import ExamConfig, ExamState, ExamState, GenerationStatus
     from src.models.topic_config import TopicConfig
     
     sub = Subject(name="S")
@@ -670,7 +670,7 @@ async def test_download_exam_zip_not_found(client, mock_auth):
 async def test_download_exam_zip_file_missing_on_disk(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, GenerationStatus
+    from src.models.exam_config import ExamConfig, ExamState, GenerationStatus
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
@@ -686,13 +686,15 @@ async def test_download_exam_zip_file_missing_on_disk(client, mock_auth, session
 async def test_store_student_list_config_not_found(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState, ExamState
+
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id)
+    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
+
     
     with patch("src.routers.exam.get_exam_config_by_id", return_value=None):
         csv_file = io.BytesIO(b"n,m,e\n1,J,j")
@@ -711,7 +713,7 @@ async def test_retrieve_student_list_value_error(client, mock_auth):
 async def test_delete_exam_config_wrong_state(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig, ExamState
+    from src.models.exam_config import ExamConfig, ExamState, ExamState
     
     sub = Subject(name="S")
     session.add(sub)
@@ -740,12 +742,12 @@ async def test_validate_exam_not_found(client, mock_auth):
 async def test_validate_exam_not_corrected_yet(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.exam import Exam
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id)
+    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     e = Exam(exam_config_id=ec.id, grade=None) # Not corrected
@@ -760,7 +762,7 @@ async def test_validate_exam_not_corrected_yet(client, mock_auth, session):
 async def test_get_all_exams_info_success(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.exam import Exam
     
     sub = Subject(name="S")
@@ -805,12 +807,12 @@ async def test_get_exam_info_not_found(client, mock_auth):
 async def test_correct_by_hand_job_value_error(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
     from src.models.subject import Subject
-    from src.models.exam_config import ExamConfig
+    from src.models.exam_config import ExamConfig, ExamState
     from src.models.exam import Exam
     sub = Subject(name="S")
     session.add(sub)
     await session.commit()
-    ec = ExamConfig(subject_id=sub.id)
+    ec = ExamConfig(subject_id=sub.id, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     e = Exam(exam_config_id=ec.id)
