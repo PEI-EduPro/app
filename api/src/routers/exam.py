@@ -20,7 +20,6 @@ from src.models.email_options import EmailOptionsPayload
 from src.models.exam import CorrectByHandRequest
 from src.models.exam_config import (
     ExamConfig,
-    ExamConfigRead,
     ExamConfigResponse, 
     GenerationStatus, 
     ExamState, 
@@ -33,7 +32,7 @@ from src.models.exam_config import (
     VigilantsUpdateRequest
 )
 from src.models.topic_config import TopicConfig, TopicConfigDTO
-from src.models.user import User
+from src.models.user import User, KeycloakUserPublic
 from src.models.warning import Warning
 from src.services.exam import (
     build_exam_questions,
@@ -465,7 +464,7 @@ async def get_exam_config_endpoint(
         status=exam_config.status,
         state=exam_config.state,
         associations=exam_config.associations or [],
-        vigilants=[v["username"] for v in vigilants],
+        vigilants=[KeycloakUserPublic(id=v["id"], username=v.get("username"), email=v.get("email"), firstName=v.get("firstName"), lastName=v.get("lastName")) for v in vigilants],
         total_exams=exam_config.total_exams,
         associated_exams_count=exam_config.associated_exams_count,
         pictured_exams_count=exam_config.pictured_exams_count

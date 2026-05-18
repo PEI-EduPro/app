@@ -2,6 +2,7 @@
 from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
+from src.models.user import KeycloakUserPublic
 from pydantic import BaseModel
 from sqlalchemy import Column, JSON, Enum as SAEnum
 
@@ -117,7 +118,7 @@ class ExamConfigResponse(SQLModel):
     status: GenerationStatus = GenerationStatus.PENDING
     state: ExamState = ExamState.PREPARING
     associations: List[str] = []
-    vigilants: List[str] = []
+    vigilants: List[KeycloakUserPublic] = []
     
     # Computed metrics
     total_exams: int = 0
