@@ -146,8 +146,8 @@ def isolate_and_crop_table(image_path, num_questions):
     bbox = get_robust_qr_bbox(image)
 
     if bbox is None:
-        logger.error("Could not detect the QR code after multiple enhancement attempts. Please check image clarity.")
-        raise Exception("Could not detect the QR code after multiple enhancement attempts. Please check image clarity.")
+        logger.error("Could not detect the QR code")
+        raise ValueError("Could not detect the QR code")
 
     # Naming conventions
     cropped_table_path = image_path.replace(".", "_cropped_table.")                     
