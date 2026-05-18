@@ -70,8 +70,44 @@ function RouteComponent() {
     nome: s.name,
   })) as unknown as Record<string, string>[];
 
+  const examClosed =
+    !isLoading &&
+    roomDetails &&
+    roomDetails.state !== "running" &&
+    roomDetails.state !== "preparing";
+
+  if (examClosed) {
+    navigate({ to: "/mobile_evaluate_tests", search: { ucId } });
+    return null;
+  }
+
+  const examNotOpen =
+    !isLoading && roomDetails && roomDetails.state === "preparing";
+
   return (
     <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs">
+      <AlertDialog open={!!examNotOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exame ainda não aberto</AlertDialogTitle>
+            <AlertDialogDescription>
+              O exame ainda não foi aberto. É necessário abrir o exame para
+              começar com a associação de alunos e o exame aparecer nos
+              dispositivos dos restantes professores vigilantes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogAction
+              size="lg"
+              className="w-full cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/80"
+              onClick={() => startRoom()}
+            >
+              Abrir Exame
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Scan de Exames"}
         crumbs={[{ name: "Exames", link: "/unidades-curriculares" }]}
@@ -99,81 +135,51 @@ function RouteComponent() {
                     </span>
                   </div>
                 )}
-                {roomDetails?.state === "running" ? (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="destructive"
-                        className="cursor-pointer h-auto px-4 py-2"
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant="destructive"
+                      className="cursor-pointer h-auto px-4 py-2"
+                    >
+                      Fechar Exame
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogMedia className="bg-destructive/10 text-destructive">
+                        <TriangleAlert />
+                      </AlertDialogMedia>
+                      <AlertDialogTitle>Fechar Exame</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Ao fechar o exame nenhum outro utilizador conseguirá
+                        fazer scan a mais nenhum código QR. Deseja continuar?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                      <AlertDialogCancel
+                        variant="outline"
+                        size="lg"
+                        className="cursor-pointer"
                       >
-                        Fechar Exame
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogMedia className="bg-destructive/10 text-destructive">
-                          <TriangleAlert />
-                        </AlertDialogMedia>
-                        <AlertDialogTitle>Fechar Exame</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Ao fechar o exame nenhum outro utilizador conseguirá
-                          fazer scan a mais nenhum código QR. Deseja continuar?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="w-full! flex flex-row justify-between!">
-                        <AlertDialogCancel
-                          variant="outline"
-                          size="lg"
-                          className="cursor-pointer"
-                        >
-                          Cancelar
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          variant="destructive"
-                          size="lg"
-                          className="cursor-pointer"
-                          onClick={() => {
-                            closeRoom();
-                            navigate({
-                              to: "/mobile_evaluate_tests",
-                              search: { ucId },
-                            });
-                          }}
-                        >
-                          Continuar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                ) : (
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button className="cursor-pointer h-auto px-4 py-2 bg-[#41B5C0] text-white hover:bg-[#41B5C0]/80 font-semibold">
-                        Abrir Exame
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Abrir Exame</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Ao abrir o exame os utilizadores poderão começar a fazer scan dos códigos QR e associar os testes aos alunos. Deseja continuar?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="w-full! flex flex-row justify-between!">
-                        <AlertDialogCancel variant="outline" size="lg" className="cursor-pointer">
-                          Cancelar
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          size="lg"
-                          className="cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/80"
-                          onClick={() => startRoom()}
-                        >
-                          Abrir
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                )}
+                        Cancelar
+                      </AlertDialogCancel>
+                      <AlertDialogAction
+                        variant="destructive"
+                        size="lg"
+                        className="cursor-pointer"
+                        onClick={() => {
+                          closeRoom();
+                          navigate({
+                            to: "/mobile_evaluate_tests",
+                            search: { ucId },
+                          });
+                        }}
+                      >
+                        Continuar
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </div>
             )}
 

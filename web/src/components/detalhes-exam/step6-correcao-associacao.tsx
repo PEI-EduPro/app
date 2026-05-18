@@ -63,15 +63,31 @@ function StudentPickerDialog({
           onChange={(rows) => setSelection((rows as StudentRow[]).slice(-1))}
         />
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="cursor-pointer">Cancelar</Button>
-          <Button disabled={selection.length === 0} onClick={handleConfirm} className="cursor-pointer">Confirmar</Button>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="cursor-pointer"
+          >
+            Cancelar
+          </Button>
+          <Button
+            disabled={selection.length === 0}
+            onClick={handleConfirm}
+            className="cursor-pointer"
+          >
+            Confirmar
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-export default function Step6Content({ examConfigId }: { examConfigId: number }) {
+export default function Step6Content({
+  examConfigId,
+}: {
+  examConfigId: number;
+}) {
   const { data } = useGetWarnings(examConfigId);
   const resolveMutation = useResolveWarnings(examConfigId);
   const [blockState, setBlockState] = useState<Record<number, BlockState>>({});
@@ -89,22 +105,30 @@ export default function Step6Content({ examConfigId }: { examConfigId: number })
     blockState[examId] ?? { selected: null, removed: [], extra: [] };
 
   const updateState = (examId: number, patch: Partial<BlockState>) =>
-    setBlockState((prev) => ({ ...prev, [examId]: { ...getState(examId), ...patch } }));
+    setBlockState((prev) => ({
+      ...prev,
+      [examId]: { ...getState(examId), ...patch },
+    }));
 
   const allAssigned = warnings.flatMap((qr) => {
     const s = getState(qr.exam_id);
     return [
-      ...qr.students.map((st) => st.nmec.toString()).filter((n) => !s.removed.includes(n)),
+      ...qr.students
+        .map((st) => st.nmec.toString())
+        .filter((n) => !s.removed.includes(n)),
       ...s.extra.map((e) => e.nmec),
     ];
   });
 
   const handleAssociate = () => {
-    const assignments = warnings.map((qr) => {
-      const s = getState(qr.exam_id);
-      const selected = s.selected ?? s.extra[0]?.nmec ?? qr.students[0]?.nmec?.toString();
-      return { exam_id: qr.exam_id, student_nmec: selected ?? "" };
-    }).filter((a) => a.student_nmec);
+    const assignments = warnings
+      .map((qr) => {
+        const s = getState(qr.exam_id);
+        const selected =
+          s.selected ?? s.extra[0]?.nmec ?? qr.students[0]?.nmec?.toString();
+        return { exam_id: qr.exam_id, student_nmec: selected ?? "" };
+      })
+      .filter((a) => a.student_nmec);
     resolveMutation.mutate({ assignments });
   };
 
@@ -120,15 +144,25 @@ export default function Step6Content({ examConfigId }: { examConfigId: number })
         const rows: StudentRow[] = [
           ...qr.students
             .filter((st) => !s.removed.includes(st.nmec.toString()))
-            .map((st) => ({ id: st.nmec.toString(), nome: st.name, nmec: st.nmec.toString(), email: st.email })),
+            .map((st) => ({
+              id: st.nmec.toString(),
+              nome: st.name,
+              nmec: st.nmec.toString(),
+              email: st.email,
+            })),
           ...s.extra,
         ];
 
         return (
-          <Card key={qr.exam_id} className="flex flex-row gap-6 p-4 items-start">
+          <Card
+            key={qr.exam_id}
+            className="flex flex-row gap-6 p-4 items-start"
+          >
             <div className="flex flex-col gap-2 items-center">
               <QRCode value={qr.exam_id.toString()} size={72} level="M" />
-              {qr.batch_number != null && <span className="text-sm">Versão: {qr.batch_number}</span>}
+              {qr.batch_number != null && (
+                <span className="text-sm">Versão: {qr.batch_number}</span>
+              )}
             </div>
 
             <div className="flex-1 flex flex-col gap-2">
@@ -136,25 +170,37 @@ export default function Step6Content({ examConfigId }: { examConfigId: number })
                 <div key={st.id} className="flex items-center gap-1">
                   <Button
                     variant="outline"
-                    onClick={() => updateState(qr.exam_id, { selected: s.selected === st.id ? null : st.id })}
+                    onClick={() =>
+                      updateState(qr.exam_id, {
+                        selected: s.selected === st.id ? null : st.id,
+                      })
+                    }
                     className={cn(
                       "flex-1 justify-start gap-3 border transition-colors cursor-pointer",
-                      s.selected === st.id ? "border-[#3263A8] bg-[#3263A8]/10" : "border-border",
+                      s.selected === st.id
+                        ? "border-[#3263A8] bg-[#3263A8]/10"
+                        : "border-border",
                     )}
                   >
                     <span className="font-medium text-sm">{st.nome}</span>
-                    <span className="text-xs text-muted-foreground">{st.email}</span>
-                    <span className="text-xs text-muted-foreground">{st.nmec}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {st.email}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {st.nmec}
+                    </span>
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-red-50 cursor-pointer"
-                    onClick={() => updateState(qr.exam_id, {
-                      removed: [...s.removed, st.id],
-                      selected: s.selected === st.id ? null : s.selected,
-                      extra: s.extra.filter((e) => e.id !== st.id),
-                    })}
+                    onClick={() =>
+                      updateState(qr.exam_id, {
+                        removed: [...s.removed, st.id],
+                        selected: s.selected === st.id ? null : s.selected,
+                        extra: s.extra.filter((e) => e.id !== st.id),
+                      })
+                    }
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -173,7 +219,9 @@ export default function Step6Content({ examConfigId }: { examConfigId: number })
                 open={pickerOpen === qr.exam_id}
                 allStudents={allStudents}
                 assigned={allAssigned}
-                onAdd={(st) => updateState(qr.exam_id, { extra: [...s.extra, st] })}
+                onAdd={(st) =>
+                  updateState(qr.exam_id, { extra: [...s.extra, st] })
+                }
                 onClose={() => setPickerOpen(null)}
               />
             </div>
@@ -181,13 +229,19 @@ export default function Step6Content({ examConfigId }: { examConfigId: number })
         );
       })}
 
-      {warnings.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-4">Sem avisos pendentes.</p>
+      {warnings.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4">
+          Sem avisos pendentes.
+        </p>
+      ) : (
+        <Button
+          className="self-end cursor-pointer"
+          disabled={resolveMutation.isPending}
+          onClick={handleAssociate}
+        >
+          Associar
+        </Button>
       )}
-
-      <Button className="self-end cursor-pointer" disabled={resolveMutation.isPending} onClick={handleAssociate}>
-        Associar
-      </Button>
     </div>
   );
 }

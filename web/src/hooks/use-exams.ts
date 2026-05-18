@@ -13,6 +13,7 @@ import {
   type PostExamStudentI,
   type PostResolveWarningsI,
   type StudentsI,
+  type ExamWorkflowStatus,
 } from "@/lib/types";
 import { toast } from "sonner";
 
@@ -68,6 +69,16 @@ const useGetExamConfigById = (examConfigId: number) =>
     queryKey: ["examConfigById", examConfigId],
     queryFn: () => apiClient.get(`/exams/config/${examConfigId}`),
     enabled: !!examConfigId,
+    refetchInterval: (query) => {
+      const state = query.state.data?.state;
+      const doneStates: ExamWorkflowStatus[] = [
+        "warning_handling",
+        "validation",
+        "completed",
+        "sent",
+      ];
+      return state && doneStates.includes(state) ? false : 5000;
+    },
   });
 
 const useGetExamConfig = (ucId: number) =>
@@ -135,6 +146,24 @@ const useStartExamSession = (examConfigId: number) => {
     },
     onError: () =>
       toast.error("Erro ao iniciar o exame.", { position: "top-right" }),
+  });
+};
+
+const usePatchExamVigilants = (examConfigId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vigilantKeycloakIds: string[]) =>
+      apiClient.patch(`/exams/${examConfigId}/vigilantes`, {
+        vigilant_keycloak_ids: vigilantKeycloakIds,
+      }),
+    onSuccess: () => {
+      toast.success("Vigilantes guardados!", { position: "top-right" });
+      queryClient.invalidateQueries({
+        queryKey: ["examConfigById", examConfigId],
+      });
+    },
+    onError: () =>
+      toast.error("Erro ao guardar vigilantes.", { position: "top-right" }),
   });
 };
 
@@ -207,7 +236,7 @@ const usePostPairExamStudent = (examConfigId: number) => {
       });
     },
     onError: () =>
-      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+      toast.error("Ocorreu um erro, tente novamente.", {
         position: "top-right",
       }),
   });
@@ -230,7 +259,7 @@ const useSendExamsPhotos = (examConfigId: number) => {
       });
     },
     onError: () =>
-      toast.error("Ocorreu um erro, tente novamente mais tarde.", {
+      toast.error("Ocorreu um erro, tente novamente.", {
         position: "top-right",
       }),
   });
@@ -329,6 +358,7 @@ export {
   useDeleteExamConfig,
   usePostGrades,
   useStartExamSession,
+  usePatchExamVigilants,
   useCloseExamSession,
   useDownloadGrades,
   useGetExamSessions,
