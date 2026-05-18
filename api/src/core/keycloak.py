@@ -802,6 +802,59 @@ class KeycloakClient:
             logger.error(f"Error deleting exam session groups for {exam_config_id}: {e}")
             return False
 
+    async def replace_exam_session_vigilants(
+        self,
+        exam_config_id: int,
+        vigilant_ids: list[str]
+    ) -> bool:
+        """
+        Replace all vigilants in an exam session group with a new list.
+        """
+        group_name = f"w{exam_config_id}/vigilant"
+        logger.info(f"Replacing vigilants for exam config {exam_config_id}")
+        
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # 1. Find the group ID
+            group_id = await self._get_group_id_by_name(group_name)
+            
+            if not group_id:
+                # If group doesn't exist, create it
+                logger.warning(f"Group {group_name} not found. Creating it.")
+                group_id = await loop.run_in_executor(
+                    None,
+                    lambda: self.admin_client.create_group({"name": group_name})
+                )
+
+            # 2. Remove all current members
+            current_members = await loop.run_in_executor(
+                None, 
+                lambda: self.admin_client.get_group_members(group_id)
+            )
+            
+            for member in current_members:
+                await loop.run_in_executor(
+                    None,
+                    lambda uid=member['id']: self.admin_client.group_user_remove(uid, group_id)
+                )
+
+            # 3. Add new vigilants
+            for v_id in vigilant_ids:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=v_id: self.admin_client.group_user_add(uid, group_id)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to add vigilant {v_id} to exam config {exam_config_id}: {e}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error replacing vigilants for exam config {exam_config_id}: {e}")
+            raise e
+
 keycloak_client = KeycloakClient()
 
 """

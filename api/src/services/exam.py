@@ -1297,6 +1297,18 @@ async def create_exam_session_groups_service(
         vigilant_ids=vigilant_keycloak_ids
     )
 
+async def update_exam_session_vigilants_service(
+    exam_config_id: int,
+    vigilant_ids: List[str]
+):
+    """
+    Updates Keycloak groups for an exam session vigilants.
+    """
+    await keycloak_client.replace_exam_session_vigilants(
+        exam_config_id=exam_config_id,
+        vigilant_ids=vigilant_ids
+    )
+
 async def get_exam_session_info_service(session: AsyncSession, exam_config_id: int, user_groups: List[str]) -> Optional[ExamSessionInfoResponse]:
     exam_config = await get_exam_config_by_id(session, exam_config_id)
     if not exam_config:

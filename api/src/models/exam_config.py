@@ -181,3 +181,6 @@ class EvaluateBatchRequest(BaseModel):
 class QRCodeToNMEC(BaseModel):
     qr: str
     nmec: int
+
+class VigilantsUpdateRequest(BaseModel):
+    vigilant_keycloak_ids: List[str]

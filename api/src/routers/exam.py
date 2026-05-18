@@ -29,7 +29,8 @@ from src.models.exam_config import (
     ExamSessionMetricsResponse, 
     ProfessorExamSessionItem, 
     EvaluateBatchRequest, 
-    QRCodeToNMEC
+    QRCodeToNMEC,
+    VigilantsUpdateRequest
 )
 from src.models.topic_config import TopicConfig, TopicConfigDTO
 from src.models.user import User
@@ -56,7 +57,8 @@ from src.services.exam import (
     close_exam_session_service,
     get_professor_exam_sessions,
     notify_student,
-    generate_grades_report_pdf
+    generate_grades_report_pdf,
+    update_exam_session_vigilants_service
 )
 from src.services.omr import evaluate_exam
 
@@ -695,6 +697,34 @@ async def start_exam_session(
     except Exception as e:
         logger.error(f"Failed to start exam session: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to start exam session")
+
+@router.patch("/{exam_config_id}/vigilantes", response_model=MessageResponse)
+async def update_vigilantes(
+    exam_config_id: int,
+    body: VigilantsUpdateRequest,
+    user_info: User = Depends(get_current_user_info),
+    session: AsyncSession = Depends(get_session)
+):
+    """
+    Update the list of vigilantes for an exam configuration.
+    This replaces the current list with the new one provided.
+    Only accessible by the regent of the subject.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Exam configuration not found.")
+
+    verify_permission(user_info, [f"/s{exam_config.subject_id}/regent"])
+
+    try:
+        await update_exam_session_vigilants_service(
+            exam_config_id=exam_config_id,
+            vigilant_ids=body.vigilant_keycloak_ids
+        )
+        return {"message": "Vigilantes updated successfully."}
+    except Exception as e:
+        logger.error(f"Failed to update vigilantes: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update vigilantes")
 
 @router.get("/{exam_config_id}/session/info", response_model=ExamSessionInfoResponse)
 async def get_exam_session_info(
