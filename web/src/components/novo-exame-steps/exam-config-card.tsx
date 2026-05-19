@@ -2,6 +2,7 @@ import type { GetTopicI, NewExamConfigI, ExamConfigI } from "@/lib/types";
 import { Card, CardContent } from "../ui/card";
 import { Button } from "../ui/button";
 import { Download } from "lucide-react";
+import { useDownloadExamConfig } from "@/hooks/use-exams";
 
 type ExamConfigCardData = NewExamConfigI | ExamConfigI;
 
@@ -12,17 +13,17 @@ function isNewExamConfig(data: ExamConfigCardData): data is NewExamConfigI {
 export function ExamConfigCard({
   examConfigData,
   allTopics = [],
-  download = false,
 }: {
   examConfigData: ExamConfigCardData;
   allTopics?: GetTopicI[];
-  download?: boolean;
 }) {
+  const { mutate } = useDownloadExamConfig();
   const fraction = examConfigData.fraction;
   const total_exams =
     "total_exams" in examConfigData ? examConfigData.total_exams : undefined;
   const num_versions =
     "num_versions" in examConfigData ? examConfigData.num_versions : undefined;
+  const download = "id" in examConfigData;
 
   // Normalise to a common list of { id, name, numQuestions, relativeQuotation }
   const topicRows = isNewExamConfig(examConfigData)
@@ -112,7 +113,11 @@ export function ExamConfigCard({
               <p className="text-xl font-bold">{totalQuestions}</p>
             </div>
             {download && (
-              <Button variant="outline" className="cursor-pointer">
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => mutate(examConfigData.id)}
+              >
                 <Download className="h-4 w-4 mr-2" />
                 Descarregar Exames
               </Button>

@@ -56,7 +56,10 @@ const useDownloadExamConfig = () =>
   useMutation({
     mutationFn: (id: number) =>
       apiClient.download(`/exams/config/${id}/download`),
-    onSuccess: (blob: Blob) => saveFile(blob, "generated_exam.zip"),
+    onSuccess: (blob: Blob) => {toast.success("Notas transferidas com sucesso", {
+        position: "top-right",
+        duration: 3000,
+      }), saveFile(blob, "generated_exam.zip")},
     onError: () =>
       toast.error("Erro ao descarregar o exame.", {
         position: "top-right",
@@ -110,8 +113,9 @@ const useDeleteExamConfig = (ucId: number) => {
   });
 };
 
-const usePostGrades = (examConfigId: number) =>
-  useMutation({
+const usePostGrades = (examConfigId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
     mutationFn: (options: PostEmailI) =>
       apiClient.post(`/exams/${examConfigId}/session/notify-students`, options),
     onSuccess: () => {
@@ -119,6 +123,9 @@ const usePostGrades = (examConfigId: number) =>
       toast.success("Notas lançadas com sucesso!", {
         position: "top-right",
         duration: 3000,
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["examConfigById", examConfigId],
       });
     },
     onError: () => {
@@ -129,6 +136,7 @@ const usePostGrades = (examConfigId: number) =>
       });
     },
   });
+}
 
 const useStartExamSession = (examConfigId: number) => {
   const queryClient = useQueryClient();
