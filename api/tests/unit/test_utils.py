@@ -82,7 +82,7 @@ def test_parse_moodle_xml_shortanswer():
     assert len(question["options"]) == 1
     # Expect empty string because the current clean_text implementation 
     # uses the "xml" parser which strips raw text lacking an XML root tag
-    assert question["options"][0]["text"] == ""
+    assert question["options"][0]["text"] == "Paris"
     assert question["options"][0]["fraction"] == 100.0
 
 def test_parse_moodle_xml_ignore_other_types():
