@@ -19,8 +19,8 @@ async def _setup_subject(session):
 
 
 async def _setup_exam_config(session, subject_id, fraction=25.0):
-    from src.models.exam_config import ExamConfig
-    ec = ExamConfig(subject_id=subject_id, fraction=fraction)
+    from src.models.exam_config import ExamConfig, ExamState
+    ec = ExamConfig(subject_id=subject_id, fraction=fraction, state=ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -70,6 +70,7 @@ async def test_correct_by_hand_service_all_correct(session):
     updated = await correct_by_hand(session, e.id, VALID_GRID)
 
     assert updated.grade == pytest.approx(20.0)
+    assert updated.validated is True
     results = json.loads(updated.results)
     assert results["0"]["B"] is True
     assert results["1"]["A"] is True
@@ -212,3 +213,4 @@ async def test_correct_by_hand_endpoint_updates_db(client, mock_auth, session):
     await session.refresh(e)
     assert e.grade is not None
     assert e.results is not None
+    assert e.validated is True

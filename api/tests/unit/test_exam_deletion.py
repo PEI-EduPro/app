@@ -14,7 +14,6 @@ async def test_delete_exam_config_comprehensive(client, mock_auth, session):
     from src.models.subject import Subject
     from src.models.exam_config import ExamConfig
     from src.models.exam import Exam
-    from src.models.waiting_room import WaitingRoom
     from src.models.warning import Warning, WarningType
     from src.models.topic_config import TopicConfig
     from src.models.topic import Topic
@@ -49,17 +48,12 @@ async def test_delete_exam_config_comprehensive(client, mock_auth, session):
     exam_item = Exam(exam_config_id=exam_config.id, capture_path=capture_path)
     session.add(exam_item)
     
-    waiting_room = WaitingRoom(exam_config_id=exam_config.id)
-    session.add(waiting_room)
-    await session.commit()
-    await session.refresh(waiting_room)
-    
     warning = Warning(exam_config_id=exam_config.id, type=WarningType.multiple_students_to_exam)
     session.add(warning)
     await session.commit()
 
     # 2. Mock Keycloak Deletion
-    with patch("src.services.exam.keycloak_client.delete_waiting_room_groups", new_callable=AsyncMock) as mock_kc_delete:
+    with patch("src.services.exam.keycloak_client.delete_exam_session_groups", new_callable=AsyncMock) as mock_kc_delete:
         mock_kc_delete.return_value = True
 
         # 3. Execute Deletion
@@ -71,7 +65,6 @@ async def test_delete_exam_config_comprehensive(client, mock_auth, session):
         assert (await session.get(ExamConfig, exam_config.id)) is None
         assert (await session.get(TopicConfig, topic_config.id)) is None
         assert (await session.get(Exam, exam_item.id)) is None
-        assert (await session.get(WaitingRoom, waiting_room.id)) is None
         assert (await session.get(Warning, warning.id)) is None
         
         # 5. Verify File Deletion
@@ -79,8 +72,59 @@ async def test_delete_exam_config_comprehensive(client, mock_auth, session):
         assert not os.path.exists(capture_path)
         
         # 6. Verify Keycloak Call
-        mock_kc_delete.assert_called_once_with(waiting_room.id)
+        mock_kc_delete.assert_called_once_with(exam_config.id)
 
     # Cleanup if needed (though os.path.exists check should be enough)
     if os.path.exists(zip_path): os.remove(zip_path)
     if os.path.exists(capture_path): os.remove(capture_path)
+
+
+@pytest.mark.asyncio
+async def test_delete_exam_config_not_found(session):
+    """Test deleting non-existent exam configuration returns False"""
+    from src.services.exam import delete_exam_config
+    result = await delete_exam_config(session, 9999)
+    assert result is False
+
+
+@pytest.mark.asyncio
+async def test_delete_exam_config_file_remove_fail(session):
+    """Test delete_exam_config handles file removal failures gracefully"""
+    from src.services.exam import delete_exam_config
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+
+    subject = Subject(name="Test")
+    session.add(subject)
+    await session.commit()
+    
+    ec = ExamConfig(subject_id=subject.id, zip_path="/fake/path.zip")
+    session.add(ec)
+    await session.commit()
+    
+    with patch("os.path.exists", return_value=True), \
+         patch("os.remove", side_effect=Exception("Perm error")), \
+         patch("src.services.exam.keycloak_client.delete_exam_session_groups", new_callable=AsyncMock) as mock_kc:
+        mock_kc.return_value = True
+        result = await delete_exam_config(session, ec.id)
+        assert result is True
+
+
+@pytest.mark.asyncio
+async def test_delete_exam_config_keycloak_fail(session):
+    """Test delete_exam_config handles Keycloak group deletion failures gracefully"""
+    from src.services.exam import delete_exam_config
+    from src.models.subject import Subject
+    from src.models.exam_config import ExamConfig
+
+    subject = Subject(name="Test")
+    session.add(subject)
+    await session.commit()
+    
+    ec = ExamConfig(subject_id=subject.id)
+    session.add(ec)
+    await session.commit()
+    
+    with patch("src.services.exam.keycloak_client.delete_exam_session_groups", side_effect=Exception("KC error")):
+        result = await delete_exam_config(session, ec.id)
+        assert result is True

@@ -1,6 +1,6 @@
 {
-  "name": "Edu-Pro",
-  "short_name": "Edu-Pro",
+  "name": "EduPro",
+  "short_name": "EduPro",
   "description": "Aplicação para gerir unidades curriculares e automatizar a geração e correção de exames.",
   "scope": "/",
   "start_url": "/",
@@ -19,14 +19,14 @@
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "Edu-Pro"
+      "label": "EduPro"
     },
     {
      "src": "/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "Edu-Pro"
+      "label": "EduPro"
     }
   ]
 }

@@ -1,14 +1,14 @@
 import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { encodeId } from "@/lib/id-encoder";
-import type { WaitingRoomStatusT } from "@/lib/types";
+import type { ExamWorkflowStatus } from "@/lib/types";
 import { Link } from "@tanstack/react-router";
 
 export interface UCCardProps {
   srcImage?: string;
   label: string;
   id: number;
-  waitingRoomStatus?: WaitingRoomStatusT;
+  waitingRoomStatus?: ExamWorkflowStatus;
   index?: number;
   selectionMode?: boolean;
   onSelect?: (id: number) => void;
@@ -86,7 +86,7 @@ export function UCCard({
     <Link
       to={
         isMobile
-          ? waitingRoomStatus !== "closed"
+          ? waitingRoomStatus === "running" || waitingRoomStatus === "preparing"
             ? "/mobile_scan_teste"
             : "/mobile_evaluate_tests"
           : "/detalhes-uc"
@@ -114,14 +114,14 @@ export function UCCard({
                 className={`text-xs font-semibold w-fit px-2 py-0.5 rounded-full ${
                   waitingRoomStatus === "running"
                     ? "bg-green-100 text-green-700"
-                    : waitingRoomStatus === "preparation"
+                    : waitingRoomStatus === "preparing"
                       ? "bg-yellow-100 text-yellow-700"
                       : "bg-gray-100 text-gray-500"
                 }`}
               >
                 {waitingRoomStatus === "running"
                   ? "A decorrer"
-                  : waitingRoomStatus === "preparation"
+                  : waitingRoomStatus === "preparing"
                     ? "Em preparação"
                     : "Fechado"}
               </span>

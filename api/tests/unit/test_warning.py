@@ -4,9 +4,8 @@ from src.main import app
 from src.models.user import User
 from src.models.warning import Warning, WarningType
 from src.models.subject import Subject
-from src.models.exam_config import ExamConfig
+from src.models.exam_config import ExamConfig, ExamState
 from src.models.exam import Exam
-from src.models.waiting_room import WaitingRoom, WaitingRoomState
 import json
 
 @pytest.fixture
@@ -36,7 +35,7 @@ async def setup_data(session):
         "12345": {"name": "John Doe", "email": "john@example.com"},
         "67890": {"name": "Jane Doe", "email": "jane@example.com"}
     }
-    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict))
+    exam_config = ExamConfig(subject_id=subject.id, fraction=0, nmec_name_list=json.dumps(nmec_dict), state=ExamState.WARNING_HANDLING)
     session.add(exam_config)
     await session.commit()
     await session.refresh(exam_config)
@@ -49,22 +48,15 @@ async def setup_data(session):
     await session.refresh(exam1)
     await session.refresh(exam2)
 
-    wr = WaitingRoom(exam_config_id=exam_config.id, state=WaitingRoomState.CLOSED)
-    session.add(wr)
-    await session.commit()
-    await session.refresh(wr)
-
     return {
         "subject_id": subject.id,
         "exam_config_id": exam_config.id,
         "exam_ids": [exam1.id, exam2.id],
-        "waiting_room_id": wr.id,
     }
 
 @pytest.mark.asyncio
-async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_data, session):
+async def test_get_warnings_by_exam_config_id(client, mock_auth_user, setup_data, session):
     app.dependency_overrides[get_current_user_info] = mock_auth_user
-    waiting_room_id = setup_data["waiting_room_id"]
     exam_config_id = setup_data["exam_config_id"]
     exam_ids = setup_data["exam_ids"]
 
@@ -93,7 +85,7 @@ async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_dat
     session.add_all([warning1, warning2, warning3])
     await session.commit()
 
-    response = await client.get(f"/api/warnings/{waiting_room_id}")
+    response = await client.get(f"/api/warnings/{exam_config_id}")
 
     assert response.status_code == 200
     data = response.json()
@@ -137,9 +129,6 @@ async def test_get_warnings_by_waiting_room_id(client, mock_auth_user, setup_dat
 
 @pytest.mark.asyncio
 async def test_get_warnings_unauthorized(client, session, setup_data):
-    # Missing auth override means 403 / 401 depending on your auth mock
-    # Wait, client without override might fail with 401 Unauthorized
-
     # We can override with a student or random user
     async def override_unauthorized_user():
         return User(
@@ -151,7 +140,7 @@ async def test_get_warnings_unauthorized(client, session, setup_data):
         )
     app.dependency_overrides[get_current_user_info] = override_unauthorized_user
 
-    waiting_room_id = setup_data["waiting_room_id"]
-    response = await client.get(f"/api/warnings/{waiting_room_id}")
+    exam_config_id = setup_data["exam_config_id"]
+    response = await client.get(f"/api/warnings/{exam_config_id}")
 
     assert response.status_code == 403

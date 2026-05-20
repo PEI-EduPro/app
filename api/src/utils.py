@@ -89,10 +89,10 @@ async def decode_base64_image(base64_str: str) -> tuple[int, str]:
 
 
 def clean_text(xml_text: str) -> str:
-    """Remove XML tags (like <p>) and return plain text."""
+    """Remove XML/HTML tags (like <p>) and return plain text."""
     if not xml_text:
         return ""
-    return BeautifulSoup(xml_text, "xml").get_text().strip()
+    return BeautifulSoup(xml_text, "html.parser").get_text().strip()
 
 def parse_moodle_xml(xml_content):
     soup = BeautifulSoup(xml_content, 'xml')

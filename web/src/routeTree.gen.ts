@@ -15,8 +15,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LayoutUnidadesCurricularesRouteImport } from './routes/_layout/unidades-curriculares'
 import { Route as LayoutMobile_scan_testeRouteImport } from './routes/_layout/mobile_scan_teste'
 import { Route as LayoutMobile_evaluate_testsRouteImport } from './routes/_layout/mobile_evaluate_tests'
-import { Route as LayoutExamesCorrecaoRouteImport } from './routes/_layout/exames-correcao'
 import { Route as LayoutDetalhesUcRouteImport } from './routes/_layout/detalhes-uc'
+import { Route as LayoutDetalhesExameRouteImport } from './routes/_layout/detalhes-exame'
 
 const LayoutRoute = LayoutRouteImport.update({
   id: '/_layout',
@@ -49,22 +49,22 @@ const LayoutMobile_evaluate_testsRoute =
     path: '/mobile_evaluate_tests',
     getParentRoute: () => LayoutRoute,
   } as any)
-const LayoutExamesCorrecaoRoute = LayoutExamesCorrecaoRouteImport.update({
-  id: '/exames-correcao',
-  path: '/exames-correcao',
-  getParentRoute: () => LayoutRoute,
-} as any)
 const LayoutDetalhesUcRoute = LayoutDetalhesUcRouteImport.update({
   id: '/detalhes-uc',
   path: '/detalhes-uc',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutDetalhesExameRoute = LayoutDetalhesExameRouteImport.update({
+  id: '/detalhes-exame',
+  path: '/detalhes-exame',
   getParentRoute: () => LayoutRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/detalhes-exame': typeof LayoutDetalhesExameRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
-  '/exames-correcao': typeof LayoutExamesCorrecaoRoute
   '/mobile_evaluate_tests': typeof LayoutMobile_evaluate_testsRoute
   '/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -72,8 +72,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
+  '/detalhes-exame': typeof LayoutDetalhesExameRoute
   '/detalhes-uc': typeof LayoutDetalhesUcRoute
-  '/exames-correcao': typeof LayoutExamesCorrecaoRoute
   '/mobile_evaluate_tests': typeof LayoutMobile_evaluate_testsRoute
   '/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
   '/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -83,8 +83,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/$': typeof SplatRoute
   '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/detalhes-exame': typeof LayoutDetalhesExameRoute
   '/_layout/detalhes-uc': typeof LayoutDetalhesUcRoute
-  '/_layout/exames-correcao': typeof LayoutExamesCorrecaoRoute
   '/_layout/mobile_evaluate_tests': typeof LayoutMobile_evaluate_testsRoute
   '/_layout/mobile_scan_teste': typeof LayoutMobile_scan_testeRoute
   '/_layout/unidades-curriculares': typeof LayoutUnidadesCurricularesRoute
@@ -94,8 +94,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/$'
+    | '/detalhes-exame'
     | '/detalhes-uc'
-    | '/exames-correcao'
     | '/mobile_evaluate_tests'
     | '/mobile_scan_teste'
     | '/unidades-curriculares'
@@ -103,8 +103,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/$'
+    | '/detalhes-exame'
     | '/detalhes-uc'
-    | '/exames-correcao'
     | '/mobile_evaluate_tests'
     | '/mobile_scan_teste'
     | '/unidades-curriculares'
@@ -113,8 +113,8 @@ export interface FileRouteTypes {
     | '/'
     | '/$'
     | '/_layout'
+    | '/_layout/detalhes-exame'
     | '/_layout/detalhes-uc'
-    | '/_layout/exames-correcao'
     | '/_layout/mobile_evaluate_tests'
     | '/_layout/mobile_scan_teste'
     | '/_layout/unidades-curriculares'
@@ -170,13 +170,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutMobile_evaluate_testsRouteImport
       parentRoute: typeof LayoutRoute
     }
-    '/_layout/exames-correcao': {
-      id: '/_layout/exames-correcao'
-      path: '/exames-correcao'
-      fullPath: '/exames-correcao'
-      preLoaderRoute: typeof LayoutExamesCorrecaoRouteImport
-      parentRoute: typeof LayoutRoute
-    }
     '/_layout/detalhes-uc': {
       id: '/_layout/detalhes-uc'
       path: '/detalhes-uc'
@@ -184,20 +177,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LayoutDetalhesUcRouteImport
       parentRoute: typeof LayoutRoute
     }
+    '/_layout/detalhes-exame': {
+      id: '/_layout/detalhes-exame'
+      path: '/detalhes-exame'
+      fullPath: '/detalhes-exame'
+      preLoaderRoute: typeof LayoutDetalhesExameRouteImport
+      parentRoute: typeof LayoutRoute
+    }
   }
 }
 
 interface LayoutRouteChildren {
+  LayoutDetalhesExameRoute: typeof LayoutDetalhesExameRoute
   LayoutDetalhesUcRoute: typeof LayoutDetalhesUcRoute
-  LayoutExamesCorrecaoRoute: typeof LayoutExamesCorrecaoRoute
   LayoutMobile_evaluate_testsRoute: typeof LayoutMobile_evaluate_testsRoute
   LayoutMobile_scan_testeRoute: typeof LayoutMobile_scan_testeRoute
   LayoutUnidadesCurricularesRoute: typeof LayoutUnidadesCurricularesRoute
 }
 
 const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutDetalhesExameRoute: LayoutDetalhesExameRoute,
   LayoutDetalhesUcRoute: LayoutDetalhesUcRoute,
-  LayoutExamesCorrecaoRoute: LayoutExamesCorrecaoRoute,
   LayoutMobile_evaluate_testsRoute: LayoutMobile_evaluate_testsRoute,
   LayoutMobile_scan_testeRoute: LayoutMobile_scan_testeRoute,
   LayoutUnidadesCurricularesRoute: LayoutUnidadesCurricularesRoute,
