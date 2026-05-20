@@ -1,15 +1,18 @@
-import json
-import logging
-import os
-
 import cv2
 import imutils
+import json
+import logging
 import numpy as np
+import os
 from imutils.perspective import order_points
+from sqlmodel import select, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.models.exam import Exam
+from src.models.exam_config import ExamConfig, ExamState
+from src.models.warning import Warning, WarningType
 from src.services.exam import get_exam_config_by_id
+from src.services.warning import calculate_and_persist_warnings
 
 logger = logging.getLogger(__name__)
 
@@ -274,10 +277,24 @@ async def evaluate_exam(
     # Persist results to the database
     exam.grade = total_exam_score
     exam.results = json.dumps(answered_dict)
+    exam.validated = True
 
     exam.capture_path = clean_path          
     exam.correction_path = correction_path
-
     session.add(exam)
     await session.commit()
     await session.refresh(exam)
+
+    # 2. Re-calculate all warnings (including the new one if nmec is missing)
+    # This automatically transitions the state between WARNING_HANDLING and VALIDATION
+    nmec_to_name = {}
+    if exam_config.nmec_name_list:
+        try:
+            nmec_to_name = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
+
+    await calculate_and_persist_warnings(session, exam_config.id, exam_config.associations, nmec_to_name)
+
+    await session.commit()
+    await session.refresh(exam_config)

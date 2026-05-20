@@ -2,12 +2,11 @@ import json
 import logging
 from typing import List, Dict, Set
 
-from sqlmodel import select, delete
+from sqlmodel import select, delete, func
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from src.models.exam import Exam
-from src.models.exam_config import ExamConfig
-from src.models.waiting_room import WaitingRoom
+from src.models.exam_config import ExamConfig, ExamState
 from src.models.warning import Warning, WarningType, WarningAssignment, StudentSummary
 
 logger = logging.getLogger(__name__)
@@ -32,6 +31,7 @@ async def calculate_and_persist_warnings(
     Delete all existing warnings for exam_config_id, then recalculate and persist
     new ones based on the provided associations list.
     Also writes exam.nmec for clean (conflict-free) 1:1 associations.
+    Includes 'exam_correction_no_student' warnings for exams with photos but no student associated.
     """
     # Delete old warnings
     await session.exec(delete(Warning).where(Warning.exam_config_id == exam_config_id))
@@ -53,6 +53,7 @@ async def calculate_and_persist_warnings(
     conflict_students: Set[str] = set()
     conflict_exams: Set[int] = set()
 
+    # 1. Multiple exams to one student
     for student_nmec, exams in student_to_exams.items():
         if len(exams) > 1:
             conflict_students.add(student_nmec)
@@ -64,6 +65,7 @@ async def calculate_and_persist_warnings(
                 exam_list=list(exams)
             ))
 
+    # 2. Multiple students to one exam
     for exam_id, students in exam_to_students.items():
         if len(students) > 1:
             conflict_exams.add(exam_id)
@@ -75,7 +77,7 @@ async def calculate_and_persist_warnings(
                 exam_list=[exam_id]
             ))
 
-    # Write exam.nmec, student_name, student_email for clean 1:1 associations
+    # 3. Clean 1:1 associations: Write exam.nmec, student_name, student_email
     for exam_id, students in exam_to_students.items():
         if len(students) == 1:
             student_nmec = next(iter(students))
@@ -94,39 +96,79 @@ async def calculate_and_persist_warnings(
                     except (ValueError, TypeError):
                         logger.warning(
                             f"Could not set nmec on exam {exam_id}: "
-                            f"'{student_nmec}' is not a valid integer. Association data may be corrupt."
+                            f"'{student_nmec}' is not a valid integer."
                         )
+
+    # 4. Exam correction without student association
+    # Fetch all exams for this config to check who has a capture but no nmec
+    all_exams_stmt = select(Exam).where(Exam.exam_config_id == exam_config_id)
+    all_exams = (await session.exec(all_exams_stmt)).all()
+    
+    for exam in all_exams:
+        if exam.capture_path is not None and exam.nmec is None:
+            session.add(Warning(
+                exam_config_id=exam_config_id,
+                type=WarningType.exam_correction_no_student,
+                student_list=None,
+                exam_list=[exam.id]
+            ))
+
+    # 5. Automatic State Transition
+    # If no warnings exist and we are in WARNING_HANDLING, move to VALIDATION
+    await session.flush() # Ensure counts are accurate
+    count_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config_id)
+    warning_count = (await session.exec(count_stmt)).one()
+
+    if warning_count == 0:
+        exam_config = await session.get(ExamConfig, exam_config_id)
+        if exam_config and exam_config.state == ExamState.WARNING_HANDLING:
+            # Move to VALIDATION first
+            exam_config.state = ExamState.VALIDATION
+            session.add(exam_config)
+            await session.flush()
+            logger.info(f"ExamConfig {exam_config_id} automatically transitioned to VALIDATION (zero warnings).")
+
+            # Then check if we can move straight to COMPLETED
+            # Fetch exams to check validation status
+            exam_stmt = select(Exam).where(Exam.exam_config_id == exam_config_id)
+            exams = (await session.exec(exam_stmt)).all()
+            unvalidated_pictured = [e for e in exams if e.capture_path is not None and not e.validated]
+            
+            if not unvalidated_pictured:
+                # Need to use transition_exam_config_state to ensure all logic is applied
+                from src.services.exam import transition_exam_config_state
+                await transition_exam_config_state(session, exam_config_id, ExamState.COMPLETED)
+                logger.info(f"ExamConfig {exam_config_id} automatically transitioned from VALIDATION to COMPLETED (all exams already validated).")
 
 async def get_filtered_students(
     session: AsyncSession,
-    waiting_room_id: int,
+    exam_config_id: int,
 ) -> List[StudentSummary]:
     """
     Returns students that either:
-    - have no association in the waiting room, OR
+    - have no association in the exam session, OR
     - are involved in any warning (any type)
     """
-    waiting_room = await session.get(WaitingRoom, waiting_room_id)
-    if not waiting_room:
-        raise ValueError("Waiting room not found")
+    exam_config = await session.get(ExamConfig, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
 
-    exam_config = await session.get(ExamConfig, waiting_room.exam_config_id)
     nmec_to_info: dict = {}
-    if exam_config and exam_config.nmec_name_list:
+    if exam_config.nmec_name_list:
         try:
             nmec_to_info = json.loads(exam_config.nmec_name_list)
         except json.JSONDecodeError:
-            logger.error(f"Failed to parse nmec_name_list for exam_config {waiting_room.exam_config_id}: invalid JSON")
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
 
     # Build set of nmecs that have at least one association
     associated_nmecs: Set[str] = set()
-    for assoc in waiting_room.associations:
+    for assoc in exam_config.associations:
         if ":" in assoc:
             _, nmec = assoc.split(":", 1)
             associated_nmecs.add(nmec)
 
     # Build set of nmecs involved in any warning
-    stmt = select(Warning).where(Warning.exam_config_id == waiting_room.exam_config_id)
+    stmt = select(Warning).where(Warning.exam_config_id == exam_config_id)
     result = await session.exec(stmt)
     warnings = result.all()
 
@@ -155,12 +197,10 @@ async def get_filtered_students(
     return students
 
 
-async def get_warnings_by_waiting_room_id(session: AsyncSession, waiting_room_id: int) -> List[dict]:
-    waiting_room = await session.get(WaitingRoom, waiting_room_id)
-    if not waiting_room:
-        raise ValueError("Waiting room not found")
-
-    exam_config_id = waiting_room.exam_config_id
+async def get_warnings_by_exam_config_id(session: AsyncSession, exam_config_id: int) -> List[dict]:
+    exam_config = await session.get(ExamConfig, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
 
     statement = select(Warning).where(Warning.exam_config_id == exam_config_id)
     result = await session.exec(statement)
@@ -238,30 +278,27 @@ async def get_warnings_by_waiting_room_id(session: AsyncSession, waiting_room_id
 
 async def resolve_warnings_service(
     session: AsyncSession,
-    waiting_room_id: int,
+    exam_config_id: int,
     assignments: List[WarningAssignment]
 ) -> List[dict]:
-    waiting_room = await session.get(WaitingRoom, waiting_room_id)
-    if not waiting_room:
-        raise ValueError("Waiting room not found")
-
-    exam_config_id = waiting_room.exam_config_id
+    exam_config = await session.get(ExamConfig, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
 
     # Build set of exam_ids being resolved
     incoming_exam_ids = {a.exam_id for a in assignments}
 
     # Remove existing associations for those exams, keep the rest
-    kept = [a for a in waiting_room.associations if ":" in a and int(a.split(":", 1)[0]) not in incoming_exam_ids]
+    kept = [a for a in exam_config.associations if ":" in a and int(a.split(":", 1)[0]) not in incoming_exam_ids]
 
     # Add new assignments
     new_associations = kept + [f"{a.exam_id}:{a.student_nmec}" for a in assignments]
-    waiting_room.associations = new_associations
-    session.add(waiting_room)
+    exam_config.associations = new_associations
+    session.add(exam_config)
 
     # Load nmec->name map
-    exam_config = await session.get(ExamConfig, exam_config_id)
     nmec_to_name = {}
-    if exam_config and exam_config.nmec_name_list:
+    if exam_config.nmec_name_list:
         try:
             nmec_to_name = json.loads(exam_config.nmec_name_list)
         except json.JSONDecodeError:
@@ -270,4 +307,4 @@ async def resolve_warnings_service(
     await calculate_and_persist_warnings(session, exam_config_id, new_associations, nmec_to_name)
     await session.commit()
 
-    return await get_warnings_by_waiting_room_id(session, waiting_room_id)
+    return await get_warnings_by_exam_config_id(session, exam_config_id)

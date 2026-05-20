@@ -63,14 +63,17 @@ export function UCFormInner({
   });
 
   const selectedRegente = watch("regente");
+  const selectedProfessores = watch("professores");
 
-  const filteredRegente = professors.filter((p) => {
-    const q = regenteSearch.toLowerCase();
-    return (
-      formatName(p).toLowerCase().includes(q) ||
-      (p.email || "").toLowerCase().includes(q)
-    );
-  });
+  const filteredRegente = professors
+    .filter((p) => !selectedProfessores.includes(p.id))
+    .filter((p) => {
+      const q = regenteSearch.toLowerCase();
+      return (
+        formatName(p).toLowerCase().includes(q) ||
+        (p.email || "").toLowerCase().includes(q)
+      );
+    });
 
   const filteredProfessores = professors
     .filter((p) => p.id !== selectedRegente)

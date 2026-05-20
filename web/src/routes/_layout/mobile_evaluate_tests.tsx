@@ -1,16 +1,16 @@
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import z from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
 import { RefreshCw, Camera } from "lucide-react";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Webcam from "react-webcam";
 import {
-  useGetSubmitedExams,
-  useGetWaitingRoomById,
+  useGetSubmittedExams,
+  useGetExamSessionInfo,
   useSendExamsPhotos,
-} from "@/hooks/use-waiting-rooms";
+} from "@/hooks/use-exams";
 
 const detalheUCSearchSchema = z.object({ ucId: z.string() });
 
@@ -83,16 +83,27 @@ function RouteComponent() {
   const { ucId } = Route.useSearch();
   const realId = decodeId(ucId);
   const [photo, setPhoto] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const { data: roomDetails } = useGetWaitingRoomById(realId);
+  const { data: roomDetails } = useGetExamSessionInfo(realId);
   const { mutate } = useSendExamsPhotos(realId);
-  const { data: submitedExams } = useGetSubmitedExams(realId);
+  const { data: submitedExams } = useGetSubmittedExams(realId);
+
+  useEffect(() => {
+    if (
+      roomDetails &&
+      roomDetails.role !== "regent" &&
+      roomDetails.state !== "running"
+    ) {
+      navigate({ to: "/unidades-curriculares" });
+    }
+  }, [roomDetails, navigate]);
 
   return (
     <div className="py-3.5 px-4 w-full flex flex-col min-h-screen">
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Detalhes"}
-        crumbs={[{ name: "Salas", link: "/unidades-curriculares" }]}
+        crumbs={[{ name: "Exames", link: "/unidades-curriculares" }]}
       />
 
       <div className="flex flex-col items-center flex-1 gap-4">

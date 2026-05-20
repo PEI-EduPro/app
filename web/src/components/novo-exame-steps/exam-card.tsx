@@ -10,14 +10,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { DownloadIcon, Trash2Icon } from "lucide-react";
-import { useCallback, useState } from "react";
+import { Trash2Icon } from "lucide-react";
 import type { ExamConfigI, GenerationStatus } from "@/lib/types";
-import { ExamConfigCard } from "./exam-config-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { useNavigate } from "@tanstack/react-router";
+import { cn } from "@/lib/utils";
 
 const statusConfig: Record<
   GenerationStatus,
@@ -31,26 +30,27 @@ const statusConfig: Record<
   COMPLETED: { label: "Concluído", variant: "outline" },
   FAILED: { label: "Falhado", variant: "destructive" },
 };
-import { useDeleteExamConfig, useDownloadExamConfig } from "@/hooks/use-exams";
-import { decodeId } from "@/lib/id-encoder";
+import { useDeleteExamConfig } from "@/hooks/use-exams";
+import { decodeId, encodeId } from "@/lib/id-encoder";
 
 export default function ExamCard({
   name,
   examConfig,
   ucId,
+  ucName,
   id,
 }: {
   id: number;
   name: string;
   ucId: string;
+  ucName: string;
   examConfig: ExamConfigI;
 }) {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const handleOpenModal = useCallback(() => setIsModalOpen(true), []);
-  const handleCloseModal = useCallback(() => setIsModalOpen(false), []);
+  const navigate = useNavigate();
   const deleteMutation = useDeleteExamConfig(decodeId(ucId));
-  const downloadMutation = useDownloadExamConfig();
 
+  const canDelete =
+    examConfig.state === "preparing" || examConfig.state === "sent";
   const totalQuestions =
     examConfig.topic_configs?.reduce(
       (sum, t) => sum + (t.num_questions || 0),
@@ -60,8 +60,19 @@ export default function ExamCard({
   return (
     <>
       <Card
-        className="group flex flex-row items-center gap-4 px-5 py-4 cursor-pointer border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden"
-        onClick={handleOpenModal}
+        className={cn(
+          "group flex flex-row items-center gap-4 px-5 py-4 border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 transition-all duration-200 overflow-hidden",
+          examConfig.status === "COMPLETED"
+            ? "cursor-pointer hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5"
+            : "cursor-default opacity-70",
+        )}
+        onClick={() =>
+          examConfig.status === "COMPLETED" &&
+          navigate({
+            to: "/detalhes-exame",
+            search: { examId: encodeId(id), examName: name, ucId, ucName },
+          })
+        }
       >
         <div className="shrink-0 w-1 self-stretch rounded-full bg-linear-to-b from-[#41B5C0] to-[#3263A8]" />
 
@@ -85,7 +96,7 @@ export default function ExamCard({
               Variações
             </p>
             <p className="text-lg font-bold text-[#3263A8] leading-none">
-              {examConfig.num_variations}
+              {examConfig.total_exams}
             </p>
           </div>
           <div className="w-px h-8 bg-border" />
@@ -108,21 +119,7 @@ export default function ExamCard({
           </div>
         </div>
 
-        {examConfig.status === "COMPLETED" && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={(e) => {
-              e.stopPropagation();
-              downloadMutation.mutate(id);
-            }}
-            disabled={downloadMutation.isPending}
-            className="cursor-pointer shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-150 hover:text-primary hover:bg-primary/10 rounded-full"
-          >
-            <DownloadIcon className="h-4 w-4" />
-          </Button>
-        )}
-
+        <div onClick={(e) => e.stopPropagation()}>
         <AlertDialog>
           <AlertDialogTrigger asChild>
             <Button
@@ -139,10 +136,17 @@ export default function ExamCard({
               <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
                 <Trash2Icon />
               </AlertDialogMedia>
-              <AlertDialogTitle>Apagar Configuração de Exame</AlertDialogTitle>
+              <AlertDialogTitle>Apagar Exame</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta ação irá apagar permanentemente a configuração de exame.
-                Deseja continuar?
+                {canDelete && (
+                  <p>
+                    Esta ação irá apagar permanentemente o exame. Deseja
+                    continuar?
+                    <br />
+                  </p>
+                )}
+                Só é possível apagar um exame antes de ser iniciado ou após o
+                envio das notas.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="w-full! flex flex-row justify-between!">
@@ -153,26 +157,24 @@ export default function ExamCard({
               >
                 Cancelar
               </AlertDialogCancel>
-              <AlertDialogAction
-                size="lg"
-                variant="destructive"
-                className="cursor-pointer"
-                onClick={() => deleteMutation.mutate(id)}
-              >
-                Apagar
-              </AlertDialogAction>
+              {canDelete && (
+                <AlertDialogAction
+                  size="lg"
+                  variant="destructive"
+                  className="cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteMutation.mutate(id);
+                  }}
+                >
+                  Apagar
+                </AlertDialogAction>
+              )}
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </div>
       </Card>
-
-      {isModalOpen && (
-        <Dialog open={isModalOpen} onOpenChange={handleCloseModal}>
-          <DialogContent className="max-w-lg p-0 overflow-y-auto max-h-[90vh]">
-            <ExamConfigCard examConfigData={examConfig} />
-          </DialogContent>
-        </Dialog>
-      )}
     </>
   );
 }

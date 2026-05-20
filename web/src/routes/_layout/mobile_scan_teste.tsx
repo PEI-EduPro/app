@@ -8,12 +8,12 @@ import z from "zod";
 import { Button } from "@/components/ui/button";
 import { decodeId } from "@/lib/id-encoder";
 import {
-  useCloseWaitingRoom,
-  useGetWaitingRoomById,
-  useGetWaitingRoomMetrics,
+  useCloseExamSession,
+  useGetExamSessionInfo,
+  useGetExamSessionMetrics,
   usePostPairExamStudent,
-  useStartWaitingRoom,
-} from "@/hooks/use-waiting-rooms";
+  useStartExamSession,
+} from "@/hooks/use-exams";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -49,17 +49,17 @@ function RouteComponent() {
 
   const navigate = useNavigate();
 
-  const { data: roomDetails, isLoading } = useGetWaitingRoomById(realId);
+  const { data: roomDetails, isLoading } = useGetExamSessionInfo(realId);
 
-  const { data: metrics } = useGetWaitingRoomMetrics({
+  const { data: metrics } = useGetExamSessionMetrics({
     enabled: roomDetails?.role === "regent",
-    roomId: realId,
+    examConfigId: realId,
     refetchInterval: 5000,
   });
 
   const { mutate: postExamStudent } = usePostPairExamStudent(realId);
-  const { mutate: closeRoom } = useCloseWaitingRoom(realId);
-  const { mutate: startRoom } = useStartWaitingRoom(realId);
+  const { mutate: closeRoom } = useCloseExamSession(realId);
+  const { mutate: startRoom } = useStartExamSession(realId);
 
   const [canAssociate, setCanAssociate] = useState<boolean>(false);
   const [QRCode, setQRCode] = useState<string>("");
@@ -70,11 +70,50 @@ function RouteComponent() {
     nome: s.name,
   })) as unknown as Record<string, string>[];
 
+  const examClosed =
+    !isLoading &&
+    roomDetails &&
+    roomDetails.state !== "running" &&
+    roomDetails.state !== "preparing";
+
+  if (examClosed) {
+    navigate({ to: "/mobile_evaluate_tests", search: { ucId } });
+    return null;
+  }
+
+  const examNotOpen =
+    !isLoading && roomDetails && roomDetails.state === "preparing";
+
   return (
-    <div className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs">
+    <div
+      className="h-dvh flex flex-col py-2 px-4 w-full animate-fade-in overflow-x-hidden text-xs [&_h1]:text-base [&_span]:text-xs [&_button]:text-xs [&_input]:text-xs"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <AlertDialog open={!!examNotOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exame ainda não aberto</AlertDialogTitle>
+            <AlertDialogDescription>
+              O exame ainda não foi aberto. É necessário abrir o exame para
+              começar com a associação de alunos e o exame aparecer nos
+              dispositivos dos restantes professores vigilantes.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter>
+            <AlertDialogAction
+              size="lg"
+              className="w-full cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/80"
+              onClick={() => startRoom()}
+            >
+              Abrir Exame
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AppBreadcrumb
         page={roomDetails?.subject_name || "Scan de Exames"}
-        crumbs={[{ name: "Salas", link: "/unidades-curriculares" }]}
+        crumbs={[{ name: "Exames", link: "/unidades-curriculares" }]}
       />
 
       <h1 className="font-rubik text-center text-base font-bold text-foreground mb-2 animate-fade-in-up truncate">
@@ -99,7 +138,7 @@ function RouteComponent() {
                     </span>
                   </div>
                 )}
-                {roomDetails?.state === "running" ? (
+                <div onClick={(e) => e.stopPropagation()}>
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
                       <Button
@@ -145,14 +184,7 @@ function RouteComponent() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-                ) : (
-                  <Button
-                    className="cursor-pointer h-auto px-4 py-2 bg-[#41B5C0] text-white hover:bg-[#41B5C0]/80 font-semibold"
-                    onClick={() => startRoom()}
-                  >
-                    Abrir Exame
-                  </Button>
-                )}
+                </div>
               </div>
             )}
 

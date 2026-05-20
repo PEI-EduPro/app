@@ -11,7 +11,6 @@ from src.models.subject import Subject
 from src.models.topic import Topic
 from src.models.exam_config import ExamConfig
 from src.models.exam import Exam
-from src.models.waiting_room import WaitingRoom
 from src.models.warning import Warning, WarningType
 
 @pytest.mark.asyncio
@@ -47,21 +46,19 @@ async def test_delete_exam_config_full(session):
     
     e = Exam(exam_config_id=ec.id, capture_path="/tmp/cap.jpg")
     session.add(e)
-    wr = WaitingRoom(exam_config_id=ec.id)
-    session.add(wr)
     w = Warning(exam_config_id=ec.id, type=WarningType.multiple_students_to_exam)
     session.add(w)
     await session.commit()
     
     with patch("os.path.exists", return_value=True), \
          patch("os.remove") as mock_remove, \
-         patch("src.services.exam.keycloak_client.delete_waiting_room_groups", new_callable=AsyncMock) as mock_kc:
+         patch("src.services.exam.keycloak_client.delete_exam_session_groups", new_callable=AsyncMock) as mock_kc:
         
         mock_kc.return_value = True
         result = await delete_exam_config(session, ec.id)
         assert result is True
         assert mock_remove.call_count == 2 # zip and capture
-        mock_kc.assert_called_once()
+        mock_kc.assert_called_once_with(ec.id)
         
         # Verify DB deletion
         assert await session.get(ExamConfig, ec.id) is None

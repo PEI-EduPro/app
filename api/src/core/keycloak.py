@@ -413,6 +413,18 @@ class KeycloakClient:
                 return g['id']
         return None
 
+    async def get_group_members_by_name(self, group_name: str) -> list[dict]:
+        """Fetch all members of a group by its name (e.g., 's1/students', 'w5/vigilant')"""
+        try:
+            group_id = await self._get_group_id_by_name(group_name)
+            if not group_id:
+                return []
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, lambda: self.admin_client.get_group_members(group_id))
+        except Exception as e:
+            logger.error(f"Failed to fetch members for group {group_name}: {e}")
+            return []
+
     async def get_subject_students(self, subject_id: str) -> list[dict]:
         """Fetch all users in the subject's student group"""
         group_name = f"s{subject_id}/students"
@@ -694,22 +706,22 @@ class KeycloakClient:
             # Returning empty list is safer than crashing, but denies access.
             return []
 
-    async def create_waiting_room_groups(
+    async def create_exam_session_groups(
         self,
-        waiting_room_id: int,
+        exam_config_id: int,
         regent_keycloak_id: str,
         vigilant_ids: list[str]
     ) -> bool:
         """
-        Creates the waiting room groups in Keycloak.
-        Creates w{id}/regent and w{id}/vigilant and assigns users.
+        Creates the exam session groups in Keycloak (formerly waiting room groups).
+        Creates w{exam_config_id}/regent and w{exam_config_id}/vigilant and assigns users.
         """
-        logger.info(f"Creating groups for waiting room ID: {waiting_room_id}")
+        logger.info(f"Creating groups for exam config ID: {exam_config_id}")
 
         try:
             loop = asyncio.get_event_loop()
 
-            base_group_name = f"w{waiting_room_id}"
+            base_group_name = f"w{exam_config_id}"
             subgroups = ["regent", "vigilant"]
 
             subgroup_ids = {}
@@ -735,7 +747,7 @@ class KeycloakClient:
                         lambda uid=regent_keycloak_id, gid=regent_group_id: self.admin_client.group_user_add(uid, gid)
                     )
                 except Exception as e:
-                    logger.error(f"Failed to add regent {regent_keycloak_id} to waiting room {waiting_room_id}: {e}")
+                    logger.error(f"Failed to add regent {regent_keycloak_id} to exam config {exam_config_id}: {e}")
 
             # Assign vigilants
             vigilant_group_name = f"{base_group_name}/vigilant"
@@ -749,21 +761,21 @@ class KeycloakClient:
                             lambda uid=v_id, gid=vigilant_group_id: self.admin_client.group_user_add(uid, gid)
                         )
                     except Exception as e:
-                        logger.error(f"Failed to add vigilant {v_id} to waiting room {waiting_room_id}: {e}")
+                        logger.error(f"Failed to add vigilant {v_id} to exam config {exam_config_id}: {e}")
 
             return True
 
         except Exception as e:
-            logger.error(f"Keycloak Admin API error during waiting room group creation: {e}")
+            logger.error(f"Keycloak Admin API error during exam session group creation: {e}")
             raise e
 
-    async def delete_waiting_room_groups(self, waiting_room_id: int) -> bool:
+    async def delete_exam_session_groups(self, exam_config_id: int) -> bool:
         """
-        Deletes Keycloak groups for a specific waiting room.
+        Deletes Keycloak groups for a specific exam session.
         """
-        logger.info(f"Deleting groups for waiting room ID: {waiting_room_id}")
+        logger.info(f"Deleting groups for exam config ID: {exam_config_id}")
         
-        base_group_name = f"w{waiting_room_id}"
+        base_group_name = f"w{exam_config_id}"
         subgroups = ["regent", "vigilant"]
         
         try:
@@ -787,8 +799,61 @@ class KeycloakClient:
             return True
 
         except Exception as e:
-            logger.error(f"Error deleting waiting room groups for {waiting_room_id}: {e}")
+            logger.error(f"Error deleting exam session groups for {exam_config_id}: {e}")
             return False
+
+    async def replace_exam_session_vigilants(
+        self,
+        exam_config_id: int,
+        vigilant_ids: list[str]
+    ) -> bool:
+        """
+        Replace all vigilants in an exam session group with a new list.
+        """
+        group_name = f"w{exam_config_id}/vigilant"
+        logger.info(f"Replacing vigilants for exam config {exam_config_id}")
+        
+        try:
+            loop = asyncio.get_event_loop()
+            
+            # 1. Find the group ID
+            group_id = await self._get_group_id_by_name(group_name)
+            
+            if not group_id:
+                # If group doesn't exist, create it
+                logger.warning(f"Group {group_name} not found. Creating it.")
+                group_id = await loop.run_in_executor(
+                    None,
+                    lambda: self.admin_client.create_group({"name": group_name})
+                )
+
+            # 2. Remove all current members
+            current_members = await loop.run_in_executor(
+                None, 
+                lambda: self.admin_client.get_group_members(group_id)
+            )
+            
+            for member in current_members:
+                await loop.run_in_executor(
+                    None,
+                    lambda uid=member['id']: self.admin_client.group_user_remove(uid, group_id)
+                )
+
+            # 3. Add new vigilants
+            for v_id in vigilant_ids:
+                try:
+                    await loop.run_in_executor(
+                        None,
+                        lambda uid=v_id: self.admin_client.group_user_add(uid, group_id)
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to add vigilant {v_id} to exam config {exam_config_id}: {e}")
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Error replacing vigilants for exam config {exam_config_id}: {e}")
+            raise e
 
 keycloak_client = KeycloakClient()
 

@@ -1,0 +1,35 @@
+\documentclass[a4paper,11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[portuguese]{babel}
+\usepackage{etoolbox}
+\usepackage{longtable}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{a4paper, margin=1in}
+
+\providetoggle{english}
+\settoggle{english}{false}
+
+\begin{document}
+\begin{center}
+    {\huge \textbf{Relatório de Notas}} \\
+    \vspace{0.2cm}
+    {\Large \input{UC}} \\
+    \vspace{0.1cm}
+    {\large __EXAM_NAME__} \\
+    \input{date}
+\end{center}
+
+\vspace{0.5cm}
+
+\begin{longtable}{|l|p{8cm}|r|}
+\hline
+\textbf{NMEC} & \textbf{Nome} & \textbf{Nota} \\
+\hline
+\endhead
+
+__ROWS__
+
+\end{longtable}
+\end{document}

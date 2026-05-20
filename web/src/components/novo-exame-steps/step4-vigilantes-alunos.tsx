@@ -221,7 +221,7 @@ export function Step4VigilantesAlunos({
                               .split("\n")
                               .filter((l) => l.trim());
                             if (lines.length > 1) {
-                              setValue("num_variations", lines.length - 1);
+                              setValue("total_exams", lines.length - 1);
                               setValue("num_versions", lines.length - 1);
                             }
                           };
@@ -259,7 +259,7 @@ export function Step4VigilantesAlunos({
 
           <FormField
             control={control}
-            name="num_variations"
+            name="total_exams"
             render={() => (
               <FormItem className="flex items-center justify-between">
                 <FormLabel className="shrink-0 flex items-center gap-1">
@@ -271,22 +271,22 @@ export function Step4VigilantesAlunos({
                     type="number"
                     min="1"
                     placeholder="1"
-                    value={watch("num_variations") || ""}
+                    value={watch("total_exams") || ""}
                     onChange={(e) => {
                       if (e.target.value === "") {
-                        setValue("num_variations", NaN);
+                        setValue("total_exams", NaN);
                         return;
                       }
                       const n = parseInt(e.target.value);
-                      setValue("num_variations", isNaN(n) || n < 1 ? 1 : n);
+                      setValue("total_exams", isNaN(n) || n < 1 ? 1 : n);
                     }}
                     onBlur={(e) => {
                       if (e.target.value === "") {
-                        setValue("num_variations", 1);
+                        setValue("total_exams", 1);
                         return;
                       }
                       const n = parseInt(e.target.value);
-                      if (isNaN(n) || n < 1) setValue("num_variations", 1);
+                      if (isNaN(n) || n < 1) setValue("total_exams", 1);
                     }}
                     onKeyDown={(e) => {
                       if (
@@ -341,7 +341,7 @@ export function Step4VigilantesAlunos({
                     className="max-w-18.25"
                     type="number"
                     min="1"
-                    max={watch("num_variations") || undefined}
+                    max={watch("total_exams") || undefined}
                     placeholder="1"
                     value={watch("num_versions") || ""}
                     onChange={(e) => {
@@ -393,7 +393,7 @@ export function Step4VigilantesAlunos({
               isPending ||
               !formState.isValid ||
               !watch("student_tuples") ||
-              watch("num_variations") < 1
+              watch("total_exams") < 1
             }
           >
             Próximo

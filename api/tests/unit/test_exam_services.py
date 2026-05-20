@@ -1,5 +1,6 @@
 import pytest
 import json
+from unittest.mock import patch, MagicMock
 from src.services import exam
 from src.models.subject import Subject
 from src.models.topic import Topic
@@ -97,11 +98,55 @@ async def test_store_student_list(session):
     # Verify data was stored
     await session.refresh(exam_config)
     assert exam_config.nmec_name_list == student_data
+
+
+@pytest.mark.asyncio
+async def test_create_configs_requested_gt_available(session):
+    """Test create_configs raises ValueError when more questions are requested than available"""
+    subject = Subject(name="Test Subject")
+    session.add(subject)
+    await session.commit()
+    await session.refresh(subject)
     
-    # Verify we can parse the stored data
-    parsed_data = json.loads(exam_config.nmec_name_list)
-    assert parsed_data["12345"] == "John Doe"
-    assert parsed_data["67890"] == "Jane Smith"
+    topic = Topic(name="Test Topic", subject_id=subject.id)
+    session.add(topic)
+    await session.commit()
+    await session.refresh(topic)
+    
+    # 0 questions available, 1 requested
+    exam_specs = {
+        "subject_id": subject.id,
+        "fraction": 0.5,
+        "topics": [topic.id],
+        "number_questions": {str(topic.id): 1},
+        "relative_quotations": {str(topic.id): 1.0}
+    }
+    
+    with pytest.raises(ValueError, match="has only 0 questions"):
+        await exam.create_configs(session, exam_specs)
+
+
+def test_compute_normalized_weights_zero_mass():
+    """Test _compute_normalized_weights with zero total mass"""
+    tc = TopicConfig(topic_id=1, num_questions=0, relative_weight=1.0)
+    weights = exam._compute_normalized_weights([tc])
+    assert weights == {1: 1.0}
+
+
+@pytest.mark.asyncio
+async def test_generate_exams_to_disk_no_pdflatex(session):
+    """Test generate_exams_to_disk fails when pdflatex is missing"""
+    with patch("shutil.which", return_value=None):
+        with pytest.raises(RuntimeError, match="pdflatex is not installed"):
+            await exam.generate_exams_to_disk(session, MagicMock(), [MagicMock()])
+
+
+@pytest.mark.asyncio
+async def test_generate_exams_to_disk_no_topic_configs(session):
+    """Test generate_exams_to_disk fails when no topic configs are provided"""
+    with patch("shutil.which", return_value="/usr/bin/pdflatex"):
+        with pytest.raises(ValueError, match="No topic configurations provided"):
+            await exam.generate_exams_to_disk(session, MagicMock(), [])
 
 
 @pytest.mark.asyncio
