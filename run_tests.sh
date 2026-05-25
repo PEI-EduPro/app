@@ -67,13 +67,14 @@ echo -e "\n${GREEN}Infrastructure is Ready!${NC}"
 # 2. Run Tests
 cd api
 
-COVERAGE_ARGS=""
-if [ "${COVERAGE:-false}" = "true" ]; then
-    COVERAGE_ARGS="--cov=src --cov-report=xml:coverage.xml --cov-report=term-missing"
-fi
+# Delete old coverage data to start fresh
+rm -f .coverage coverage.xml
+
+COMMON_COV_ARGS="--cov=src"
 
 echo -e "${GREEN}2. Running Unit Tests...${NC}"
 # Run unit tests (should be fast, in-memory DB)
+# We don't show the report yet, as we want to combine it with integration tests
 STORAGE_DIR=$STORAGE_DIR \
 PYTHONPATH=. \
 POSTGRES_SERVER=localhost \
@@ -88,11 +89,11 @@ KEYCLOAK_CLIENT_ID=api-backend \
 KEYCLOAK_CLIENT_SECRET="test" \
 KEYCLOAK_ADMIN_USERNAME=admin \
 KEYCLOAK_ADMIN_PASSWORD=admin \
-uv run pytest tests/unit $COVERAGE_ARGS
+uv run pytest tests/unit $COMMON_COV_ARGS --cov-report=
 
 echo -e "${GREEN}3. Running Integration Tests...${NC}"
 # Run integration tests (connects to ISOLATED Docker services)
-# Pass env vars explicitly to ensure pytest picks them up
+# Append coverage results and show final report
 
 #Se calhar passamos isto para um .env.test um dia 
 STORAGE_DIR=$STORAGE_DIR \
@@ -109,6 +110,6 @@ KEYCLOAK_CLIENT_ID=api-backend \
 KEYCLOAK_CLIENT_SECRET="**********" \
 KEYCLOAK_ADMIN_USERNAME=admin \
 KEYCLOAK_ADMIN_PASSWORD=admin \
-uv run pytest tests/integration $COVERAGE_ARGS
+uv run pytest tests/integration $COMMON_COV_ARGS --cov-append --cov-report=xml:coverage.xml --cov-report=term-missing
 
 echo -e "${GREEN}All tests passed successfully!${NC}"

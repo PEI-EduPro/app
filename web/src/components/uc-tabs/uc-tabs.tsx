@@ -1,7 +1,6 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import BancoPerguntasTab from "./banco-perguntas-tab";
 import ExamesTab from "./exames-tab";
-import SalasTab from "./salas-tab";
 
 interface UcTabsProps {
   realId: number;
@@ -30,9 +29,6 @@ export default function UcTabs({
           <TabsTrigger className="cursor-pointer" value="exames">
             Exames
           </TabsTrigger>
-          <TabsTrigger className="cursor-pointer" value="salas">
-            Salas
-          </TabsTrigger>
         </TabsList>
       </div>
       {isRegente && (
@@ -41,10 +37,7 @@ export default function UcTabs({
         </TabsContent>
       )}
       <TabsContent value="exames" className="mt-0">
-        <ExamesTab realId={realId} />
-      </TabsContent>
-      <TabsContent value="salas" className="mt-0">
-        <SalasTab realId={realId} ucName={ucName} />
+        <ExamesTab realId={realId} ucName={ucName} />
       </TabsContent>
     </Tabs>
   );

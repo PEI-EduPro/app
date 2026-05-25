@@ -48,8 +48,7 @@ async def update_topic(
     if not topic:
             raise HTTPException(status_code=404, detail="Topic not found")
     
-    data = topic_data.model_dump()
-    topic.sqlmodel_update(data)
+    topic.sqlmodel_update(topic_data.model_dump(exclude_unset=True))
 
     session.add(topic)
     await session.commit()

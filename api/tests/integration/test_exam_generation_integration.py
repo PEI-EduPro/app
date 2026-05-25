@@ -4,8 +4,8 @@ from unittest.mock import patch, AsyncMock
 
 
 @pytest.mark.asyncio
-async def test_exam_generation_with_students_and_waiting_room_integration(client, mock_auth, session):
-    """Integration test for exam generation with student tuples and waiting room creation"""
+async def test_exam_generation_with_students_and_session_integration(client, mock_auth, session):
+    """Integration test for exam generation with student tuples and session creation"""
     from src.core.deps import get_current_user_info
     from src.main import app
     from src.models.subject import Subject
@@ -45,7 +45,7 @@ async def test_exam_generation_with_students_and_waiting_room_integration(client
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
          patch("src.services.exam._update_rules"), \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock):
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock):
 
         # Test payload with all new features
         payload = {
@@ -55,7 +55,7 @@ async def test_exam_generation_with_students_and_waiting_room_integration(client
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 5},
             "relative_quotations": {str(topic.id): 2.0},
-            "num_variations": 2,
+            "total_exams": 2,
             "professors": ["Prof. Smith", "Prof. Johnson"],
             "student_tuples": [
                 [12345, "Alice Johnson", "alice@university.edu"],
@@ -93,16 +93,9 @@ async def test_exam_generation_with_students_and_waiting_room_integration(client
         assert student_data["67890"]["name"] == "Bob Smith"
         assert student_data["67890"]["email"] == "bob@university.edu"
 
-        # Verify waiting room was created
-        from sqlmodel import select
-        from src.models.waiting_room import WaitingRoom
-        
-        stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == config_id)
-        result = await session.exec(stmt)
-        waiting_room = result.first()
-        
-        assert waiting_room is not None
-        assert waiting_room.exam_config_id == config_id
+        # Verify session was initialized
+        from src.models.exam_config import ExamState
+        assert exam_config.state == ExamState.PREPARING
 
 
 @pytest.mark.asyncio
@@ -143,7 +136,7 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
          patch("src.services.exam._write_blank_answers"), \
          patch("src.services.exam._write_all_solutions"), \
          patch("src.services.exam._update_rules"), \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock):
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock):
 
         # Minimal payload without new optional parameters
         payload = {
@@ -153,7 +146,7 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 3},
             "relative_quotations": {str(topic.id): 1.0},
-            "num_variations": 1
+            "total_exams": 1
         }
 
         response = await client.post("/api/exams/generate", json=payload)
@@ -170,13 +163,6 @@ async def test_exam_generation_without_optional_params_integration(client, mock_
         assert exam_config.fraction == 50
         assert exam_config.nmec_name_list is None
 
-        # Verify waiting room was created (now always created)
-        from sqlmodel import select
-        from src.models.waiting_room import WaitingRoom
-
-        stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == config_id)
-        result = await session.exec(stmt)
-        waiting_room = result.first()
-
-        assert waiting_room is not None
-        assert waiting_room.exam_config_id == config_id
+        # Verify session was initialized
+        from src.models.exam_config import ExamState
+        assert exam_config.state == ExamState.PREPARING

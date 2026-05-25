@@ -2,6 +2,9 @@
 from typing import Optional, List, Dict, Tuple
 from sqlmodel import Field, SQLModel, Relationship
 from src.models.topic_config import TopicConfigDTO
+from src.models.user import KeycloakUserPublic
+from pydantic import BaseModel
+from sqlalchemy import Column, JSON, Enum as SAEnum
 
 
 from enum import Enum
@@ -12,6 +15,14 @@ class GenerationStatus(str, Enum):
     COMPLETED = "COMPLETED"
     FAILED = "FAILED"
 
+class ExamState(str, Enum):
+    PREPARING = "preparing"
+    RUNNING = "running"
+    WARNING_HANDLING = "warning_handling"
+    VALIDATION = "validation"
+    COMPLETED = "completed"
+    SENT = "sent"
+
 # ExamConfig model
 class ExamConfig(SQLModel, table=True):
     __tablename__ = "exam_config"
@@ -21,13 +32,49 @@ class ExamConfig(SQLModel, table=True):
     subject_id: int = Field(foreign_key="subject.id")
     nmec_name_list: Optional[str] = None # nmec (string): {name: string, email: string}
     exam_name: Optional[str] = Field(default=None, max_length=255)
+    exam_date: Optional[str] = Field(default=None, max_length=50)
     num_versions: int = Field(default=1)
     status: GenerationStatus = Field(default=GenerationStatus.PENDING)
     zip_path: Optional[str] = Field(default=None)
+    
+    # Merged from WaitingRoom
+    state: ExamState = Field(
+        default=ExamState.PREPARING,
+        sa_column=Column(SAEnum(ExamState, values_callable=lambda x: [e.value for e in x], name="examstate"))
+    )
+    associations: List[str] = Field(default=[], sa_column=Column(JSON))
 
     topic_configs: List["TopicConfig"] = Relationship(back_populates="exam_config",
                                                      sa_relationship_kwargs={"cascade": "all, delete-orphan"})
     exams: List["Exam"] = Relationship(back_populates="exam_config")
+
+    @property
+    def total_exams(self) -> int:
+        """Count of generated exams for this configuration."""
+        try:
+            return len(self.exams) if self.exams is not None else 0
+        except Exception:
+            return 0
+
+    @property
+    def associated_exams_count(self) -> Optional[int]:
+        """Count of exams that have been associated with a student."""
+        if self.state not in [ExamState.RUNNING, ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED, ExamState.SENT]:
+            return None
+        try:
+            return sum(1 for e in self.exams if e.nmec is not None) if self.exams is not None else 0
+        except Exception:
+            return 0
+
+    @property
+    def pictured_exams_count(self) -> Optional[int]:
+        """Count of exams that have a capture path (OMR processed)."""
+        if self.state not in [ExamState.WARNING_HANDLING, ExamState.VALIDATION, ExamState.COMPLETED, ExamState.SENT]:
+            return None
+        try:
+            return sum(1 for e in self.exams if e.capture_path is not None) if self.exams is not None else 0
+        except Exception:
+            return 0
 
 # ExamConfig schemas
 class ExamConfigCreate(SQLModel):
@@ -48,28 +95,93 @@ class ExamConfigRead(SQLModel):
     id: int
     fraction: int
     subject_id: int
+    exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     status: GenerationStatus
+    state: ExamState
     zip_path: Optional[str] = None
+    
+    # Computed metrics
+    total_exams: int = 0
+    associated_exams_count: Optional[int] = None
+    pictured_exams_count: Optional[int] = None
 
 class ExamConfigResponse(SQLModel):
     id: int
     subject_id: int
     fraction: int
-    topic_configs: List[TopicConfigDTO]
-    nmec_name_list: Optional[str]
-    num_variations: int
-    status: GenerationStatus
+    exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
+    topic_configs: List[TopicConfigDTO] = []
+    nmec_name_list: Optional[str] = None
+    num_versions: int = 1
+    status: GenerationStatus = GenerationStatus.PENDING
+    state: ExamState = ExamState.PREPARING
+    associations: List[str] = []
+    vigilants: List[KeycloakUserPublic] = []
+    
+    # Computed metrics
+    total_exams: int = 0
+    associated_exams_count: Optional[int] = None
+    pictured_exams_count: Optional[int] = None
 
+class ExamSessionResponse(BaseModel):
+    id: int
+    state: ExamState
+    associations: List[str]
+    message: str
+
+class StudentInfo(BaseModel):
+    name: str
+    nmec: str
+
+class ExamSessionInfoResponse(BaseModel):
+    id: int
+    subject_id: int
+    subject_name: str
+    state: ExamState
+    associations: List[str]
+    student_list: List[StudentInfo]
+    exam_ids: List[int]
+    total_students: int
+    total_exams: int
+    role: str
+
+class ExamSessionMetricsResponse(BaseModel):
+    associated_exams_count: int
+    associated_students_count: int
+
+class ProfessorExamSessionItem(BaseModel):
+    """Information about a single exam session for a professor."""
+    subject_id: int
+    subject_name: str
+    exam_config_id: int
+    state: str
+    role: str
+    exam_name: Optional[str]
+    exam_date: Optional[str]
 
 class ExamGenerateRequest(SQLModel):
     subject_id: int
     fraction: int
     exam_name: Optional[str] = None
+    exam_date: Optional[str] = None
     topics: List[str]
     number_questions: Dict[str, int]
     relative_quotations: Dict[str, float]
-    num_variations: int = 1
+    total_exams: int = 1
     number_versions: Optional[int] = None
     professors: List[str] = []
     student_tuples: List[Tuple[int, str, str]] = []
     vigilant_keycloak_ids: List[str] = []
+
+class EvaluateBatchRequest(BaseModel):
+    """Request for evaluation. List of files"""
+    files: List[str]
+
+class QRCodeToNMEC(BaseModel):
+    qr: str
+    nmec: int
+
+class VigilantsUpdateRequest(BaseModel):
+    vigilant_keycloak_ids: List[str]

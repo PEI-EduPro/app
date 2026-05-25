@@ -158,11 +158,6 @@ interface MultiSelectProps
   modalPopover?: boolean;
 
   /**
-   * If true, renders the multi-select component as a child of another component.
-   * Optional, defaults to false.
-   */
-  asChild?: boolean;
-
   /**
    * Additional class names to apply custom styles to the multi-select component.
    * Optional, can be used to add custom styles.
@@ -315,7 +310,6 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       animationConfig,
       maxCount = 3,
       modalPopover = false,
-      asChild = false,
       className,
       hideSelectAll = false,
       searchable = true,
@@ -930,7 +924,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
                       >
                         {`+ ${
                           selectedValues.length - responsiveSettings.maxCount
-                        } more`}
+                        } mais`}
                         <XCircle
                           className={cn(
                             "ml-2 h-4 w-4 cursor-pointer",

@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import patch, AsyncMock
 from src.core.deps import get_current_user_info
 from src.main import app
 from src.models.subject import Subject
@@ -96,3 +97,147 @@ async def test_get_question_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
     response = await client.get("/api/questions/99999")
     assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_create_question_empty_list(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.post("/api/questions/", json=[])
+    assert response.status_code == 400
+    assert "No questions provided" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_question_from_xml(client, mock_auth, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    topic = setup_topic
+    from unittest.mock import patch
+    with patch("src.routers.question.question.create_question_XML", new_callable=AsyncMock) as mock_xml:
+        mock_xml.return_value = {
+            "topics_created": 1,
+            "questions_created": 1,
+            "options_created": 1
+        }
+        response = await client.post(f"/api/questions/{topic.subject_id}/XML", content="<xml/>", headers={"Content-Type": "application/xml"})
+        assert response.status_code == 200
+        assert response.json()["topics_created"] == 1
+
+@pytest.mark.asyncio
+async def test_put_question_success(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    topic = setup_topic
+    from src.models.question import Question
+    q = Question(topic_id=topic.id, question_text="Old")
+    session.add(q)
+    await session.commit()
+    await session.refresh(q)
+    
+    response = await client.put(f"/api/questions/{q.id}", json={"id": q.id, "question_text": "New"})
+    assert response.status_code == 200
+    assert response.json()["question_text"] == "New"
+
+@pytest.mark.asyncio
+async def test_delete_question_success(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    topic = setup_topic
+    from src.models.question import Question
+    q = Question(topic_id=topic.id, question_text="To Delete")
+    session.add(q)
+    await session.commit()
+    await session.refresh(q)
+    
+    response = await client.delete(f"/api/questions/{q.id}")
+    assert response.status_code == 200
+    assert "deleted successfully" in response.json()
+
+@pytest.mark.asyncio
+async def test_put_question_value_error(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    topic = setup_topic
+    from src.models.question import Question
+    q = Question(topic_id=topic.id, question_text="Old")
+    session.add(q)
+    await session.commit()
+    
+    with patch("src.routers.question.question.update_question", side_effect=ValueError("Bad update")):
+        response = await client.put(f"/api/questions/{q.id}", json={"id": q.id, "topic_id": topic.id, "question_text": "New"})
+        assert response.status_code == 400
+        assert "Bad update" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_question_topic_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    payload = [{"topic_id": 99999, "question_text": "Q"}]
+    response = await client.post("/api/questions/", json=payload)
+    assert response.status_code == 400
+    assert "Topic 99999 not found" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_create_question_internal_error(client, mock_auth, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    with patch("src.routers.question.question.create_question", side_effect=Exception("Internal Boom")):
+        payload = [{"topic_id": setup_topic.id, "question_text": "Q"}]
+        response = await client.post("/api/questions/", json=payload)
+        assert response.status_code == 500
+        assert "internal error" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_get_question_options_question_not_found(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.get("/api/questions/99999/question-options")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_get_question_options_none_returned(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.question import Question
+    q = Question(topic_id=setup_topic.id, question_text="Q")
+    session.add(q)
+    await session.commit()
+    await session.refresh(q)
+    
+    with patch("src.routers.question.question.get_question_options_by_question_id", return_value=None):
+        response = await client.get(f"/api/questions/{q.id}/question-options")
+        assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_put_question_internal_error(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.question import Question
+    q = Question(topic_id=setup_topic.id, question_text="Q")
+    session.add(q)
+    await session.commit()
+    
+    with patch("src.routers.question.question.update_question", side_effect=Exception("Update fail")):
+        response = await client.put(f"/api/questions/{q.id}", json={"id": q.id, "question_text": "New"})
+        assert response.status_code == 500
+
+@pytest.mark.asyncio
+async def test_delete_question_not_found_early(client, mock_auth):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    response = await client.delete("/api/questions/99999")
+    assert response.status_code == 404
+
+@pytest.mark.asyncio
+async def test_delete_question_service_returns_false(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.question import Question
+    q = Question(topic_id=setup_topic.id, question_text="Q")
+    session.add(q)
+    await session.commit()
+    
+    with patch("src.routers.question.question.delete_question", return_value=False):
+        response = await client.delete(f"/api/questions/{q.id}")
+        assert response.status_code == 400
+        assert "Question not found" in response.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_delete_question_internal_error(client, mock_auth, session, setup_topic):
+    app.dependency_overrides[get_current_user_info] = mock_auth
+    from src.models.question import Question
+    q = Question(topic_id=setup_topic.id, question_text="Q")
+    session.add(q)
+    await session.commit()
+    
+    with patch("src.routers.question.question.delete_question", side_effect=Exception("Delete fail")):
+        response = await client.delete(f"/api/questions/{q.id}")
+        assert response.status_code == 500
+

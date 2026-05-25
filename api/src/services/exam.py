@@ -1,3 +1,4 @@
+import anyio
 import asyncio
 import csv
 import io
@@ -5,15 +6,18 @@ import json
 import logging
 import os
 import random
+import re
 import shutil
 import smtplib
 import subprocess
 import tempfile
 import traceback
+import zipfile
+from datetime import datetime
 from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from fastapi import HTTPException
 from jinja2 import Environment, FileSystemLoader
@@ -24,14 +28,22 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from src.core.keycloak import keycloak_client
 
 from src.models.exam import Exam
-from src.models.exam_config import ExamConfig, GenerationStatus
+from src.models.exam_config import (
+    ExamConfig, 
+    GenerationStatus, 
+    ExamState, 
+    ExamSessionInfoResponse, 
+    ExamSessionMetricsResponse, 
+    ProfessorExamSessionItem, 
+    StudentInfo
+)
 from src.models.question import Question
 from src.models.question_option import QuestionOption
 from src.models.subject import Subject
 from src.models.topic import Topic
 from src.models.topic_config import TopicConfig
-from src.models.waiting_room import WaitingRoom
 from src.models.warning import Warning
+from src.services.warning import calculate_and_persist_warnings
 
 
 
@@ -83,6 +95,7 @@ async def create_configs(
         fraction=exam_specs["fraction"],
         nmec_name_list=nmec_name_list,
         exam_name=exam_specs.get("exam_name") or exam_specs.get("exam_title", None),
+        exam_date=exam_specs.get("exam_date", None),
         num_versions=num_versions
     )
     session.add(exam_config)
@@ -115,11 +128,112 @@ def _compute_normalized_weights(topic_configs: List[TopicConfig]) -> Dict[int, f
     return {tc.topic_id: tc.relative_weight * norm for tc in topic_configs}
 
 # put the exam batch number rendered in the LaTeX
+async def generate_grades_report_pdf(
+    session: AsyncSession,
+    exam_config_id: int
+) -> bytes:
+    """Generate a PDF report of student grades using project standard templates."""
+    if shutil.which("pdflatex") is None:
+        raise RuntimeError("pdflatex is not installed.")
+
+    # 1. Fetch data
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
+
+    subject_result = await session.exec(select(Subject).where(Subject.id == exam_config.subject_id))
+    subject = subject_result.first()
+    subject_name = subject.name if subject else "Unknown Subject"
+
+    exams = await get_exams_by_config_id(session, exam_config_id)
+    corrected_exams = [e for e in exams if e.grade is not None]
+    corrected_exams.sort(key=lambda x: x.nmec if x.nmec else 0)
+
+    # 2. Setup Temporary Directory and Templates
+    with tempfile.TemporaryDirectory() as tmpdir:
+        # Copy base templates if any were needed (though report is mostly self-contained)
+        # For consistency, we'll write the specific files needed
+        
+        # Write UC.tex (following project pattern)
+        # Defaulting to 1st Semester and 2025/26 as seen in other parts of the code
+        semester_text_en = "1st Semester"
+        semester_text_pt = "1º Semestre"
+        academic_year = "2025/26"
+        uc_content = f"""\\iftoggle{{english}}{{
+{subject_name}\\\\
+{semester_text_en}, {academic_year}\\\\
+}}{{
+{subject_name}\\\\
+{semester_text_pt}, {academic_year}\\\\
+}}"""
+        async with await anyio.open_file(os.path.join(tmpdir, "UC.tex"), "w") as f:
+            await f.write(uc_content)
+
+        # Write date.tex (following project pattern)
+        exam_date = exam_config.exam_date
+        formatted_date = ""
+        if exam_date:
+            try:
+                date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
+                formatted_date = date_obj.strftime("%d de %B de %Y")
+                pt_months = {
+                    "January": "janeiro", "February": "fevereiro", "March": "março",
+                    "April": "abril", "May": "maio", "June": "junho",
+                    "July": "julho", "August": "agosto", "September": "setembro",
+                    "October": "outubro", "November": "novembro", "December": "dezembro"
+                }
+                for en, pt in pt_months.items():
+                    formatted_date = formatted_date.replace(en, pt)
+            except Exception:
+                formatted_date = exam_date
+        async with await anyio.open_file(os.path.join(tmpdir, "date.tex"), "w") as f:
+            await f.write(formatted_date)
+
+        # Build ROWS
+        rows = []
+        for e in corrected_exams:
+            nmec = str(e.nmec) if e.nmec else ""
+            name = e.student_name or "Unknown Student"
+            grade = f"{e.grade:.2f}"
+            safe_name = name.replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
+            rows.append(f"{nmec} & {safe_name} & {grade} \\\\ \\hline")
+
+        # Read Main Template
+        template_path = os.path.join(LATEX_TEMPLATES_DIR, "grades_report.tex")
+        async with await anyio.open_file(template_path, "r") as f:
+            latex_content = await f.read()
+
+        latex_content = latex_content.replace("__EXAM_NAME__", exam_config.exam_name or "Exame")
+        latex_content = latex_content.replace("__ROWS__", "\n".join(rows))
+
+        main_file = "report.tex"
+        async with await anyio.open_file(os.path.join(tmpdir, main_file), "w") as f:
+            await f.write(latex_content)
+
+        # 3. Compile
+        try:
+            with anyio.fail_after(30):
+                await anyio.run_process(
+                    ["pdflatex", "-interaction=nonstopmode", main_file],
+                    cwd=tmpdir,
+                    check=False,
+                )
+            pdf_path = os.path.join(tmpdir, "report.pdf")
+            if os.path.exists(pdf_path):
+                async with await anyio.open_file(pdf_path, "rb") as f:
+                    return await f.read()
+            else:
+                raise RuntimeError("LaTeX compilation failed - PDF not generated")
+        except Exception as e:
+            logger.error(f"LaTeX report compilation failed: {e}")
+            raise RuntimeError(f"Failed to generate PDF report: {e}")
+
+
 async def generate_exams_from_configs(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1,
+    total_exams: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
@@ -128,7 +242,7 @@ async def generate_exams_from_configs(
 ) -> bytes:
     """Generate LaTeX exams and answer keys, return ZIP with PDFs. Saves a copy to disk."""
     zip_bytes, zip_path = await generate_exams_to_disk(
-        session, exam_config, topic_configs, num_variations,
+        session, exam_config, topic_configs, total_exams,
         exam_title, exam_date, semester, academic_year, num_versions
     )
     
@@ -144,7 +258,7 @@ async def generate_exams_to_disk(
     session: AsyncSession,
     exam_config: ExamConfig,
     topic_configs: List[TopicConfig],
-    num_variations: int = 1,
+    total_exams: int = 1,
     exam_title: str = "Exame Época Normal",
     exam_date: str = None,
     semester: str = "1",
@@ -152,11 +266,8 @@ async def generate_exams_to_disk(
     num_versions: int = None
 ) -> Tuple[bytes, str]:
     """Generate LaTeX exams and answer keys, save to disk and return (bytes, path)."""
-    import zipfile
-    import io
-
     if num_versions is None:
-        num_versions = num_variations
+        num_versions = total_exams
 
     if shutil.which("pdflatex") is None:
         raise RuntimeError("pdflatex is not installed. Please install it (e.g., 'sudo apt install texlive-latex-extra') or run the API via Docker.")
@@ -192,7 +303,6 @@ async def generate_exams_to_disk(
 
         # Write custom date.tex
         if exam_date:
-            from datetime import datetime
             date_obj = datetime.strptime(exam_date, "%Y-%m-%d")
             formatted_date = date_obj.strftime("%d de %B de %Y")
             # Portuguese month names
@@ -204,13 +314,13 @@ async def generate_exams_to_disk(
             }
             for en, pt in pt_months.items():
                 formatted_date = formatted_date.replace(en, pt)
-            with open(os.path.join(tmpdir, "date.tex"), "w") as f:
-                f.write(formatted_date)
+            async with await anyio.open_file(os.path.join(tmpdir, "date.tex"), "w") as f:
+                await f.write(formatted_date)
 
-        for var_num in range(1, num_variations + 1):
+        for var_num in range(1, total_exams + 1):
             # Calculate version_idx with remainder distributed to earlier versions
-            base_size = num_variations // num_versions
-            remainder = num_variations % num_versions
+            base_size = total_exams // num_versions
+            remainder = total_exams % num_versions
             threshold = remainder * (base_size + 1)
             
             if var_num <= threshold:
@@ -272,11 +382,11 @@ async def generate_exams_to_disk(
                 versions_cache[version_idx] = (questions_latex, answers_map, answer_key, relative_weights, num_questions)
 
             # Write variant questions file
-            with open(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
-                f.write(questions_latex)
+            async with await anyio.open_file(os.path.join(tmpdir, "T-variants.tex"), "w") as f:
+                await f.write(questions_latex)
 
             # Update Rules.tex with actual number of questions and fraction
-            _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
+            await _update_rules(tmpdir, num_questions, exam_config.fraction / 100.0)
 
             # Save exam to DB
             new_exam = Exam(exam_config_id=exam_config.id, exam_xml=questions_latex, batch_number=var_num, answer_key=answer_key, relative_weights=relative_weights)
@@ -286,16 +396,16 @@ async def generate_exams_to_disk(
             exam_id_str = str(new_exam.id)
 
             # Generate exam PDF (blank answer grid)
-            _write_blank_answers(tmpdir, num_questions)
+            await _write_blank_answers(tmpdir, num_questions)
             # Pass var_num (Batch ID) to LaTeX so each paper is uniquely identified (e.g. Exame 12)
-            exam_pdf = _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
+            exam_pdf = await _compile_latex(tmpdir, "main_variants.tex", var_num, subject_name, exam_title, semester, academic_year, exam_id_str)
             if exam_pdf:
-                with open(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
-                    f.write(exam_pdf)
+                async with await anyio.open_file(os.path.join(exams_dir, f"exam_var_{var_num}.pdf"), "wb") as f:
+                    await f.write(exam_pdf)
 
         # Generate single solutions PDF with all UNIQUE variations and their corresponding batch IDs
         unique_answers = []
-        all_single = (num_versions == num_variations)
+        all_single = (num_versions == total_exams)
         
         for i in range(len(versions_cache)):
             v_num = i + 1
@@ -314,11 +424,11 @@ async def generate_exams_to_disk(
                 
             unique_answers.append((label, versions_cache[i][1]))
 
-        _write_all_solutions(tmpdir, unique_answers, num_questions, exam_title)
-        solutions_pdf = _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
+        await _write_all_solutions(tmpdir, unique_answers, num_questions, exam_title)
+        solutions_pdf = await _compile_latex(tmpdir, "solutions.tex", 1, subject_name, exam_title, semester, academic_year)
         if solutions_pdf:
-            with open(os.path.join(keys_dir, "all_solutions.pdf"), "wb") as f:
-                f.write(solutions_pdf)
+            async with await anyio.open_file(os.path.join(keys_dir, "all_solutions.pdf"), "wb") as f:
+                await f.write(solutions_pdf)
 
         if not os.listdir(exams_dir):
              raise RuntimeError("No exams were generated. LaTeX compilation likely failed. Check logs for details.")
@@ -336,21 +446,21 @@ async def generate_exams_to_disk(
         os.makedirs(os.path.join(STORAGE_DIR, "exams"), exist_ok=True)
         zip_filename = f"exams_config_{exam_config.id}.zip"
         zip_path = os.path.join(STORAGE_DIR, "exams", zip_filename)
-        with open(zip_path, "wb") as f:
-            f.write(zip_bytes)
+        async with await anyio.open_file(zip_path, "wb") as f:
+            await f.write(zip_bytes)
 
     return zip_bytes, zip_path
 
 async def generate_exams_task(
     session_factory,
     exam_config_id: int,
-    num_variations: int,
+    total_exams: int,
     exam_specs: dict,
     num_versions: Optional[int] = None
 ):
     """Background task for generating exams."""
     if num_versions is None:
-        num_versions = num_variations
+        num_versions = total_exams
 
     async with session_factory() as session:
         try:
@@ -371,7 +481,7 @@ async def generate_exams_task(
             academic_year = exam_specs.get("academic_year", "2025/26")
 
             _, zip_path = await generate_exams_to_disk(
-                session, exam_config, topic_configs, num_variations,
+                session, exam_config, topic_configs, total_exams,
                 exam_title, exam_date, semester, academic_year, num_versions
             )
 
@@ -455,17 +565,17 @@ def _get_answers_map(questions: list) -> Dict[int, str]:
     return answers
 
 
-def _update_rules(workdir: str, num_questions: int, fraction: float):
+async def _update_rules(workdir: str, num_questions: int, fraction: float):
     """Update Rules.tex with actual number of questions and fraction."""
     rules_path = os.path.join(workdir, "Rules.tex")
-    with open(rules_path, "r") as f:
-        content = f.read()
+    async with await anyio.open_file(rules_path, "r") as f:
+        content = await f.read()
     content = content.replace("#NUM_QUESTIONS", str(num_questions))
     content = content.replace("#FRACTION", str(fraction))
-    with open(rules_path, "w") as f:
-        f.write(content)
+    async with await anyio.open_file(rules_path, "w") as f:
+        await f.write(content)
 
-def _write_blank_answers(workdir: str, num_questions: int):
+async def _write_blank_answers(workdir: str, num_questions: int):
     """Write blank T-answers.tex for student exam."""
     cols = num_questions
     header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
@@ -494,11 +604,11 @@ def _write_blank_answers(workdir: str, num_questions: int):
 \\end{{center}}
 \\vspace{{0.25cm}}
 """
-    with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
-        f.write(content)
+    async with await anyio.open_file(os.path.join(workdir, "T-answers.tex"), "w") as f:
+        await f.write(content)
 
 
-def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int):
+async def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int):
     """Write T-answers.tex with X marks in correct cells."""
     cols = num_questions
     header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
@@ -527,11 +637,11 @@ def _write_answer_key(workdir: str, answers: Dict[int, str], num_questions: int)
 \\end{{center}}
 \\vspace{{0.25cm}}
 """
-    with open(os.path.join(workdir, "T-answers.tex"), "w") as f:
-        f.write(content)
+    async with await anyio.open_file(os.path.join(workdir, "T-answers.tex"), "w") as f:
+        await f.write(content)
 
 
-def _write_all_solutions(workdir: str, all_answers: List[Tuple[str, Dict[int, str]]], num_questions: int, exam_title: str = "Exame Época Normal"):
+async def _write_all_solutions(workdir: str, all_answers: List[Tuple[str, Dict[int, str]]], num_questions: int, exam_title: str = "Exame Época Normal"):
     """Write solutions.tex with all variations in horizontal lines."""
     content = f"""\\documentclass[a4paper,10pt]{{exam}}
 \\input{{H}}
@@ -554,16 +664,16 @@ def _write_all_solutions(workdir: str, all_answers: List[Tuple[str, Dict[int, st
 \\vspace{{0.5cm}}
 
 """
-    
+
     for label, answers in all_answers:
         cols = num_questions
         header = " &".join([f"{i:02d}" for i in range(1, cols + 1)])
-        
+
         rows = []
         for letter in ['A', 'B', 'C', 'D']:
             cells = [("X" if answers.get(q) == letter else " ") for q in range(1, cols + 1)]
             rows.append(f"{letter}& " + " & ".join(cells) + " \\\\ \\hline")
-        
+
         content += f"""\\noindent\\rule{{\\textwidth}}{{0.4pt}}
 
 \\vspace{{0.3cm}}
@@ -584,24 +694,23 @@ def _write_all_solutions(workdir: str, all_answers: List[Tuple[str, Dict[int, st
 
 \\vspace{{0.3cm}}
 """
-    
+
     content += "\\end{document}"
-    
-    with open(os.path.join(workdir, "solutions.tex"), "w") as f:
-        f.write(content)
 
+    async with await anyio.open_file(os.path.join(workdir, "solutions.tex"), "w") as f:
+        await f.write(content)
 
-def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26", qrcode_content: str = "0") -> bytes | None:
+async def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str = None, exam_title: str = "Exame Época Normal", semester: str = "1", academic_year: str = "2025/26", qrcode_content: str = "0") -> bytes | None:
     """Compile LaTeX to PDF, return PDF bytes or None on failure."""
     main_path = os.path.join(workdir, main_file)
-    with open(main_path, "r") as f:
-        content = f.read()
+    async with await anyio.open_file(main_path, "r") as f:
+        content = await f.read()
     content = content.replace("\\newcommand\\tttnumber{0}", f"\\newcommand\\tttnumber{{{var_num}}}")
     content = content.replace("\\newcommand\\qrcodecontent{0}", f"\\newcommand\\qrcodecontent{{{qrcode_content}}}")
     content = content.replace("#FOOTER", "")
     content = content.replace("Exame Época Normal", exam_title)
-    with open(main_path, "w") as f:
-        f.write(content)
+    async with await anyio.open_file(main_path, "w") as f:
+        await f.write(content)
 
     # Create subject-specific UC.tex if subject_name is provided
     if subject_name:
@@ -614,14 +723,14 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
 {subject_name}\\\\
 {semester_text_pt}, {academic_year}\\\\
 }}"""
-        with open(os.path.join(workdir, "UC.tex"), "w") as f:
-            f.write(uc_content)
+        async with await anyio.open_file(os.path.join(workdir, "UC.tex"), "w") as f:
+            await f.write(uc_content)
     
     # Modify H.tex to include variation number after UC.tex
     h_path = os.path.join(workdir, "H.tex")
     if os.path.exists(h_path):
-        with open(h_path, "r") as f:
-            h_content = f.read()
+        async with await anyio.open_file(h_path, "r") as f:
+            h_content = await f.read()
         # Only add if not already present (check for Versão pattern)
         if "Versão" not in h_content:
             h_content = h_content.replace(
@@ -630,25 +739,25 @@ def _compile_latex(workdir: str, main_file: str, var_num: int, subject_name: str
             )
         else:
             # Replace existing version number (Batch ID)
-            import re
             h_content = re.sub(
                 r"Versão \d+",
                 f"Versão {var_num}",
                 h_content
             )
-
-        with open(h_path, "w") as f:
-            f.write(h_content)
+        async with await anyio.open_file(h_path, "w") as f:
+            await f.write(h_content)
 
     try:
-        subprocess.run(
-            ["pdflatex", "-interaction=nonstopmode", main_file],
-            cwd=workdir, capture_output=True, timeout=30
-        )
+        with anyio.fail_after(30):
+            await anyio.run_process(
+                ["pdflatex", "-interaction=nonstopmode", main_file],
+                cwd=workdir,
+                check=False,
+            )
         pdf_path = os.path.join(workdir, main_file.replace(".tex", ".pdf"))
         if os.path.exists(pdf_path):
-            with open(pdf_path, "rb") as f:
-                return f.read()
+            async with await anyio.open_file(pdf_path, "rb") as f:
+                return await f.read()
     except Exception as e:
         logger.error(f"LaTeX compilation failed: {e}")
     return None
@@ -659,18 +768,18 @@ async def create_configs_and_exams(
     exam_specs: dict,
     num_versions: int = 1,
     student_tuples: List[tuple] = None,
-    num_variations: int = None
+    total_exams: int = None
 ) -> bytes:
     """Backward-compatible function combining config creation and exam generation."""
-    if num_variations is None:
-        num_variations = num_versions
+    if total_exams is None:
+        total_exams = num_versions
         
     exam_config, topic_configs = await create_configs(session, exam_specs, student_tuples, num_versions)
     exam_title = exam_specs.get("exam_name") or exam_specs.get("exam_title") or "Exame Época Normal"
     exam_date = exam_specs.get("exam_date")
     semester = exam_specs.get("semester", "1")
     academic_year = exam_specs.get("academic_year", "2025/26")
-    return await generate_exams_from_configs(session, exam_config, topic_configs, num_variations, exam_title, exam_date, semester, academic_year, num_versions)
+    return await generate_exams_from_configs(session, exam_config, topic_configs, total_exams, exam_title, exam_date, semester, academic_year, num_versions)
 
 
 async def get_exam_configs_by_subject(
@@ -713,7 +822,7 @@ async def get_exam_config_by_id(
     exam_config_id: int
 ) -> ExamConfig | None:
     """
-    Get a specific exam configuration by ID.
+    Get a specific exam configuration by ID, with computed metrics.
     """
     statement = (
         select(ExamConfig)
@@ -724,7 +833,12 @@ async def get_exam_config_by_id(
         )
     )
     result = await session.exec(statement)
-    return result.first()
+    exam_config = result.first()
+    
+    if not exam_config:
+        return None
+
+    return exam_config
 
 
 async def process_student_list_csv(
@@ -820,7 +934,7 @@ async def delete_exam_config(
     """
     Comprehensive deletion of an exam configuration and all related data.
     - Associated exams and their capture images.
-    - Associated waiting rooms and their Keycloak groups.
+    - Associated Keycloak groups.
     - Associated warnings.
     - The generated ZIP file.
     - The configuration itself and its topic configurations.
@@ -837,11 +951,7 @@ async def delete_exam_config(
     if not exam_config:
         return False
 
-    # 2. Fetch related WaitingRooms and Warnings
-    wr_stmt = select(WaitingRoom).where(WaitingRoom.exam_config_id == exam_config_id)
-    wr_result = await session.exec(wr_stmt)
-    waiting_rooms = list(wr_result.all())
-
+    # 2. Fetch related Warnings
     warning_stmt = select(Warning).where(Warning.exam_config_id == exam_config_id)
     warning_result = await session.exec(warning_stmt)
     warnings = list(warning_result.all())
@@ -864,25 +974,20 @@ async def delete_exam_config(
             except Exception as e:
                 logger.error(f"Failed to delete capture file {exam_item.capture_path}: {e}")
 
-    # 4. Delete Keycloak groups for each waiting room
-    for wr in waiting_rooms:
-        try:
-            success = await keycloak_client.delete_waiting_room_groups(wr.id)
-            if success:
-                logger.info(f"Deleted Keycloak groups for waiting room {wr.id}")
-            else:
-                logger.warning(f"Failed to delete Keycloak groups for waiting room {wr.id}")
-        except Exception as e:
-            logger.error(f"Error while deleting Keycloak groups for waiting room {wr.id}: {e}")
+    # 4. Delete Keycloak groups for the exam session
+    try:
+        success = await keycloak_client.delete_exam_session_groups(exam_config.id)
+        if success:
+            logger.info(f"Deleted Keycloak groups for exam config {exam_config.id}")
+        else:
+            logger.warning(f"Failed to delete Keycloak groups for exam config {exam_config.id}")
+    except Exception as e:
+        logger.error(f"Error while deleting Keycloak groups for exam config {exam_config.id}: {e}")
 
     # 5. Delete database records in order
     # Delete Warnings
     for w in warnings:
         await session.delete(w)
-    
-    # Delete WaitingRooms
-    for wr in waiting_rooms:
-        await session.delete(wr)
     
     # Delete Exams
     for exam_item in exam_config.exams:
@@ -950,6 +1055,7 @@ async def correct_by_hand(
 
     exam_instance.results = json.dumps(normalised_grid)
     exam_instance.grade = max(0.0, total_score)
+    exam_instance.validated = True
 
     session.add(exam_instance)
     await session.commit()
@@ -985,7 +1091,7 @@ def build_exam_questions(exam: Exam, fraction: float) -> list:
 
     return questions
 
-async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[str, bool]):
+async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[str, Any]):
     """Notify student associated with the corresponding exam"""
 
     if not exam:
@@ -1088,6 +1194,7 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         question_stats=question_stats,
         score_details=score_details,
         fraction=exam_config.fraction,
+        custom_description=email_options.get("custom_description", ""),
     )
 
     # 3. CONSTRUCT AND SEND EMAIL
@@ -1101,8 +1208,8 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
     # Attach student capture
     if has_capture and email_options.get("exam_capture"):
         try:
-            with open(exam.capture_path, "rb") as img:
-                mime_image_capture = MIMEImage(img.read())
+            async with await anyio.open_file(exam.capture_path, "rb") as img:
+                mime_image_capture = MIMEImage(await img.read())
                 mime_image_capture.add_header("Content-ID", "<student_capture>")
                 mime_image_capture.add_header("Content-Disposition", "inline", filename="student_capture.jpg")
                 msg.attach(mime_image_capture)
@@ -1112,8 +1219,8 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
     # Attach signature
     img_path = os.path.join(os.path.dirname(__file__), "..", "img", "signature.jpg")
     try:
-        with open(img_path, "rb") as img:
-            mime_image = MIMEImage(img.read())
+        async with await anyio.open_file(img_path, "rb") as img:
+            mime_image = MIMEImage(await img.read())
             mime_image.add_header("Content-ID", "<signature_image>")
             mime_image.add_header("Content-Disposition", "inline", filename="signature.jpg")
             msg.attach(mime_image)
@@ -1136,3 +1243,256 @@ async def notify_student(session: AsyncSession, exam: Exam, email_options: Dict[
         raise HTTPException(status_code=500, detail=f"Falha no servidor de email: {type(e).__name__}: {e}")
 
     return {"message": "Email enviado com sucesso"}
+async def transition_exam_config_state(
+    session: AsyncSession, 
+    exam_config_id: int, 
+    target_state: ExamState
+) -> ExamConfig:
+    """
+    Transition ExamConfig to a new state with business logic validation.
+    """
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
+
+    current_state = exam_config.state
+
+    # 1. Validation Logic for specific transitions
+    if target_state == ExamState.VALIDATION:
+        # Must resolve all warnings before moving to validation
+        warning_stmt = select(func.count(Warning.id)).where(Warning.exam_config_id == exam_config_id)
+        warning_count = (await session.exec(warning_stmt)).one()
+        if warning_count > 0:
+            raise ValueError(f"Cannot transition to {target_state} because there are {warning_count} unresolved warnings.")
+
+    elif target_state == ExamState.COMPLETED:
+        # All exams with pictures must be validated
+        unvalidated_pictured_exams = [e for e in exam_config.exams if e.capture_path is not None and not e.validated]
+        if unvalidated_pictured_exams:
+            raise ValueError(f"Cannot transition to {target_state} because there are {len(unvalidated_pictured_exams)} pictured exams that have not been validated.")
+
+    # 2. Update state
+    exam_config.state = target_state
+    session.add(exam_config)
+    await session.commit()
+    await session.refresh(exam_config)
+    return exam_config
+
+async def create_exam_session_groups_service(
+    session: AsyncSession,
+    exam_config_id: int,
+    regent_keycloak_id: str,
+    vigilant_keycloak_ids: List[str]
+):
+    """
+    Creates Keycloak groups for an exam session and assigns users.
+    Now tied directly to ExamConfig ID.
+    """
+    await keycloak_client.create_exam_session_groups(
+        exam_config_id=exam_config_id,
+        regent_keycloak_id=regent_keycloak_id,
+        vigilant_ids=vigilant_keycloak_ids
+    )
+
+async def update_exam_session_vigilants_service(
+    exam_config_id: int,
+    vigilant_ids: List[str]
+):
+    """
+    Updates Keycloak groups for an exam session vigilants.
+    """
+    await keycloak_client.replace_exam_session_vigilants(
+        exam_config_id=exam_config_id,
+        vigilant_ids=vigilant_ids
+    )
+
+async def get_exam_session_info_service(session: AsyncSession, exam_config_id: int, user_groups: List[str]) -> Optional[ExamSessionInfoResponse]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+
+    # Get Subject to get the name
+    subject = await session.get(Subject, exam_config.subject_id)
+    if not subject:
+        logger.warning(f"Subject not found for exam config {exam_config_id}")
+        return None
+        
+    exams = await get_exams_by_config_id(session, exam_config_id)
+    exam_ids = [exam.id for exam in exams]
+    
+    formatted_students = []
+    if exam_config.nmec_name_list:
+        try:
+            raw_students = json.loads(exam_config.nmec_name_list)
+
+            for nmec_key, student_data in raw_students.items():
+                formatted_students.append(
+                    StudentInfo(
+                        nmec = str(nmec_key),
+                        name = student_data.get("name", "Unknown")
+                    )
+                )
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
+
+    # Role extraction logic
+    user_role = "Unknown"
+    target_prefix = f"w{exam_config_id}/"
+    for raw_group in user_groups:
+        group = raw_group.lstrip("/")
+        # Check if the group is for THIS specific exam session
+        if group.startswith(target_prefix):
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                extracted_role = parts[1]
+                if extracted_role in ["regent", "vigilant"]:
+                    user_role = extracted_role
+                    break
+            
+    return ExamSessionInfoResponse(
+        id=exam_config.id,
+        subject_id=subject.id,
+        subject_name=subject.name,
+        state=exam_config.state,
+        associations=exam_config.associations,
+        student_list=formatted_students,
+        exam_ids=exam_ids,
+        total_students=len(formatted_students),
+        total_exams=len(exam_ids),
+        role = user_role
+    )
+
+async def associate_student_to_exam_service(
+    session: AsyncSession,
+    exam_config_id: int,
+    exam_id: int,
+    student_nmec: str
+) -> Optional[ExamConfig]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+
+    association_string = f"{exam_id}:{student_nmec}"
+    if association_string not in exam_config.associations:
+        exam_config.associations = [*exam_config.associations, association_string]
+        session.add(exam_config)
+        await session.commit()
+        await session.refresh(exam_config)
+
+    return exam_config
+
+async def get_exam_session_metrics_service(
+    session: AsyncSession,
+    exam_config_id: int
+) -> Optional[ExamSessionMetricsResponse]:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        return None
+        
+    associated_exams = set()
+    associated_students = set()
+    
+    for assoc in exam_config.associations:
+        if ":" in assoc:
+            exam_id, student_nmec = assoc.split(":", 1)
+            associated_exams.add(exam_id)
+            associated_students.add(student_nmec)
+            
+    return ExamSessionMetricsResponse(
+        associated_exams_count=len(associated_exams),
+        associated_students_count=len(associated_students)
+    )
+
+async def close_exam_session_service(session: AsyncSession, exam_config_id: int) -> ExamConfig:
+    exam_config = await get_exam_config_by_id(session, exam_config_id)
+    if not exam_config:
+        raise ValueError("Exam configuration not found")
+
+    if exam_config.state != ExamState.RUNNING:
+        raise ValueError(f"Exam session must be in running state to be closed. Current state: {exam_config.state}")
+
+    # 1. Update state to WARNING_HANDLING
+    exam_config.state = ExamState.WARNING_HANDLING
+    session.add(exam_config)
+    await session.commit()
+    await session.refresh(exam_config)
+
+    # 2. Load nmec-name mapping for warnings
+    nmec_to_name = {}
+    if exam_config.nmec_name_list:
+        try:
+            nmec_to_name = json.loads(exam_config.nmec_name_list)
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse nmec_name_list for exam_config {exam_config.id}: invalid JSON")
+
+    # 3. Detect conflicts, persist warnings, and write clean exam.nmec values
+    await calculate_and_persist_warnings(session, exam_config.id, exam_config.associations, nmec_to_name)
+
+    await session.commit()
+    await session.refresh(exam_config)
+
+    return exam_config
+
+async def get_professor_exam_sessions(
+    session: AsyncSession,
+    professor_keycloak_id: str,
+    professor_groups: List[str]
+) -> List[ProfessorExamSessionItem]:
+    """
+    Get all exam sessions where the professor is either a regent or vigilant.
+    """
+    # Extract exam config IDs and roles from groups
+    exam_config_ids_with_roles: Dict[int, str] = {}
+    
+    for group in professor_groups:
+        group = group.lstrip("/")
+
+        if group.startswith("w") and "/" in group:
+            parts = group.split("/", 1)
+            if len(parts) == 2:
+                wr_prefix, role = parts
+                if role in ["regent", "vigilant"]:
+                    try:
+                        exam_config_id = int(wr_prefix[1:])
+                        exam_config_ids_with_roles[exam_config_id] = role
+                    except ValueError:
+                        logger.warning(f"Invalid exam config ID in group: {group}")
+                        continue
+    
+    if not exam_config_ids_with_roles:
+        return []
+    
+    # Fetch all exam configs at once
+    stmt = (
+        select(ExamConfig)
+        .where(ExamConfig.id.in_(list(exam_config_ids_with_roles.keys())))
+        .options(selectinload(ExamConfig.exams))
+    )
+    results = await session.exec(stmt)
+    exam_configs = results.all()
+    
+    result: List[ProfessorExamSessionItem] = []
+    
+    for ec in exam_configs:
+        role = exam_config_ids_with_roles.get(ec.id)
+        if not role:
+            continue
+
+        if role == "vigilant" and ec.state.value != "running":
+            continue
+        
+        subject = await session.get(Subject, ec.subject_id)
+        if not subject:
+            continue
+        
+        result.append(ProfessorExamSessionItem(
+            subject_id=subject.id,
+            subject_name=subject.name,
+            exam_config_id=ec.id,
+            state=ec.state.value,
+            role=role,
+            exam_name=ec.exam_name,
+            exam_date=ec.exam_date
+        ))
+    
+    return result

@@ -10,16 +10,22 @@ import { Plus, Search } from "lucide-react";
 import { useGetExamConfig } from "@/hooks/use-exams";
 import { useGetUCTopics } from "@/hooks/use-questions";
 import { useMemo, useState } from "react";
-import ExamCard from "../exam-card";
+import ExamCard from "../novo-exame-steps/exam-card";
 import { Button } from "../ui/button";
 import { encodeId } from "@/lib/id-encoder";
-import { NoQuestionsAlertDialog } from "../no-questions-alert-dialog";
+import { NoQuestionsAlertDialog } from "../questions/no-questions-alert-dialog";
 import { NovoExameForm } from "../novo-exame-steps/novo-exame-form";
 import type { GenerationStatus } from "@/lib/types";
 
 type StatusFilter = "all" | GenerationStatus;
 
-export default function ExamesTab({ realId }: { realId: number }) {
+export default function ExamesTab({
+  realId,
+  ucName,
+}: {
+  realId: number;
+  ucName: string;
+}) {
   const { data: examConfigs } = useGetExamConfig(realId);
   const { data: topics } = useGetUCTopics(realId);
 
@@ -30,9 +36,12 @@ export default function ExamesTab({ realId }: { realId: number }) {
 
   const filtered = useMemo(() => {
     if (!examConfigs) return [];
-    return examConfigs.filter((el, index) => {
-      const matchesStatus = statusFilter === "all" || el.status === statusFilter;
-      const matchesSearch = !search || `Exame ${index + 1}`.toLowerCase().includes(search.toLowerCase());
+    return examConfigs.filter((el) => {
+      const matchesStatus =
+        statusFilter === "all" || el.status === statusFilter;
+      const matchesSearch =
+        !search ||
+        (el.exam_name ?? "").toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     });
   }, [examConfigs, statusFilter, search]);
@@ -40,6 +49,18 @@ export default function ExamesTab({ realId }: { realId: number }) {
   const indexMap = useMemo(() => {
     if (!examConfigs) return new Map<number, number>();
     return new Map(examConfigs.map((el, i) => [el.id, i]));
+  }, [examConfigs]);
+
+  const nameMap = useMemo(() => {
+    if (!examConfigs) return new Map<number, string>();
+    return new Map(
+      examConfigs.map((el) => {
+        return [
+          el.id,
+          `${el.exam_name} - ${new Date(el.exam_date).toLocaleDateString("pt-PT")}`,
+        ];
+      }),
+    );
   }, [examConfigs]);
 
   return (
@@ -60,16 +81,29 @@ export default function ExamesTab({ realId }: { realId: number }) {
           <Plus className="h-4 w-4" />
           Novo Exame
         </Button>
-        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as StatusFilter)}
+        >
           <SelectTrigger className="w-44 shrink-0">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem className="cursor-pointer" value="all">Todos</SelectItem>
-            <SelectItem className="cursor-pointer" value="PENDING">Pendente</SelectItem>
-            <SelectItem className="cursor-pointer" value="PROCESSING">A processar</SelectItem>
-            <SelectItem className="cursor-pointer" value="COMPLETED">Concluído</SelectItem>
-            <SelectItem className="cursor-pointer" value="FAILED">Falhado</SelectItem>
+            <SelectItem className="cursor-pointer" value="all">
+              Todos
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="PENDING">
+              Pendente
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="PROCESSING">
+              A processar
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="COMPLETED">
+              Concluído
+            </SelectItem>
+            <SelectItem className="cursor-pointer" value="FAILED">
+              Falhado
+            </SelectItem>
           </SelectContent>
         </Select>
         <div className="relative flex-1">
@@ -87,8 +121,11 @@ export default function ExamesTab({ realId }: { realId: number }) {
         {filtered.map((el) => (
           <ExamCard
             id={el.id}
-            name={`Exame ${(indexMap.get(el.id) ?? 0) + 1}`}
+            name={
+              nameMap.get(el.id) ?? `Exame ${(indexMap.get(el.id) ?? 0) + 1}`
+            }
             ucId={encodeId(realId)}
+            ucName={ucName}
             key={el.id}
             examConfig={el}
           />

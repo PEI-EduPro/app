@@ -11,9 +11,9 @@ from src.main import app
 # Helpers
 # ---------------------------------------------------------------------------
 
-async def _setup_exam_config(session, subject_id):
-    from src.models.exam_config import ExamConfig
-    ec = ExamConfig(subject_id=subject_id, fraction=0.0)
+async def _setup_exam_config(session, subject_id, state=None):
+    from src.models.exam_config import ExamConfig, ExamState
+    ec = ExamConfig(subject_id=subject_id, fraction=0.0, state=state or ExamState.VALIDATION)
     session.add(ec)
     await session.commit()
     await session.refresh(ec)
@@ -39,26 +39,17 @@ async def _setup_exam(session, exam_config_id, *, corrected=False):
     return e
 
 
-async def _setup_waiting_room(session, exam_config_id, state):
-    from src.models.waiting_room import WaitingRoom, WaitingRoomState
-    wr = WaitingRoom(exam_config_id=exam_config_id, state=state)
-    session.add(wr)
-    await session.commit()
-    await session.refresh(wr)
-    return wr
-
-
 # ---------------------------------------------------------------------------
-# POST /api/waiting-rooms/{waiting_room_id}/evaluate
+# POST /api/exams/{exam_config_id}/session/evaluate
 # ---------------------------------------------------------------------------
 
 @pytest.mark.asyncio
-async def test_evaluate_batch_waiting_room_not_found(client, mock_auth):
+async def test_evaluate_batch_session_not_found(client, mock_auth):
     app.dependency_overrides[get_current_user_info] = mock_auth
     body = {"files": ["fakebase64string"]}
-    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode:
+    with patch("src.routers.exam.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
         mock_decode.return_value = (1, "/tmp/exam.jpg")
-        response = await client.post("/api/waiting-rooms/9999/evaluate", json=body)
+        response = await client.post("/api/exams/9999/session/evaluate", json=body)
     assert response.status_code == 404
 
 
@@ -67,20 +58,19 @@ async def test_evaluate_batch_wrong_state(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.waiting_room import WaitingRoomState
+    from src.models.exam_config import ExamState
 
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
-    ec = await _setup_exam_config(session, sub.id)
-    wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.RUNNING)
+    ec = await _setup_exam_config(session, sub.id, state=ExamState.RUNNING)
 
     body = {"files": ["fakebase64string"]}
-    response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
+    response = await client.post(f"/api/exams/{ec.id}/session/evaluate", json=body)
     assert response.status_code == 400
-    assert "closed" in response.json()["detail"].lower()
+    assert "warning_handling" in response.json()["detail"].lower()
 
 
 @pytest.mark.asyncio
@@ -88,25 +78,24 @@ async def test_evaluate_batch_exam_wrong_config(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.waiting_room import WaitingRoomState
+    from src.models.exam_config import ExamState
 
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
-    ec1 = await _setup_exam_config(session, sub.id)
+    ec1 = await _setup_exam_config(session, sub.id, state=ExamState.WARNING_HANDLING)
     ec2 = await _setup_exam_config(session, sub.id)
-    wr = await _setup_waiting_room(session, ec1.id, WaitingRoomState.CLOSED)
     exam_wrong = await _setup_exam(session, ec2.id)  # belongs to ec2, not ec1
 
-    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode:
+    with patch("src.routers.exam.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode:
         mock_decode.return_value = (exam_wrong.id, "/tmp/exam.jpg")
         body = {"files": ["fakebase64string"]}
-        response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
+        response = await client.post(f"/api/exams/{ec1.id}/session/evaluate", json=body)
 
     assert response.status_code == 400
-    assert "does not belong" in response.json()["detail"]
+    assert "Invalid exam" in response.json()["detail"]
 
 
 @pytest.mark.asyncio
@@ -114,78 +103,27 @@ async def test_evaluate_batch_success(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.waiting_room import WaitingRoomState
+    from src.models.exam_config import ExamState
 
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
-    ec = await _setup_exam_config(session, sub.id)
-    wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.CLOSED)
+    ec = await _setup_exam_config(session, sub.id, state=ExamState.WARNING_HANDLING)
     exam_instance = await _setup_exam(session, ec.id)
 
-    with patch("src.routers.waiting_room.utils.decode_base64_image") as mock_decode, \
-         patch("src.routers.waiting_room.evaluate_exam", new_callable=AsyncMock) as mock_eval:
+    with patch("src.routers.exam.utils.decode_base64_image", new_callable=AsyncMock) as mock_decode, \
+         patch("src.routers.exam.evaluate_exam", new_callable=AsyncMock) as mock_eval:
         mock_decode.return_value = (exam_instance.id, "/tmp/exam.jpg")
         mock_eval.return_value = None
         body = {"files": ["fakebase64string"]}
-        response = await client.post(f"/api/waiting-rooms/{wr.id}/evaluate", json=body)
+        response = await client.post(f"/api/exams/{ec.id}/session/evaluate", json=body)
 
     assert response.status_code == 200
     results = response.json()["results"]
     assert results[0]["exam_id"] == exam_instance.id
     assert results[0]["status"] == "success"
-
-
-# ---------------------------------------------------------------------------
-# POST /api/exams/{exam_id}/validate
-# ---------------------------------------------------------------------------
-
-@pytest.mark.asyncio
-async def test_validate_exam_not_found(client, mock_auth):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-    response = await client.post("/api/exams/9999/validate")
-    assert response.status_code == 404
-
-
-@pytest.mark.asyncio
-async def test_validate_exam_not_corrected(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-
-    from src.models.subject import Subject
-    sub = Subject(name="Subj")
-    session.add(sub)
-    await session.commit()
-    await session.refresh(sub)
-
-    ec = await _setup_exam_config(session, sub.id)
-    e = await _setup_exam(session, ec.id, corrected=False)
-
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 400
-    assert "not been corrected" in response.json()["detail"]
-
-
-@pytest.mark.asyncio
-async def test_validate_exam_success(client, mock_auth, session):
-    app.dependency_overrides[get_current_user_info] = mock_auth
-
-    from src.models.subject import Subject
-    from src.models.exam import Exam
-    sub = Subject(name="Subj")
-    session.add(sub)
-    await session.commit()
-    await session.refresh(sub)
-
-    ec = await _setup_exam_config(session, sub.id)
-    e = await _setup_exam(session, ec.id, corrected=True)
-
-    response = await client.post(f"/api/exams/{e.id}/validate")
-    assert response.status_code == 200
-
-    await session.refresh(e)
-    assert e.validated is True
 
 
 # ---------------------------------------------------------------------------
@@ -258,16 +196,14 @@ async def test_all_exams_info_empty(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.waiting_room import WaitingRoomState
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
     ec = await _setup_exam_config(session, sub.id)
-    wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.PREPARATION)
 
-    response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
+    response = await client.get(f"/api/exams/{ec.id}/all_exams_info")
     assert response.status_code == 200
     assert response.json() == []
 
@@ -277,21 +213,19 @@ async def test_all_exams_info_mixed(client, mock_auth, session):
     app.dependency_overrides[get_current_user_info] = mock_auth
 
     from src.models.subject import Subject
-    from src.models.waiting_room import WaitingRoomState
     sub = Subject(name="Subj")
     session.add(sub)
     await session.commit()
     await session.refresh(sub)
 
     ec = await _setup_exam_config(session, sub.id)
-    wr = await _setup_waiting_room(session, ec.id, WaitingRoomState.PREPARATION)
     e_corrected = await _setup_exam(session, ec.id, corrected=True)
     e_uncorrected = await _setup_exam(session, ec.id, corrected=False)
 
     with open("/tmp/exam.jpg", "wb") as f:
         f.write(b"fakeimagebytes")
 
-    response = await client.get(f"/api/exams/{wr.id}/all_exams_info")
+    response = await client.get(f"/api/exams/{ec.id}/all_exams_info")
     assert response.status_code == 200
     data = response.json()
 
