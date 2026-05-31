@@ -7,13 +7,18 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 /* ── Background: dark navy + three color blurs (matches index.tsx) ── */
+html,
 body {
   margin: 0;
   font-family: "Nunito Sans", sans-serif;
   font-size: 17px;
-  color: #ffffff;
+  color: #ffffff !important;
   min-height: 100vh;
-  background-color: #2E2B50;
+  background-color: #2E2B50 !important;
+  background: #2E2B50 !important;
+  --pf-v5-global--BackgroundColor--100: #2E2B50;
+  --pf-v5-global--BackgroundColor--200: #2E2B50;
+  --pf-v5-global--Color--100: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,6 +99,7 @@ body::after {
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
+  background: transparent !important;
 }
 
 .pf-v5-c-login__container {
@@ -234,8 +240,8 @@ input[type="email"],
   border-radius: 0.75rem;
   font-family: inherit;
   font-size: 1rem;
-  color: #ffffff;
-  background: rgba(255,255,255,0.08);
+  color: #ffffff !important;
+  background: rgba(46,43,80,0.85) !important;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   /* neutralise PatternFly bottom-border-only variables */
@@ -269,7 +275,7 @@ input[type="email"]:focus,
 .pf-v5-c-form-control:focus {
   border-color: #41B5C0 !important;
   box-shadow: 0 0 0 3px rgba(65,181,192,0.25);
-  background: rgba(255,255,255,0.12);
+  background: rgba(46,43,80,0.95) !important;
 }
 
 /* ── Primary button ── */
