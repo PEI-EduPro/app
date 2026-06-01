@@ -138,7 +138,7 @@ export default function QuestionModal({
           <form onSubmit={handleSubmit}>
             {/* Question Text */}
             <div className="mb-6">
-              <Label className="block text-sm font-medium text-gray-700 mb-2">
+              <Label className="block text-sm font-medium text-gray-700 dark:text-foreground mb-2">
                 Texto da Questão<span className="text-red-500 ml-1">*</span>
               </Label>
               <Textarea
@@ -157,13 +157,13 @@ export default function QuestionModal({
             {/* Options */}
             <div className="flex flex-col mb-6 gap-2">
               <div className="flex items-center justify-between">
-                <Label className="block text-sm font-medium text-gray-700">
+                <Label className="block text-sm font-medium text-gray-700 dark:text-foreground">
                   Opções de Resposta
                 </Label>
                 <Button
                   variant="ghost"
                   onClick={addOption}
-                  className="flex items-center gap-2 text-sm text-[#3263A8] hover:text-[#2a5390] cursor-pointer"
+                  className="flex items-center gap-2 text-sm text-[#3263A8] hover:text-[#2a5390] dark:text-primary dark:hover:text-primary/80 cursor-pointer"
                 >
                   <Plus size={16} />
                   Adicionar Opção
