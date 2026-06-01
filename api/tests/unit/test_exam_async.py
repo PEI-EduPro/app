@@ -37,7 +37,7 @@ async def test_generate_exams_async_endpoint(client, mock_auth, session):
 
     # 2. Mock Background Tasks and Keycloak
     with patch("src.routers.exam.BackgroundTasks.add_task") as mock_add_task, \
-         patch("src.services.waiting_room.keycloak_client.create_waiting_room_groups", new_callable=AsyncMock) as mock_wr_kc:
+         patch("src.routers.exam.create_exam_session_groups_service", new_callable=AsyncMock) as mock_wr_kc:
         
         mock_wr_kc.return_value = True
         
@@ -48,7 +48,7 @@ async def test_generate_exams_async_endpoint(client, mock_auth, session):
             "topics": [str(topic.id)],
             "number_questions": {str(topic.id): 1},
             "relative_quotations": {str(topic.id): 1.0},
-            "num_variations": 1
+            "total_exams": 1
         }
 
         response = await client.post("/api/exams/generate_async", json=payload)
@@ -64,7 +64,7 @@ async def test_generate_exams_async_endpoint(client, mock_auth, session):
         args, _ = mock_add_task.call_args
         assert args[0] == generate_exams_task
         assert args[2] == data["id"] # config_id
-        assert args[3] == 1 # num_variations
+        assert args[3] == 1 # total_exams
 
 @pytest.mark.asyncio
 async def test_get_config_status_endpoint(client, mock_auth, session):

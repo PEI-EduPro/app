@@ -111,45 +111,47 @@ function QuestionItem({
         >
           <SquarePen className="w-4 h-4" />
         </Button>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button
-              variant="ghost"
-              className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
-              title="Excluir questão"
-            >
-              <Trash2 className="w-4 h-4" />
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-                <Trash2Icon />
-              </AlertDialogMedia>
-              <AlertDialogTitle>Apagar Questão</AlertDialogTitle>
-              <AlertDialogDescription>
-                Deseja apagar esta questão?
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter className="w-full! flex flex-row justify-between!">
-              <AlertDialogCancel
-                variant="outline"
-                className="cursor-pointer"
-                size="lg"
+        <div onClick={(e) => e.stopPropagation()}>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                title="Excluir questão"
               >
-                Cancelar
-              </AlertDialogCancel>
-              <AlertDialogAction
-                size="lg"
-                variant="destructive"
-                className="cursor-pointer"
-                onClick={onDelete}
-              >
-                Apagar
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                  <Trash2Icon />
+                </AlertDialogMedia>
+                <AlertDialogTitle>Apagar Questão</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Deseja apagar esta questão?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                <AlertDialogCancel
+                  variant="outline"
+                  className="cursor-pointer"
+                  size="lg"
+                >
+                  Cancelar
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  size="lg"
+                  variant="destructive"
+                  className="cursor-pointer"
+                  onClick={onDelete}
+                >
+                  Apagar
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
       </div>
     </div>
   );
@@ -375,7 +377,12 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
                 </div>
               </div>
             }
-            trigger={<XmlUploadButton subjectId={realId} onPreviewOpenChange={setXmlPreviewOpen} />}
+            trigger={
+              <XmlUploadButton
+                subjectId={realId}
+                onPreviewOpenChange={setXmlPreviewOpen}
+              />
+            }
           />
           <Button
             size="sm"
@@ -440,46 +447,48 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
                   >
                     <SquarePen className="w-5 h-5" />
                   </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        onClick={(e) => e.stopPropagation()}
-                        className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
-                        title="Excluir tópico"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
-                          <Trash2Icon />
-                        </AlertDialogMedia>
-                        <AlertDialogTitle>Apagar Tópico</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Deseja apagar este tópico e todas as suas questões?
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter className="w-full! flex flex-row justify-between!">
-                        <AlertDialogCancel
-                          variant="outline"
-                          className="cursor-pointer"
-                          size="lg"
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                          title="Excluir tópico"
                         >
-                          Cancelar
-                        </AlertDialogCancel>
-                        <AlertDialogAction
-                          size="lg"
-                          variant="destructive"
-                          className="cursor-pointer"
-                          onClick={() => deleteTopicMutation.mutate(topic.id)}
-                        >
-                          Apagar
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                          <Trash2 className="w-5 h-5" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogMedia className="bg-destructive/10 text-destructive dark:bg-destructive/20 dark:text-destructive">
+                            <Trash2Icon />
+                          </AlertDialogMedia>
+                          <AlertDialogTitle>Apagar Tópico</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Deseja apagar este tópico e todas as suas questões?
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="w-full! flex flex-row justify-between!">
+                          <AlertDialogCancel
+                            variant="outline"
+                            className="cursor-pointer"
+                            size="lg"
+                          >
+                            Cancelar
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            size="lg"
+                            variant="destructive"
+                            className="cursor-pointer"
+                            onClick={() => deleteTopicMutation.mutate(topic.id)}
+                          >
+                            Apagar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
                 </div>
               </div>
 

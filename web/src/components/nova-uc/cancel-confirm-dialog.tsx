@@ -16,42 +16,56 @@ interface CancelConfirmDialogProps {
   isDirty?: boolean;
 }
 
-export function CancelConfirmDialog({ onConfirm, isDirty = true }: CancelConfirmDialogProps) {
+export function CancelConfirmDialog({
+  onConfirm,
+  isDirty = true,
+}: CancelConfirmDialogProps) {
   if (!isDirty) {
     return (
-      <Button type="button" variant="destructive" className="cursor-pointer" onClick={onConfirm}>
+      <Button
+        type="button"
+        variant="destructive"
+        className="cursor-pointer"
+        onClick={onConfirm}
+      >
         Cancelar
       </Button>
     );
   }
 
   return (
-    <AlertDialog>
-      <AlertDialogTrigger asChild>
-        <Button type="button" variant="destructive" className="cursor-pointer">
-          Cancelar
-        </Button>
-      </AlertDialogTrigger>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Descartar alterações?</AlertDialogTitle>
-          <AlertDialogDescription>
-            As informações preenchidas serão perdidas.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel className="cursor-pointer">
-            Voltar
-          </AlertDialogCancel>
-          <AlertDialogAction
+    <div onClick={(e) => e.stopPropagation()}>
+      <AlertDialog>
+        <AlertDialogTrigger asChild>
+          <Button
+            type="button"
             variant="destructive"
             className="cursor-pointer"
-            onClick={onConfirm}
           >
-            Descartar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+            Cancelar
+          </Button>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              As informações preenchidas serão perdidas.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="cursor-pointer">
+              Voltar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              className="cursor-pointer"
+              onClick={onConfirm}
+            >
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

@@ -118,10 +118,10 @@ function RouteComponent() {
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  <span className="typography-h4">Professores</span>
+                  <span className="typography-h4">Outros Docentes</span>
                   {professors.length === 0 ? (
                     <span className="text-muted-foreground text-sm">
-                      Sem professores.
+                      Sem outros docentes.
                     </span>
                   ) : (
                     <div className="flex flex-col gap-2">

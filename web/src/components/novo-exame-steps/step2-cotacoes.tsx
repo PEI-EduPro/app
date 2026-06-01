@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import HelperHoverCard from "@/components/helper-hover-card";
+import { cn } from "@/lib/utils";
 import type { Step2Props } from "./types";
 
 const NUMERIC_KEYS = [
@@ -33,11 +34,18 @@ export function Step2Cotacoes({
 }: Step2Props) {
   const { watch, setValue, control } = form;
   const [usePercent, setUsePercent] = useState(false);
-  const [percentValues, setPercentValues] = useState<Record<string, number>>({});
+  const [percentValues, setPercentValues] = useState<Record<string, number>>(
+    {},
+  );
 
   const relativeQuotations = watch("relative_quotations");
   const numberQuestions = watch("number_questions");
   const fraction = watch("fraction") ?? 0;
+
+  const percentTotal = usePercent
+    ? selectedTopics.reduce((s, t) => s + (percentValues[t.id] ?? 0), 0)
+    : 100;
+  const percentError = usePercent && Math.abs(percentTotal - 100) > 0.01;
 
   const totalWeight = selectedTopics.reduce(
     (s, t) => s + (relativeQuotations?.[Number(t.id)] || 0),
@@ -71,10 +79,14 @@ export function Step2Cotacoes({
   }
 
   function switchToPercent() {
+    const total = selectedTopics.reduce(
+      (s, t) => s + (relativeQuotations?.[Number(t.id)] || 0),
+      0,
+    );
     const initial = Object.fromEntries(
       selectedTopics.map((t) => {
         const w = form.getValues("relative_quotations")?.[Number(t.id)] || 0;
-        return [t.id, +(w * 10).toFixed(1)];
+        return [t.id, parseFloat(((w / total) * 100).toFixed(1))];
       }),
     );
     setPercentValues(initial);
@@ -103,20 +115,31 @@ export function Step2Cotacoes({
 
           <div className="flex items-center gap-2 justify-end text-sm">
             <span className="text-muted-foreground">Modo:</span>
-            <button
+            <Button
               type="button"
               onClick={switchToWeights}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer ${!usePercent ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+              disabled={percentError}
+              className={cn(
+                "px-2 py-0.5 h-auto rounded text-xs font-medium transition-colors cursor-pointer",
+                !usePercent
+                  ? "bg-primary text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              )}
             >
               Pesos relativos
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={switchToPercent}
-              className={`px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer ${usePercent ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
+              className={cn(
+                "px-2 py-0.5 h-auto rounded text-xs font-medium transition-colors cursor-pointer",
+                usePercent
+                  ? "bg-primary text-white"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80",
+              )}
             >
               Percentagem
-            </button>
+            </Button>
           </div>
 
           <div className="custom-scrollbar overflow-y-auto min-h-0 flex flex-col gap-1 flex-1">
@@ -195,6 +218,14 @@ export function Step2Cotacoes({
             ))}
           </div>
 
+          {usePercent && (
+            <div
+              className={`text-sm font-medium text-right ${percentError ? "text-red-500" : "text-muted-foreground"}`}
+            >
+              Total: {percentTotal.toFixed(1)}%
+            </div>
+          )}
+
           <div className="flex items-center pt-2 border-t">
             <FormField
               control={control}
@@ -254,7 +285,12 @@ export function Step2Cotacoes({
           >
             Retroceder
           </Button>
-          <Button size="sm" className="cursor-pointer" onClick={onNext}>
+          <Button
+            size="sm"
+            className="cursor-pointer"
+            onClick={onNext}
+            disabled={percentError}
+          >
             Próximo
           </Button>
         </div>

@@ -23,7 +23,7 @@ export interface UserI {
 export interface NewExamConfigI {
   subject_id: number;
   fraction: number;
-  num_variations: number;
+  total_exams: number;
   num_versions: number;
   topics: string[];
   number_questions: Record<number, number>;
@@ -42,12 +42,28 @@ export type GenerationStatus =
   | "COMPLETED"
   | "FAILED";
 
+export type ExamWorkflowStatus =
+  | "preparing"
+  | "running"
+  | "closed_and_capture"
+  | "warning_handling"
+  | "validation"
+  | "completed"
+  | "sent";
+
 export interface ExamConfigI {
   id: number;
   subject_id: number;
   fraction: number;
-  num_variations: number;
+  total_exams: number;
+  num_versions: number;
   status: GenerationStatus;
+  state: ExamWorkflowStatus;
+  associations: string[];
+  vigilants: { id: string; username?: string }[];
+  pictured_exams_count: number | null;
+  exam_name: string;
+  exam_date: string;
   topic_configs: {
     topic_id: number;
     topic_name: string;
@@ -64,30 +80,29 @@ export interface TopicI {
 
 export type GetTopicI = [TopicI, number];
 
-export interface GetWaitingRoomI {
+export interface GetExamSessionI {
   subject_id: number;
   subject_name: string;
-  waiting_room_id: number;
-  state: WaitingRoomStatusT;
+  exam_config_id: number;
+  state: ExamWorkflowStatus;
   role: "regent" | "vigilant";
-  exam_name: string;
+  exam_name: string | null;
 }
 
-export type WaitingRoomStatusT = "preparation" | "running" | "closed";
-
-export interface GetWaintingRoomByIdI {
+export interface GetExamSessionInfoI {
   id: number;
-  exam_config_id: number;
-  state: WaitingRoomStatusT;
-  student_list: { name: string; nmec: number }[];
+  subject_id: number;
+  subject_name: string;
+  state: ExamWorkflowStatus;
+  associations: string[];
+  student_list: { name: string; nmec: string }[];
   exam_ids: number[];
   total_students: number;
   total_exams: number;
-  subject_name: string;
   role: "regent" | "vigilant";
 }
 
-export interface GetWaitingRoomMetricsI {
+export interface GetExamSessionMetricsI {
   associated_exams_count: number;
   associated_students_count: number;
 }
@@ -139,6 +154,7 @@ export interface ExamResponseI {
   capture: string | null;
   corrected: boolean;
   validated: boolean;
+  batch_number: number;
 }
 
 export type OptionKey = "a" | "b" | "c" | "d";
@@ -152,4 +168,5 @@ export interface PostEmailI {
   question_weights: boolean;
   red_green_cross_table: boolean;
   cumulative_score_table: boolean;
+  custom_description: string;
 }

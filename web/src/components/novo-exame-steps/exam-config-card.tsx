@@ -1,5 +1,8 @@
 import type { GetTopicI, NewExamConfigI, ExamConfigI } from "@/lib/types";
 import { Card, CardContent } from "../ui/card";
+import { Button } from "../ui/button";
+import { Download } from "lucide-react";
+import { useDownloadExamConfig } from "@/hooks/use-exams";
 
 type ExamConfigCardData = NewExamConfigI | ExamConfigI;
 
@@ -14,11 +17,13 @@ export function ExamConfigCard({
   examConfigData: ExamConfigCardData;
   allTopics?: GetTopicI[];
 }) {
+  const { mutate } = useDownloadExamConfig();
   const fraction = examConfigData.fraction;
-  const num_variations =
-    "num_variations" in examConfigData
-      ? examConfigData.num_variations
-      : undefined;
+  const total_exams =
+    "total_exams" in examConfigData ? examConfigData.total_exams : undefined;
+  const num_versions =
+    "num_versions" in examConfigData ? examConfigData.num_versions : undefined;
+  const download = "id" in examConfigData;
 
   // Normalise to a common list of { id, name, numQuestions, relativeQuotation }
   const topicRows = isNewExamConfig(examConfigData)
@@ -50,12 +55,22 @@ export function ExamConfigCard({
           <h3 className="text-lg font-semibold text-center mb-3">
             Configuração Geral
           </h3>
-          <div className="grid grid-cols-2 gap-4 text-center">
-            {num_variations !== undefined && (
+          <div className="grid grid-cols-3 gap-4 text-center">
+            {total_exams !== undefined && (
               <div className="p-3 bg-white rounded-lg shadow-sm">
-                <p className="text-sm text-muted-foreground">Exames a gerar</p>
+                <p className="text-sm text-muted-foreground">
+                  {download ? "Exames a gerar" : "Total de Exames"}
+                </p>
                 <p className="text-2xl font-bold text-primary">
-                  {num_variations || 1}
+                  {total_exams || 1}
+                </p>
+              </div>
+            )}
+            {num_versions !== undefined && (
+              <div className="p-3 bg-white rounded-lg shadow-sm">
+                <p className="text-sm text-muted-foreground">Versões</p>
+                <p className="text-2xl font-bold text-primary">
+                  {num_versions || 1}
                 </p>
               </div>
             )}
@@ -97,6 +112,16 @@ export function ExamConfigCard({
               <p className="text-sm text-muted-foreground">Total de questões</p>
               <p className="text-xl font-bold">{totalQuestions}</p>
             </div>
+            {download && (
+              <Button
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => mutate(examConfigData.id)}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Descarregar Exames
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
