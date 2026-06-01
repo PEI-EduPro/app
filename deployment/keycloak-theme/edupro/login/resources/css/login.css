@@ -25,6 +25,21 @@ body {
   overflow: hidden;
 }
 
+html:not(.pf-v5-theme-dark) body,
+html:not(.pf-v5-theme-dark) {
+  color: #2E2B50 !important;
+  background-color: #f0fafa !important;
+  background: #f0fafa !important;
+  --pf-v5-global--BackgroundColor--100: #f0fafa;
+  --pf-v5-global--BackgroundColor--200: #f0fafa;
+  --pf-v5-global--Color--100: #2E2B50;
+}
+
+html:not(.pf-v5-theme-dark) #kc-container-wrapper::after {
+  background: linear-gradient(to top, #f0fafa, transparent) !important;
+}
+
+
 /* top-left teal blur */
 body::before {
   content: "";
@@ -104,7 +119,7 @@ body::after {
 
 .pf-v5-c-login__container {
   width: 100%;
-  max-width: 420px;
+  max-width: 620px;
 }
 
 /* ── Card ── */
@@ -117,7 +132,7 @@ body::after {
   border-radius: 1rem;
   padding: 2.5rem 2.5rem 2rem;
   width: 100%;
-  max-width: 420px;
+  max-width: 620px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.35);
 }
 
@@ -426,4 +441,50 @@ a:hover {
   .pf-v5-c-form-control {
     font-size: 0.9rem;
   }
+}
+
+/* ── Light mode overrides ── */
+html:not(.pf-v5-theme-dark) #kc-container,
+html:not(.pf-v5-theme-dark) .card-pf {
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(65,181,192,0.25);
+  box-shadow: 0 8px 40px rgba(46,43,80,0.10);
+}
+
+html:not(.pf-v5-theme-dark) label,
+html:not(.pf-v5-theme-dark) .pf-v5-c-form__label {
+  color: #2E2B50;
+}
+
+html:not(.pf-v5-theme-dark) #kc-header-wrapper span,
+html:not(.pf-v5-theme-dark) .login-pf-header h1,
+html:not(.pf-v5-theme-dark) #kc-page-title {
+  color: #2E2B50 !important;
+}
+
+html:not(.pf-v5-theme-dark) input[type="text"],
+html:not(.pf-v5-theme-dark) input[type="password"],
+html:not(.pf-v5-theme-dark) input[type="email"],
+html:not(.pf-v5-theme-dark) .pf-v5-c-form-control {
+  color: #2E2B50 !important;
+  background: rgba(46,43,80,0.06) !important;
+  border-color: rgba(46,43,80,0.2) !important;
+}
+
+html:not(.pf-v5-theme-dark) input[type="text"]::placeholder,
+html:not(.pf-v5-theme-dark) input[type="password"]::placeholder,
+html:not(.pf-v5-theme-dark) input[type="email"]::placeholder {
+  color: rgba(46,43,80,0.4);
+}
+
+html:not(.pf-v5-theme-dark) input[type="text"]:focus,
+html:not(.pf-v5-theme-dark) input[type="password"]:focus,
+html:not(.pf-v5-theme-dark) input[type="email"]:focus,
+html:not(.pf-v5-theme-dark) .pf-v5-c-form-control:focus {
+  background: rgba(46,43,80,0.08) !important;
+}
+
+html:not(.pf-v5-theme-dark) .login-pf-signup,
+html:not(.pf-v5-theme-dark) #kc-registration {
+  color: rgba(46,43,80,0.6);
 }

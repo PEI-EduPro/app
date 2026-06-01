@@ -81,7 +81,7 @@ export default function Step8Content({
         </Button>
         <Button
           variant="outline"
-          className="self-start cursor-pointer"
+          className="self-start cursor-pointer dark:hover:bg-accent/20 dark:hover:border-primary"
           disabled={isDownloadingGrades}
           onClick={() => downloadGrades()}
         >

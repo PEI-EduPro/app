@@ -61,9 +61,9 @@ export default function ExamCard({
     <>
       <Card
         className={cn(
-          "group flex flex-row items-center gap-4 px-5 py-4 border border-[#3263A8]/20 bg-linear-to-r from-[#3263A8]/5 to-[#2E2B50]/5 transition-all duration-200 overflow-hidden",
+          "group flex flex-row items-center gap-4 px-5 py-4 border border-border bg-card transition-all duration-200 overflow-hidden",
           examConfig.status === "COMPLETED"
-            ? "cursor-pointer hover:from-[#3263A8]/15 hover:to-[#2E2B50]/15 hover:shadow-md hover:-translate-y-0.5"
+            ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5"
             : "cursor-default opacity-70",
         )}
         onClick={() =>
@@ -77,7 +77,7 @@ export default function ExamCard({
         <div className="shrink-0 w-1 self-stretch rounded-full bg-linear-to-b from-[#41B5C0] to-[#3263A8]" />
 
         <div className="flex-1 min-w-0">
-          <span className="text-base font-semibold text-[#2E2B50] truncate block">
+          <span className="text-base font-semibold text-foreground truncate block">
             {name}
           </span>
           <span className="text-xs text-muted-foreground">
@@ -95,7 +95,7 @@ export default function ExamCard({
             <p className="text-xs text-muted-foreground leading-none mb-0.5">
               Variações
             </p>
-            <p className="text-lg font-bold text-[#3263A8] leading-none">
+            <p className="text-lg font-bold text-primary leading-none">
               {examConfig.total_exams}
             </p>
           </div>
@@ -104,7 +104,7 @@ export default function ExamCard({
             <p className="text-xs text-muted-foreground leading-none mb-0.5">
               Desconto
             </p>
-            <p className="text-lg font-bold text-[#3263A8] leading-none">
+            <p className="text-lg font-bold text-primary leading-none">
               {examConfig.fraction}%
             </p>
           </div>
@@ -113,7 +113,7 @@ export default function ExamCard({
             <p className="text-xs text-muted-foreground leading-none mb-0.5">
               Questões
             </p>
-            <p className="text-lg font-bold text-[#3263A8] leading-none">
+            <p className="text-lg font-bold text-primary leading-none">
               {totalQuestions}
             </p>
           </div>

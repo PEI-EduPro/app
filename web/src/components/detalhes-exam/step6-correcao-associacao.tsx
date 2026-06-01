@@ -50,7 +50,7 @@ function StudentPickerDialog({
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Selecionar aluno</DialogTitle>
+          <DialogTitle>Selecionar Aluno</DialogTitle>
           <DialogDescription>
             Selecione o aluno a associar a este exame.
           </DialogDescription>
@@ -66,7 +66,7 @@ function StudentPickerDialog({
           <Button
             variant="outline"
             onClick={onClose}
-            className="cursor-pointer"
+            className="cursor-pointer dark:hover:bg-accent/20 dark:hover:border-primary"
           >
             Cancelar
           </Button>
@@ -159,7 +159,9 @@ export default function Step6Content({
             className="flex flex-row gap-6 p-4 items-start"
           >
             <div className="flex flex-col gap-2 items-center">
-              <QRCode value={qr.exam_id.toString()} size={72} level="M" />
+              <div className="bg-white p-1 rounded">
+                <QRCode value={qr.exam_id.toString()} size={72} level="M" />
+              </div>
               {qr.batch_number != null && (
                 <span className="text-sm">Versão: {qr.batch_number}</span>
               )}
@@ -178,7 +180,7 @@ export default function Step6Content({
                     className={cn(
                       "flex-1 justify-start gap-3 border transition-colors cursor-pointer",
                       s.selected === st.id
-                        ? "border-[#3263A8] bg-[#3263A8]/10"
+                        ? "border-primary bg-primary/10 dark:border-primary dark:bg-primary/20"
                         : "border-border",
                     )}
                   >
@@ -193,7 +195,7 @@ export default function Step6Content({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-red-50 cursor-pointer"
+                    className="shrink-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10 cursor-pointer"
                     onClick={() =>
                       updateState(qr.exam_id, {
                         removed: [...s.removed, st.id],
@@ -209,7 +211,7 @@ export default function Step6Content({
 
               <Button
                 variant="ghost"
-                className="self-start flex items-center gap-1 text-sm text-[#3263A8] px-0 cursor-pointer"
+                className="self-start flex items-center gap-1 text-sm text-primary px-0 cursor-pointer"
                 onClick={() => setPickerOpen(qr.exam_id)}
               >
                 <Plus className="h-4 w-4" /> Adicionar aluno

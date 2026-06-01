@@ -95,7 +95,7 @@ function RouteComponent() {
                   <Button
                     size="sm"
                     variant="outline"
-                    className="max-w-21 top-4 left-4 gap-1 cursor-pointer mb-4"
+                    className="max-w-21 top-4 left-4 gap-1 cursor-pointer mb-4 dark:hover:bg-accent/20 dark:hover:border-primary"
                     onClick={() => setEditingProfessors(true)}
                   >
                     <Pencil className="h-3.5 w-3.5" />

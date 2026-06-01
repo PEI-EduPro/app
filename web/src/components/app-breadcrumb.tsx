@@ -10,7 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { useKeycloak } from "@/hooks/use-keycloak.ts";
-import { LogOut } from "lucide-react";
+import { LogOut, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/lib/theme-provider";
 
 export interface BreadcrumbProps {
   page: string;
@@ -23,6 +24,7 @@ export interface BreadcrumbProps {
 export function AppBreadcrumb(props: BreadcrumbProps) {
   const { crumbs, page } = props;
   const { keycloak } = useKeycloak();
+  const { theme, toggle } = useTheme();
 
   return (
     <div className="w-full mb-3.75 md:mb-7.5">
@@ -48,14 +50,26 @@ export function AppBreadcrumb(props: BreadcrumbProps) {
           </BreadcrumbList>
         </Breadcrumb>
 
-        <Button
-          variant="destructive"
-          onClick={() => keycloak.logout()}
-          className="cursor-pointer flex items-center gap-2 h-auto py-1 md:py-1.5"
-        >
-          <span className="text-sm md:text-base">Sair</span>
-          <LogOut className="size-4 md:size-5" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={(e) => toggle(e.clientX, e.clientY)}
+            className="cursor-pointer"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="size-4 md:size-5" /> : <Moon className="size-4 md:size-5" />}
+          </Button>
+
+          <Button
+            variant="destructive"
+            onClick={() => keycloak.logout()}
+            className="cursor-pointer flex items-center gap-2 h-auto py-1 md:py-1.5"
+          >
+            <span className="text-sm md:text-base">Sair</span>
+            <LogOut className="size-4 md:size-5" />
+          </Button>
+        </div>
       </div>
       <Separator
         style={{

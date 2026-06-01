@@ -71,6 +71,16 @@
         startSessionPolling(
             "${url.ssoLoginInOtherTabsUrl?no_esc}"
         );
+
+        const DARK_MODE_CLASS = "pf-v5-theme-dark";
+        const cookieTheme = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('edupro-theme='))?.split('=')[1];
+        const prefersDark = cookieTheme ? cookieTheme === 'dark' : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle(DARK_MODE_CLASS, prefersDark);
+        if (!cookieTheme) {
+          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) =>
+            document.documentElement.classList.toggle(DARK_MODE_CLASS, e.matches)
+          );
+        }
     </script>
 </head>
 
