@@ -59,8 +59,8 @@ export function UCCard({
         <Card className="w-full md:w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 border border-border shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:shadow-md cursor-pointer group">
           <div className="hidden md:block relative overflow-hidden">
             <img
-              src={srcImage || "/card-image.png"}
-              className="w-full object-cover group-hover:scale-105 transition-transform duration-500"
+              src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
+              className="hidden md:block w-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-0 bg-linear-to-t from-[#2E2B50]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
           </div>
@@ -70,7 +70,7 @@ export function UCCard({
           <div className="flex md:hidden items-center gap-3 p-2">
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
               <img
-                src={srcImage || "/card-image.png"}
+                src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -99,7 +99,7 @@ export function UCCard({
       <Card className="w-full md:w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 border border-border shadow-md hover:shadow-xl hover:-translate-y-1 active:translate-y-0 active:shadow-md cursor-pointer group">
         <div className="hidden md:block relative overflow-hidden">
           <img
-            src={srcImage || "/card-image.png"}
+            src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
             className="hidden md:block w-full object-cover group-hover:scale-105 transition-transform duration-500"
           />
           <div className="hidden md:block absolute inset-0 bg-linear-to-t from-[#2E2B50]/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
@@ -107,7 +107,7 @@ export function UCCard({
         <div className="flex md:hidden items-center gap-3 p-2">
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
             <img
-              src={srcImage || "/card-image.png"}
+              src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
               className="w-full h-full object-cover"
             />
           </div>

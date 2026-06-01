@@ -8,6 +8,7 @@ import type { KeycloakContextValue } from "./lib/keycloak-provider";
 // Create a new router instance
 const router = createRouter({
   routeTree,
+  basepath: import.meta.env.PROD ? "/edupro" : "/",
   context: { auth: undefined! as KeycloakContextValue },
 });
 
