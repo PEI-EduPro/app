@@ -44,7 +44,7 @@ function AnswerGrid({
   function toggle(id: number, opt: OptionKey) {
     const next = { ...grid, [id]: { ...grid[id], [opt]: !grid[id][opt] } };
     onGridChange(next);
-    onGradeChange(calcGrade(next, questions));
+    onGradeChange(Math.round(calcGrade(next, questions) * 100) / 100);
   }
   return (
     <div className="overflow-auto w-full">
@@ -71,7 +71,7 @@ function AnswerGrid({
               {questions.map((q) => (
                 <td
                   key={q.question_number}
-                  className={`border border-border p-1 ${correctAnswers[q.question_number] === opt ? "bg-green-200" : ""}`}
+                  className={`border border-border p-1 ${correctAnswers[q.question_number] === opt ? "bg-green-200 dark:bg-green-700/50" : ""}`}
                 >
                   <div className="flex items-center justify-center">
                     <input
@@ -113,7 +113,7 @@ export default function Step7Content({
     if (!exam?.questions) return;
     setSelectedId(examId);
     setGrid(buildGrid(exam.questions));
-    setGrade(exam.grade);
+    setGrade(exam.grade !== null ? Math.round(exam.grade * 100) / 100 : null);
     setLocalValidated(exam.validated);
   }
 

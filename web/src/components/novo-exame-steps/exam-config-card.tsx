@@ -115,7 +115,7 @@ export function ExamConfigCard({
             {download && (
               <Button
                 variant="outline"
-                className="cursor-pointer"
+                className="cursor-pointer dark:hover:bg-accent/20 dark:hover:border-primary"
                 onClick={() => mutate(examConfigData.id)}
               >
                 <Download className="h-4 w-4 mr-2" />

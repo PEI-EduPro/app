@@ -6,6 +6,7 @@ import { keycloak, keycloakInitOptions } from "./keycloak";
 import { KeycloakProvider } from "./keycloak-provider";
 import { useState, useEffect } from "react";
 import { PwaInstallContext, type BeforeInstallPromptEvent } from "./pwa-install-context";
+import { ThemeProvider } from "./theme-provider";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const queryClient = new QueryClient();
@@ -21,16 +22,18 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <PwaInstallContext.Provider value={{ installPrompt, setInstallPrompt }}>
-      <NuqsAdapter>
-        <KeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>
-          <QueryClientProvider client={queryClient}>
-            {children}
-            {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
-          </QueryClientProvider>
-        </KeycloakProvider>
-        <Toaster />
-      </NuqsAdapter>
-    </PwaInstallContext.Provider>
+    <ThemeProvider>
+      <PwaInstallContext.Provider value={{ installPrompt, setInstallPrompt }}>
+        <NuqsAdapter>
+          <KeycloakProvider authClient={keycloak} initOptions={keycloakInitOptions}>
+            <QueryClientProvider client={queryClient}>
+              {children}
+              {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+            </QueryClientProvider>
+          </KeycloakProvider>
+          <Toaster />
+        </NuqsAdapter>
+      </PwaInstallContext.Provider>
+    </ThemeProvider>
   );
 }
