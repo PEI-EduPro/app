@@ -85,8 +85,8 @@ export function StepItem({
               <div className="flex items-center gap-2">
                 <span
                   className={cn(
-                    "font-semibold text-[#2E2B50] transition-colors text-lg",
-                    !noExpand && !disabled && "group-hover:text-[#3263A8]",
+                    "font-semibold text-foreground transition-colors text-lg",
+                    !noExpand && !disabled && "group-hover:text-primary",
                   )}
                 >
                   {step.label}

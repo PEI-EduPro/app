@@ -37,7 +37,7 @@ const useAddUc = (onSuccess?: () => void) => {
 const useGetUcById = (ucId: number) =>
   useQuery<UcI>({
     queryKey: ["uc", ucId],
-    queryFn: () => apiClient.get(`/subjects/${ucId}/`),
+    queryFn: () => apiClient.get(`/subjects/${ucId}`),
     enabled: !!ucId,
   });
 
@@ -68,7 +68,7 @@ const useDeleteUcById = (ucId: number) => {
 
   return useMutation({
     mutationKey: ["deleteUc", ucId],
-    mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}/`),
+    mutationFn: (ucId: number) => apiClient.delete(`/subjects/${ucId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["uc"] });
       toast.success("Unidade curricular eliminada com sucesso!", {

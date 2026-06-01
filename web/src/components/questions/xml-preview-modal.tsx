@@ -200,7 +200,7 @@ export default function XmlPreviewModal({
           </p>
         </DialogHeader>
 
-        <div className="overflow-y-auto flex-1 space-y-5 pr-1">
+        <div className="overflow-y-auto flex-1 space-y-5 pr-1 discrete-scrollbar">
           {topics.map((topic, ti) => (
             <div key={ti}>
               <Input

@@ -71,28 +71,28 @@ function QuestionItem({
   onDelete,
 }: QuestionItemProps) {
   return (
-    <div className="group flex items-start gap-4 p-4 bg-white border rounded-lg hover:bg-gray-50 transition-colors">
+    <div className="group flex items-start gap-4 p-4 bg-card border border-border rounded-lg">
       <div className="flex-1">
         <div className="flex items-start gap-3">
           <div className="mt-1">
-            <div className="w-6 h-6 flex items-center justify-center rounded-full bg-blue-100 text-blue-600 text-xs font-medium">
+            <div className="w-6 h-6 flex items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-medium">
               {questionNumber}
             </div>
           </div>
           <div className="flex-1">
-            <h4 className="font-medium text-gray-800 mb-2">{question.text}</h4>
+            <h4 className="font-medium text-foreground mb-2">{question.text}</h4>
             <div className="space-y-2">
               {Object.entries(question.options).map(([key, value]) => (
                 <div key={key} className="flex items-center gap-3">
                   <div
-                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? "border-green-500 bg-green-500" : "border-gray-300"}`}
+                    className={`w-4 h-4 rounded-full border flex items-center justify-center ${parseInt(key) === question.answer ? "border-green-500 bg-green-500" : "border-border"}`}
                   >
                     {parseInt(key) === question.answer && (
                       <div className="w-2 h-2 rounded-full bg-white" />
                     )}
                   </div>
                   <span
-                    className={`text-sm ${parseInt(key) === question.answer ? "text-green-600 font-medium" : "text-gray-600"}`}
+                    className={`text-sm ${parseInt(key) === question.answer ? "text-green-500 font-medium" : "text-muted-foreground"}`}
                   >
                     {value}
                   </span>
@@ -106,7 +106,7 @@ function QuestionItem({
         <Button
           variant="ghost"
           onClick={onEdit}
-          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+          className="p-1.5 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded transition-colors cursor-pointer"
           title="Editar questão"
         >
           <SquarePen className="w-4 h-4" />
@@ -116,7 +116,7 @@ function QuestionItem({
             <AlertDialogTrigger asChild>
               <Button
                 variant="ghost"
-                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors cursor-pointer"
+                className="p-1.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded transition-colors cursor-pointer"
                 title="Excluir questão"
               >
                 <Trash2 className="w-4 h-4" />
@@ -264,7 +264,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
   if (isLoading)
     return (
       <div className="flex justify-center items-center h-64">
-        <p className="text-gray-500">Carregando questões...</p>
+        <p className="text-muted-foreground">Carregando questões...</p>
       </div>
     );
   if (error)
@@ -412,21 +412,21 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
           .filter((t) => t.name.toLowerCase().includes(search.toLowerCase()))
           .map((topic) => (
             <Card key={topic.id} className="overflow-hidden p-0">
-              <div className="flex items-center justify-between p-4 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer">
+              <div className="flex items-center justify-between p-4 bg-muted/50 hover:bg-muted transition-colors cursor-pointer">
                 <div
                   className="flex items-center gap-3 flex-1"
                   onClick={() => toggleTopic(topic.id)}
                 >
                   {topic.isOpen ? (
-                    <ChevronDown size={20} className="text-gray-500" />
+                    <ChevronDown size={20} className="text-muted-foreground" />
                   ) : (
-                    <ChevronRight size={20} className="text-gray-500" />
+                    <ChevronRight size={20} className="text-muted-foreground" />
                   )}
                   <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-800">
+                    <h3 className="text-lg font-semibold text-foreground">
                       {topic.name}
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground">
                       {Object.keys(topic.questions).length}{" "}
                       {Object.keys(topic.questions).length === 1
                         ? "questão"
@@ -442,7 +442,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
                       setEditingTopic(topic);
                       setShowTopicModal(true);
                     }}
-                    className="text-gray-600 hover:text-blue-600 p-1.5 rounded hover:bg-blue-50 transition-colors cursor-pointer"
+                    className="text-muted-foreground hover:text-primary p-1.5 rounded hover:bg-primary/10 transition-colors cursor-pointer"
                     title="Editar tópico"
                   >
                     <SquarePen className="w-5 h-5" />
@@ -453,7 +453,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
                         <Button
                           variant="ghost"
                           onClick={(e) => e.stopPropagation()}
-                          className="text-gray-600 hover:text-red-600 p-1.5 rounded hover:bg-red-50 transition-colors cursor-pointer"
+                          className="text-muted-foreground hover:text-destructive p-1.5 rounded hover:bg-destructive/10 transition-colors cursor-pointer"
                           title="Excluir tópico"
                         >
                           <Trash2 className="w-5 h-5" />
@@ -495,7 +495,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
               {topic.isOpen && (
                 <div className="p-4 border-t">
                   {Object.keys(topic.questions).length === 0 ? (
-                    <div className="text-center py-6 text-gray-500">
+                    <div className="text-center py-6 text-muted-foreground">
                       <p>Nenhuma questão criada neste tópico</p>
                     </div>
                   ) : (
@@ -548,7 +548,7 @@ export default function BancoPerguntasTab({ realId }: { realId: number }) {
           t.name.toLowerCase().includes(search.toLowerCase()),
         ).length === 0 && (
           <Card className="p-8 border-dashed border-2 text-center">
-            <p className="text-gray-500">
+            <p className="text-muted-foreground">
               {search
                 ? "Nenhum tópico encontrado"
                 : "Para começar, adicione um tópico e acrescente perguntas ou importe um ficheiro XML."}

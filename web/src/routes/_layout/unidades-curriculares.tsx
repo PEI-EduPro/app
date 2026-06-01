@@ -159,7 +159,7 @@ function UCS() {
                   <UCCard
                     waitingRoomStatus={el.state}
                     label={`${el.subject_name} - ${el.exam_name}`}
-                    srcImage={"/card-image.png"}
+                    srcImage={`${import.meta.env.BASE_URL}card-image.png`}
                     id={el.exam_config_id}
                     key={index}
                     index={index}
@@ -177,7 +177,7 @@ function UCS() {
                 filteredData?.map((el, index) => (
                   <UCCard
                     label={el.name}
-                    srcImage={"/card-image.png"}
+                    srcImage={`${import.meta.env.BASE_URL}card-image.png`}
                     id={el.id}
                     key={index}
                     index={index}
