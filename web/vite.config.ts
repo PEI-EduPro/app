@@ -5,7 +5,8 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === "production" ? "/edupro/" : "/",
   optimizeDeps: {
     include: ["@yudiel/react-qr-scanner"],
   },
@@ -28,4 +29,4 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
-});
+}));
