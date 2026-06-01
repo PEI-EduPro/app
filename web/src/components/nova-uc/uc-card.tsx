@@ -1,4 +1,4 @@
-zimport { Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { encodeId } from "@/lib/id-encoder";
 import type { ExamWorkflowStatus } from "@/lib/types";
@@ -37,8 +37,8 @@ export function UCCard({
         <Card className="w-full md:w-80 md:h-57.5 py-0 overflow-hidden gap-2.5 border-2 border-destructive/40 bg-destructive/5 hover:bg-destructive/10 hover:border-destructive hover:-translate-y-1 active:translate-y-0 shadow-md hover:shadow-xl group">
           <div className="hidden md:block relative overflow-hidden">
             <img
-              src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
-              className="hidden md:block w-full object-cover group-hover:scale-105 transition-transform duration-500"
+              src={srcImage || "/card-image.png"}
+              className="w-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
           </div>
           <span className="px-3 pb-3 font-medium text-foreground line-clamp-2">
@@ -69,7 +69,10 @@ export function UCCard({
           </span>
           <div className="flex md:hidden items-center gap-3 p-2">
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-              <img src={srcImage || `${import.meta.env.BASE_URL}card-image.png`} className="w-full h-full object-cover" />
+              <img
+                src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
+                className="w-full h-full object-cover"
+              />
             </div>
             <span className="text-sm font-medium leading-snug line-clamp-2 text-foreground">
               {label}
@@ -103,7 +106,10 @@ export function UCCard({
         </div>
         <div className="flex md:hidden items-center gap-3 p-2">
           <div className="w-12 h-12 rounded-lg overflow-hidden bg-muted shrink-0">
-            <img src={srcImage || `${import.meta.env.BASE_URL}card-image.png`} className="w-full h-full object-cover" />
+            <img
+              src={srcImage || `${import.meta.env.BASE_URL}card-image.png`}
+              className="w-full h-full object-cover"
+            />
           </div>
           <div className="flex flex-col gap-1 min-w-0">
             <span className="text-sm font-medium leading-snug line-clamp-2 text-foreground">
