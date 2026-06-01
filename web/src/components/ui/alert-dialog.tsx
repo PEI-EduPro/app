@@ -171,7 +171,7 @@ function AlertDialogCancel({
     <Button variant={variant} size={size} asChild>
       <AlertDialogPrimitive.Cancel
         data-slot="alert-dialog-cancel"
-        className={cn(className)}
+        className={cn("dark:hover:bg-accent/20 dark:hover:border-primary", className)}
         {...props}
       />
     </Button>

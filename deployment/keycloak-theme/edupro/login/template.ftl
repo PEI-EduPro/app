@@ -23,7 +23,7 @@
 
 <#macro registrationLayout bodyClass="" displayInfo=false displayMessage=true displayRequiredFields=false>
 <!DOCTYPE html>
-<html class="${properties.kcHtmlClass!}" lang="pt">
+<html class="${properties.kcHtmlClass!} pf-v5-theme-dark" lang="pt">
 
 <head>
     <meta charset="utf-8">
@@ -73,18 +73,13 @@
         );
 
         const DARK_MODE_CLASS = "pf-v5-theme-dark";
-        const mediaQuery =window.matchMedia("(prefers-color-scheme: dark)");
-        updateDarkMode(mediaQuery.matches);
-        mediaQuery.addEventListener("change", (event) =>
-          updateDarkMode(event.matches),
-        );
-        function updateDarkMode(isEnabled) {
-          const { classList } = document.documentElement;
-          if (isEnabled) {
-            classList.add(DARK_MODE_CLASS);
-          } else {
-            classList.remove(DARK_MODE_CLASS);
-          }
+        const cookieTheme = document.cookie.split(';').map(c => c.trim()).find(c => c.startsWith('edupro-theme='))?.split('=')[1];
+        const prefersDark = cookieTheme ? cookieTheme === 'dark' : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle(DARK_MODE_CLASS, prefersDark);
+        if (!cookieTheme) {
+          window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", (e) =>
+            document.documentElement.classList.toggle(DARK_MODE_CLASS, e.matches)
+          );
         }
     </script>
 </head>

@@ -7,18 +7,38 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 /* ── Background: dark navy + three color blurs (matches index.tsx) ── */
+html,
 body {
   margin: 0;
   font-family: "Nunito Sans", sans-serif;
   font-size: 17px;
-  color: #ffffff;
+  color: #ffffff !important;
   min-height: 100vh;
-  background-color: #2E2B50;
+  background-color: #2E2B50 !important;
+  background: #2E2B50 !important;
+  --pf-v5-global--BackgroundColor--100: #2E2B50;
+  --pf-v5-global--BackgroundColor--200: #2E2B50;
+  --pf-v5-global--Color--100: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
 }
+
+html:not(.pf-v5-theme-dark) body,
+html:not(.pf-v5-theme-dark) {
+  color: #2E2B50 !important;
+  background-color: #f0fafa !important;
+  background: #f0fafa !important;
+  --pf-v5-global--BackgroundColor--100: #f0fafa;
+  --pf-v5-global--BackgroundColor--200: #f0fafa;
+  --pf-v5-global--Color--100: #2E2B50;
+}
+
+html:not(.pf-v5-theme-dark) #kc-container-wrapper::after {
+  background: linear-gradient(to top, #f0fafa, transparent) !important;
+}
+
 
 /* top-left teal blur */
 body::before {
@@ -94,11 +114,12 @@ body::after {
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
+  background: transparent !important;
 }
 
 .pf-v5-c-login__container {
   width: 100%;
-  max-width: 420px;
+  max-width: 620px;
 }
 
 /* ── Card ── */
@@ -111,7 +132,7 @@ body::after {
   border-radius: 1rem;
   padding: 2.5rem 2.5rem 2rem;
   width: 100%;
-  max-width: 420px;
+  max-width: 620px;
   box-shadow: 0 8px 40px rgba(0,0,0,0.35);
 }
 
@@ -234,8 +255,8 @@ input[type="email"],
   border-radius: 0.75rem;
   font-family: inherit;
   font-size: 1rem;
-  color: #ffffff;
-  background: rgba(255,255,255,0.08);
+  color: #ffffff !important;
+  background: rgba(46,43,80,0.85) !important;
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   /* neutralise PatternFly bottom-border-only variables */
@@ -269,7 +290,7 @@ input[type="email"]:focus,
 .pf-v5-c-form-control:focus {
   border-color: #41B5C0 !important;
   box-shadow: 0 0 0 3px rgba(65,181,192,0.25);
-  background: rgba(255,255,255,0.12);
+  background: rgba(46,43,80,0.95) !important;
 }
 
 /* ── Primary button ── */
@@ -420,4 +441,50 @@ a:hover {
   .pf-v5-c-form-control {
     font-size: 0.9rem;
   }
+}
+
+/* ── Light mode overrides ── */
+html:not(.pf-v5-theme-dark) #kc-container,
+html:not(.pf-v5-theme-dark) .card-pf {
+  background: rgba(255,255,255,0.75);
+  border: 1px solid rgba(65,181,192,0.25);
+  box-shadow: 0 8px 40px rgba(46,43,80,0.10);
+}
+
+html:not(.pf-v5-theme-dark) label,
+html:not(.pf-v5-theme-dark) .pf-v5-c-form__label {
+  color: #2E2B50;
+}
+
+html:not(.pf-v5-theme-dark) #kc-header-wrapper span,
+html:not(.pf-v5-theme-dark) .login-pf-header h1,
+html:not(.pf-v5-theme-dark) #kc-page-title {
+  color: #2E2B50 !important;
+}
+
+html:not(.pf-v5-theme-dark) input[type="text"],
+html:not(.pf-v5-theme-dark) input[type="password"],
+html:not(.pf-v5-theme-dark) input[type="email"],
+html:not(.pf-v5-theme-dark) .pf-v5-c-form-control {
+  color: #2E2B50 !important;
+  background: rgba(46,43,80,0.06) !important;
+  border-color: rgba(46,43,80,0.2) !important;
+}
+
+html:not(.pf-v5-theme-dark) input[type="text"]::placeholder,
+html:not(.pf-v5-theme-dark) input[type="password"]::placeholder,
+html:not(.pf-v5-theme-dark) input[type="email"]::placeholder {
+  color: rgba(46,43,80,0.4);
+}
+
+html:not(.pf-v5-theme-dark) input[type="text"]:focus,
+html:not(.pf-v5-theme-dark) input[type="password"]:focus,
+html:not(.pf-v5-theme-dark) input[type="email"]:focus,
+html:not(.pf-v5-theme-dark) .pf-v5-c-form-control:focus {
+  background: rgba(46,43,80,0.08) !important;
+}
+
+html:not(.pf-v5-theme-dark) .login-pf-signup,
+html:not(.pf-v5-theme-dark) #kc-registration {
+  color: rgba(46,43,80,0.6);
 }

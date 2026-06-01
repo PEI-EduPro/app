@@ -18,7 +18,7 @@ export default function Step4Content({
         alunos e exames. Certifique-se de que todos os alunos presentes foram
         devidamente registados antes de prosseguir.
       </p>
-      <div className="flex items-center gap-2 text-xs text-[#3263A8] bg-[#3263A8]/5 border border-[#3263A8]/20 rounded-md px-3 py-2">
+      <div className="flex items-center gap-2 text-xs text-[#3263A8] dark:text-primary bg-[#3263A8]/5 border border-[#3263A8]/20 dark:border-primary/30 rounded-md px-3 py-2">
         <Smartphone className="h-4 w-4 shrink-0" />
         <span>Esta ação pode ser realizada a partir da aplicação móvel.</span>
       </div>
