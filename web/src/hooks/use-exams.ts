@@ -33,7 +33,7 @@ const useAddExamConfig = () => {
 
   return useMutation({
     mutationFn: (props: NewExamConfigI) =>
-      apiClient.post<ExamConfigI>("/exams/generate_async/", props),
+      apiClient.post<ExamConfigI>("/exams/generate_async", props),
     onSuccess: () => {
       toast.dismiss();
       toast.success("Exame criado com sucesso!", {
@@ -56,10 +56,12 @@ const useDownloadExamConfig = () =>
   useMutation({
     mutationFn: (id: number) =>
       apiClient.download(`/exams/config/${id}/download`),
-    onSuccess: (blob: Blob) => {toast.success("Notas transferidas com sucesso", {
+    onSuccess: (blob: Blob) => {
+      toast.success("Notas transferidas com sucesso", {
         position: "top-right",
         duration: 3000,
-      }), saveFile(blob, "generated_exam.zip")},
+      }), saveFile(blob, "generated_exam.zip")
+    },
     onError: () =>
       toast.error("Erro ao descarregar o exame.", {
         position: "top-right",
@@ -281,7 +283,7 @@ const useGetSubmittedExams = (examConfigId: number) =>
 const useGetWarnings = (examConfigId: number) =>
   useQuery<{ students: StudentsI[]; warnings: GetWarningsI[] }>({
     queryKey: ["warnings", examConfigId],
-    queryFn: () => apiClient.get(`/warnings/${examConfigId}/`),
+    queryFn: () => apiClient.get(`/warnings/${examConfigId}`),
   });
 
 const useResolveWarnings = (examConfigId: number) => {

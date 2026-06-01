@@ -9,7 +9,7 @@ export function NotFound() {
       <div className="flex flex-row gap-4 items-center">
         <span className="font-semibold text-[300px] leading-normal">4</span>
         <img
-          src="/logo-o.png"
+          src={`${import.meta.env.BASE_URL}logo-o.png`}
           alt="EduPro logo"
           className="w-40 h-40 md:h-75 md:w-auto"
         />
