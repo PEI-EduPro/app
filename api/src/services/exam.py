@@ -156,7 +156,6 @@ async def generate_grades_report_pdf(
         safe_exam_name = (exam_config.exam_name or "Exame").replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
 
         # Write UC.tex (following project pattern)
-        # User requested only subject name, removing semester/year
         uc_content = safe_subject_name
         async with await anyio.open_file(os.path.join(tmpdir, "UC.tex"), "w") as f:
             await f.write(uc_content)
