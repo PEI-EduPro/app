@@ -1621,10 +1621,7 @@
     ]
   },
   "internationalizationEnabled": true,
-  "supportedLocales": [
-    "pt",
-    "en"
-  ],
+  "supportedLocales": ["pt"],
   "defaultLocale": "pt",
   "authenticationFlows": [
     {
