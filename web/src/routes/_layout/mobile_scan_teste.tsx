@@ -106,7 +106,7 @@ function RouteComponent() {
               className="w-full cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/80"
               onClick={() => startRoom()}
             >
-              Abrir Exame
+              Iniciar Exame
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
