@@ -57,7 +57,7 @@ function Index() {
                 className="px-8 py-4 text-lg h-auto cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/90 text-white shadow-lg shadow-[#41B5C0]/30 hover:shadow-[#41B5C0]/50 hover:-translate-y-0.5 active:translate-y-0"
                 onClick={() =>
                   keycloak.login({
-                    redirectUri: `https://bioinformatics.ua.pt/edupro/unidades-curriculares/`
+                    redirectUri: `${window.location.origin}${import.meta.env.BASE_URL}unidades-curriculares`
                   })
                 }
               >
@@ -72,7 +72,7 @@ function Index() {
                 onClick={(e) => {
                   e.preventDefault();
                   keycloak.register({
-                    redirectUri: `https://bioinformatics.ua.pt/edupro/unidades-curriculares/`
+                    redirectUri: `${window.location.origin}${import.meta.env.BASE_URL}unidades-curriculares`
                   });
                 }}
               >

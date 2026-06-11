@@ -63,13 +63,7 @@ export function AppBreadcrumb(props: BreadcrumbProps) {
 
           <Button
             variant="destructive"
-            onClick={() => {
-             window.location.replace(
-                keycloak.createLogoutUrl({
-                  redirectUri: "https://bioinformatics.ua.pt/edupro/",
-                })
-              );
-            }}
+            onClick={() => keycloak.logout()}
             className="cursor-pointer flex items-center gap-2 h-auto py-1 md:py-1.5"
           >
             <span className="text-sm md:text-base">Sair</span>
