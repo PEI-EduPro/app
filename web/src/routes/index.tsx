@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useKeycloak } from "@/hooks/use-keycloak";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { Download, Moon, Sun } from "lucide-react";
@@ -35,7 +35,6 @@ function Index() {
           <Moon className="size-5" />
         )}
       </Button>
-
       <div className="relative z-10 flex flex-col md:flex-row items-center gap-12 md:gap-24 max-w-5xl w-full">
         <div className="flex flex-col items-center md:items-start gap-6 text-center md:text-left animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#41B5C0]/20 border border-[#41B5C0]/40 stagger-1 animate-fade-in-up">
@@ -54,7 +53,6 @@ function Index() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center gap-4 stagger-4 animate-fade-in-up">
-            <Link to="/unidades-curriculares">
               <Button
                 className="px-8 py-4 text-lg h-auto cursor-pointer bg-[#41B5C0] hover:bg-[#41B5C0]/90 text-white shadow-lg shadow-[#41B5C0]/30 hover:shadow-[#41B5C0]/50 hover:-translate-y-0.5 active:translate-y-0"
                 onClick={() =>
@@ -65,7 +63,6 @@ function Index() {
               >
                 Entrar
               </Button>
-            </Link>
 
             <p className="text-muted-foreground dark:text-[#E3F6A2]/60 text-sm">
               Ainda não tens conta?{" "}
