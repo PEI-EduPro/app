@@ -60,6 +60,7 @@ app.add_middleware(
         "http://localhost",
         "https://localhost",
         "https://mednat.ieeta.pt:9042",
+        "https://bioinformatics.ua.pt",
     ],
     allow_credentials=True,
     allow_methods=['*'],

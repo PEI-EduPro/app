@@ -38,7 +38,7 @@ services:
       KC_DB_PASSWORD: ${KC_DB_PASSWORD}
       KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
       KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
-    command: start --import-realm --hostname https://${KC_HOSTNAME}:${KC_HOSTNAME_PORT}/keycloak --proxy-headers forwarded --http-enabled=true
+    command: start --import-realm --hostname https://${KC_HOSTNAME}/edupro/keycloak --hostname-admin https://${KC_HOSTNAME}/edupro/keycloak --proxy-headers forwarded --http-enabled=true
     volumes:
       - ./keycloak-config/realm.json:/opt/keycloak/data/import/realm.json:ro
       - ./keycloak-theme:/opt/keycloak/themes:ro

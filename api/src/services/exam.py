@@ -151,21 +151,12 @@ async def generate_grades_report_pdf(
 
     # 2. Setup Temporary Directory and Templates
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Copy base templates if any were needed (though report is mostly self-contained)
-        # For consistency, we'll write the specific files needed
-        
+        # Escape for LaTeX
+        safe_subject_name = subject_name.replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
+        safe_exam_name = (exam_config.exam_name or "Exame").replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
+
         # Write UC.tex (following project pattern)
-        # Defaulting to 1st Semester and 2025/26 as seen in other parts of the code
-        semester_text_en = "1st Semester"
-        semester_text_pt = "1º Semestre"
-        academic_year = "2025/26"
-        uc_content = f"""\\iftoggle{{english}}{{
-{subject_name}\\\\
-{semester_text_en}, {academic_year}\\\\
-}}{{
-{subject_name}\\\\
-{semester_text_pt}, {academic_year}\\\\
-}}"""
+        uc_content = safe_subject_name
         async with await anyio.open_file(os.path.join(tmpdir, "UC.tex"), "w") as f:
             await f.write(uc_content)
 
@@ -203,7 +194,7 @@ async def generate_grades_report_pdf(
         async with await anyio.open_file(template_path, "r") as f:
             latex_content = await f.read()
 
-        latex_content = latex_content.replace("__EXAM_NAME__", exam_config.exam_name or "Exame")
+        latex_content = latex_content.replace("__EXAM_NAME__", safe_exam_name)
         latex_content = latex_content.replace("__ROWS__", "\n".join(rows))
 
         main_file = "report.tex"

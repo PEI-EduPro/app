@@ -2,27 +2,40 @@
   "name": "EduPro",
   "short_name": "EduPro",
   "description": "Aplicação para gerir unidades curriculares e automatizar a geração e correção de exames.",
-  "scope": "/",
-  "start_url": "/",
+  "start_url": "https://bioinformatics.ua.pt/edupro/",
+  "scope": "https://bioinformatics.ua.pt/edupro/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#ffffff",
   "orientation": "portrait",
   "icons": [
-    { "src": "/web-app-manifest-192x192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/web-app-manifest-512x512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/web-app-manifest-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
-  ],
-   "screenshots": [
     {
-     "src": "/web-app-manifest-512x512.png",
+      "src": "/edupro/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/edupro/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/edupro/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/edupro/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "wide",
       "label": "EduPro"
     },
     {
-     "src": "/web-app-manifest-512x512.png",
+      "src": "/edupro/web-app-manifest-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",

@@ -509,13 +509,13 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/keycloak/edupro/account/",
+      "baseUrl": "/edupro/keycloak/edupro/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/keycloak/edupro/account/*"
+        "/edupro/keycloak/edupro/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -553,13 +553,13 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/keycloak/edupro/account/",
+      "baseUrl": "/edupro/keycloak/edupro/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "redirectUris": [
-        "/keycloak/edupro/account/*"
+        "/edupro/keycloak/edupro/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -695,13 +695,15 @@
         "http://localhost:5173/*",
         "http://localhost/*",
         "https://localhost/*",
-        "https://mednat.ieeta.pt:9042/*"
+        "https://mednat.ieeta.pt:9042/*",
+        "https://bioinformatics.ua.pt/edupro/*"
       ],
       "webOrigins": [
         "http://localhost:5173",
         "http://localhost",
         "https://localhost",
-        "https://mednat.ieeta.pt:9042"
+        "https://mednat.ieeta.pt:9042",
+        "https://bioinformatics.ua.pt"
       ],
       "notBefore": 0,
       "bearerOnly": false,
@@ -711,13 +713,20 @@
       "directAccessGrantsEnabled": true,
       "serviceAccountsEnabled": false,
       "publicClient": true,
-      "frontchannelLogout": true,
+      "frontchannelLogout": false,
       "protocol": "openid-connect",
       "attributes": {
+        "realm_client": "false",
         "oidc.ciba.grant.enabled": "false",
-        "oauth2.device.authorization.grant.enabled": "false",
         "backchannel.logout.session.required": "true",
-        "backchannel.logout.revoke.offline.tokens": "false"
+        "post.logout.redirect.uris": "https://bioinformatics.ua.pt/edupro/*",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "backchannel.logout.revoke.offline.tokens": "false",
+        "login_theme": "",
+        "display.on.consent.screen": "false",
+        "consent.screen.text": "",
+        "frontchannel.logout.url": "",
+        "backchannel.logout.url": ""
       },
       "authenticationFlowBindingOverrides": {},
       "fullScopeAllowed": true,
@@ -730,13 +739,14 @@
           "protocolMapper": "oidc-group-membership-mapper",
           "consentRequired": false,
           "config": {
-            "claim.name": "groups",
             "full.path": "true",
             "introspection.token.claim": "true",
             "userinfo.token.claim": "true",
+            "multivalued": "true",
             "id.token.claim": "true",
             "lightweight.claim": "false",
-            "access.token.claim": "true"
+            "access.token.claim": "true",
+            "claim.name": "groups"
           }
         }
       ],
@@ -745,6 +755,7 @@
         "acr",
         "profile",
         "roles",
+        "basic",
         "email"
       ],
       "optionalClientScopes": [
@@ -752,7 +763,13 @@
         "phone",
         "offline_access",
         "microprofile-jwt"
-      ]
+      ],
+      "access": {
+        "view": true,
+        "configure": true,
+        "manage": true
+      },
+      "authorizationServicesEnabled": false
     },
     {
       "id": "f8aaa564-aee1-4346-9b61-1c07b2374615",
@@ -1604,7 +1621,7 @@
     ]
   },
   "internationalizationEnabled": true,
-  "supportedLocales": ["pt", "en"],
+  "supportedLocales": ["pt"],
   "defaultLocale": "pt",
   "authenticationFlows": [
     {
